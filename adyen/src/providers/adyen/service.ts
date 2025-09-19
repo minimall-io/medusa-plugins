@@ -280,6 +280,28 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     return {}
   }
 
+  /**
+   ******* packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST.PaymentWebhookEvents.WebhookReceived
+   ****** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
+   ***** packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
+   **** packages/core/core-flows/src/payment/workflows/capture-payment.ts:capturePaymentWorkflow
+   *** packages/core/core-flows/src/payment/steps/capture-payment.ts:capturePaymentStep
+   ** packages/modules/payment/src/services/payment-module.ts:capturePayment
+   * packages/modules/payment/src/services/payment-provider.ts:capturePayment
+   *
+   ****** packages/medusa/src/api/admin/payment-collections/[id]/mark-as-paid/route.ts:POST
+   ***** packages/core/core-flows/src/order/workflows/mark-payment-collection-as-paid.ts:markPaymentCollectionAsPaid
+   **** packages/core/core-flows/src/payment/workflows/capture-payment.ts:capturePaymentWorkflow
+   *** packages/core/core-flows/src/payment/steps/capture-payment.ts:capturePaymentStep
+   ** packages/modules/payment/src/services/payment-module.ts:capturePayment
+   * packages/modules/payment/src/services/payment-provider.ts:capturePayment
+   *
+   ***** packages/medusa/src/api/admin/payments/[id]/capture/route.ts:POST
+   **** packages/core/core-flows/src/payment/workflows/capture-payment.ts:capturePaymentWorkflow
+   *** packages/core/core-flows/src/payment/steps/capture-payment.ts:capturePaymentStep
+   ** packages/modules/payment/src/services/payment-module.ts:capturePayment
+   * packages/modules/payment/src/services/payment-provider.ts:capturePayment
+   */
   public async capturePayment(
     input: CapturePaymentInput,
   ): Promise<CapturePaymentOutput> {
