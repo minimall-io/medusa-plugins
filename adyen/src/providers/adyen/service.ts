@@ -153,6 +153,26 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.checkoutAPI = new CheckoutAPI(this.client)
   }
 
+  /**
+   ****** packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST.PaymentWebhookEvents.WebhookReceived
+   ***** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
+   **** packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
+   *** packages/core/core-flows/src/payment/steps/authorize-payment-session.ts:authorizePaymentSessionStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.authorizePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.authorizePayment
+   *
+   ***** packages/medusa/src/api/admin/payment-collections/[id]/mark-as-paid/route.ts:POST
+   **** packages/core/core-flows/src/order/workflows/mark-payment-collection-as-paid.ts:markPaymentCollectionAsPaid
+   *** packages/core/core-flows/src/payment/steps/authorize-payment-session.ts:authorizePaymentSessionStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.authorizePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.authorizePayment
+   *
+   ***** packages/medusa/src/api/store/carts/[id]/complete/route.ts:POST
+   **** packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   *** packages/core/core-flows/src/payment/steps/authorize-payment-session.ts:authorizePaymentSessionStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.authorizePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.authorizePayment
+   */
   public async authorizePayment(
     input: AuthorizePaymentInput,
   ): Promise<AuthorizePaymentOutput> {
@@ -180,6 +200,78 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     return { status: 'authorized' }
   }
 
+  /**
+   ******* packages/medusa/src/api/admin/returns/[id]/request/route.ts:POST
+   ****** packages/core/core-flows/src/order/workflows/return/confirm-return-request.ts:confirmReturnRequestWorkflow
+   ***** packages/core/core-flows/src/order/workflows/create-or-update-order-payment-collection.ts:createOrUpdateOrderPaymentCollectionWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/cancel-payment-collection.ts:cancelPaymentCollectionWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/cancel-payment.ts:cancelPaymentStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
+   *
+   ******* packages/medusa/src/api/admin/returns/[id]/receive/confirm/route.ts:POST
+   ****** packages/core/core-flows/src/order/workflows/return/confirm-receive-return-request.ts:confirmReturnReceiveWorkflow
+   ***** packages/core/core-flows/src/order/workflows/create-or-update-order-payment-collection.ts:createOrUpdateOrderPaymentCollectionWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/cancel-payment-collection.ts:cancelPaymentCollectionWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/cancel-payment.ts:cancelPaymentStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
+   *
+   ******* packages/medusa/src/api/admin/order-edits/[id]/confirm/route.ts:POST
+   ****** packages/core/core-flows/src/order/workflows/order-edit/confirm-order-edit-request.ts:confirmOrderEditRequestWorkflow
+   ***** packages/core/core-flows/src/order/workflows/create-or-update-order-payment-collection.ts:createOrUpdateOrderPaymentCollectionWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/cancel-payment-collection.ts:cancelPaymentCollectionWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/cancel-payment.ts:cancelPaymentStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
+   *
+   ******* packages/medusa/src/api/admin/exchanges/[id]/request/route.ts:POST
+   ****** packages/core/core-flows/src/order/workflows/exchange/confirm-exchange-request.ts:confirmExchangeRequestWorkflow
+   ***** packages/core/core-flows/src/order/workflows/create-or-update-order-payment-collection.ts:createOrUpdateOrderPaymentCollectionWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/cancel-payment-collection.ts:cancelPaymentCollectionWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/cancel-payment.ts:cancelPaymentStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
+   *
+   ******* packages/medusa/src/api/admin/claims/[id]/request/route.ts:POST
+   ****** packages/core/core-flows/src/order/workflows/claim/confirm-claim-request.ts:confirmClaimRequestWorkflow
+   ***** packages/core/core-flows/src/order/workflows/create-or-update-order-payment-collection.ts:createOrUpdateOrderPaymentCollectionWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/cancel-payment-collection.ts:cancelPaymentCollectionWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/cancel-payment.ts:cancelPaymentStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
+   *
+   ******* packages/medusa/src/api/admin/draft-orders/[id]/edit/request/route.ts:POST
+   ****** packages/core/core-flows/src/draft-order/workflows/request-draft-order-edit.ts:requestDraftOrderEditWorkflow
+   ***** packages/core/core-flows/src/order/workflows/create-or-update-order-payment-collection.ts:createOrUpdateOrderPaymentCollectionWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/cancel-payment-collection.ts:cancelPaymentCollectionWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/cancel-payment.ts:cancelPaymentStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
+   *
+   ******* packages/medusa/src/api/admin/draft-orders/[id]/edit/confirm/route.ts:POST
+   ****** packages/core/core-flows/src/draft-order/workflows/confirm-draft-order-edit.ts:confirmDraftOrderEditWorkflow
+   ***** packages/core/core-flows/src/order/workflows/create-or-update-order-payment-collection.ts:createOrUpdateOrderPaymentCollectionWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/cancel-payment-collection.ts:cancelPaymentCollectionWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/cancel-payment.ts:cancelPaymentStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
+   *
+   ***** packages/medusa/src/api/admin/orders/[id]/cancel/route.ts:POST
+   **** packages/core/core-flows/src/order/workflows/cancel-order.ts:cancelOrderWorkflow
+   *** packages/core/core-flows/src/payment/steps/cancel-payment.ts:cancelPaymentStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
+   *
+   * -> this.authorizePayment
+   *** packages/core/core-flows/src/payment/steps/authorize-payment-session.ts:authorizePaymentSessionStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
+   *
+   * -> this.authorizePayment
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.authorizePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
+   */
   public async cancelPayment(
     input: CancelPaymentInput,
   ): Promise<CancelPaymentOutput> {
