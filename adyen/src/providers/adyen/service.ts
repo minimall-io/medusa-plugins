@@ -341,6 +341,29 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     return { id: '' }
   }
 
+  /**
+   ****** packages/medusa/src/api/admin/payment-collections/[id]/mark-as-paid/route.ts:POST
+   ***** packages/core/core-flows/src/order/workflows/mark-payment-collection-as-paid.ts:markPaymentCollectionAsPaid
+   **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/create-payment-account-holder.ts:createPaymentAccountHolderStep
+   ** packages/modules/payment/src/services/payment-module.ts:deleteAccountHolder
+   * packages/modules/payment/src/services/payment-provider.ts:deleteAccountHolder
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/complete/route.ts:POST
+   ******* packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   ****** packages/core/core-flows/src/cart/steps/compensate-payment-if-needed.ts:compensatePaymentIfNeededStep
+   ***** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/create-payment-account-holder.ts:createPaymentAccountHolderStep
+   ** packages/modules/payment/src/services/payment-module.ts:deleteAccountHolder
+   * packages/modules/payment/src/services/payment-provider.ts:deleteAccountHolder
+   *
+   ***** packages/medusa/src/api/store/payment-collections/[id]/payment-sessions/route.ts:POST
+   **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/create-payment-account-holder.ts:createPaymentAccountHolderStep
+   ** packages/modules/payment/src/services/payment-module.ts:deleteAccountHolder
+   * packages/modules/payment/src/services/payment-provider.ts:deleteAccountHolder
+   */
   public async deleteAccountHolder(
     input: DeleteAccountHolderInput,
   ): Promise<DeleteAccountHolderOutput> {
