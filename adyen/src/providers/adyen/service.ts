@@ -154,9 +154,17 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   }
 
   /**
-   ****** packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST.PaymentWebhookEvents.WebhookReceived
-   ***** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
-   **** packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
+   ******** packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST
+   ******* PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
+   ****** packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
+   ***** packages/core/core-flows/src/payment/steps/complete-cart-after-payment.ts:completeCartAfterPaymentStep
+   **** packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   *** packages/core/core-flows/src/payment/steps/authorize-payment-session.ts:authorizePaymentSessionStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.authorizePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.authorizePayment
+   *
+   ***** packages/medusa/src/api/store/carts/[id]/complete/route.ts:POST
+   **** packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
    *** packages/core/core-flows/src/payment/steps/authorize-payment-session.ts:authorizePaymentSessionStep
    ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.authorizePaymentSession
    * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.authorizePayment
@@ -167,8 +175,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.authorizePaymentSession
    * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.authorizePayment
    *
-   ***** packages/medusa/src/api/store/carts/[id]/complete/route.ts:POST
-   **** packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   ****** packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST
+   ***** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
+   **** packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
    *** packages/core/core-flows/src/payment/steps/authorize-payment-session.ts:authorizePaymentSessionStep
    ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.authorizePaymentSession
    * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.authorizePayment
@@ -201,8 +210,16 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   }
 
   /**
-   ******* packages/medusa/src/api/admin/returns/[id]/request/route.ts:POST
-   ****** packages/core/core-flows/src/order/workflows/return/confirm-return-request.ts:confirmReturnRequestWorkflow
+   ******* packages/medusa/src/api/admin/draft-orders/[id]/edit/request/route.ts:POST
+   ****** packages/core/core-flows/src/draft-order/workflows/request-draft-order-edit.ts:requestDraftOrderEditWorkflow
+   ***** packages/core/core-flows/src/order/workflows/create-or-update-order-payment-collection.ts:createOrUpdateOrderPaymentCollectionWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/cancel-payment-collection.ts:cancelPaymentCollectionWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/cancel-payment.ts:cancelPaymentStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
+   *
+   ******* packages/medusa/src/api/admin/draft-orders/[id]/edit/confirm/route.ts:POST
+   ****** packages/core/core-flows/src/draft-order/workflows/confirm-draft-order-edit.ts:confirmDraftOrderEditWorkflow
    ***** packages/core/core-flows/src/order/workflows/create-or-update-order-payment-collection.ts:createOrUpdateOrderPaymentCollectionWorkflow
    **** packages/core/core-flows/src/payment-collection/workflows/cancel-payment-collection.ts:cancelPaymentCollectionWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/cancel-payment.ts:cancelPaymentStep
@@ -211,6 +228,14 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    *
    ******* packages/medusa/src/api/admin/returns/[id]/receive/confirm/route.ts:POST
    ****** packages/core/core-flows/src/order/workflows/return/confirm-receive-return-request.ts:confirmReturnReceiveWorkflow
+   ***** packages/core/core-flows/src/order/workflows/create-or-update-order-payment-collection.ts:createOrUpdateOrderPaymentCollectionWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/cancel-payment-collection.ts:cancelPaymentCollectionWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/cancel-payment.ts:cancelPaymentStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
+   *
+   ******* packages/medusa/src/api/admin/returns/[id]/request/route.ts:POST
+   ****** packages/core/core-flows/src/order/workflows/return/confirm-return-request.ts:confirmReturnRequestWorkflow
    ***** packages/core/core-flows/src/order/workflows/create-or-update-order-payment-collection.ts:createOrUpdateOrderPaymentCollectionWorkflow
    **** packages/core/core-flows/src/payment-collection/workflows/cancel-payment-collection.ts:cancelPaymentCollectionWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/cancel-payment.ts:cancelPaymentStep
@@ -241,19 +266,31 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
    * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
    *
-   ******* packages/medusa/src/api/admin/draft-orders/[id]/edit/request/route.ts:POST
-   ****** packages/core/core-flows/src/draft-order/workflows/request-draft-order-edit.ts:requestDraftOrderEditWorkflow
-   ***** packages/core/core-flows/src/order/workflows/create-or-update-order-payment-collection.ts:createOrUpdateOrderPaymentCollectionWorkflow
-   **** packages/core/core-flows/src/payment-collection/workflows/cancel-payment-collection.ts:cancelPaymentCollectionWorkflow
-   *** packages/core/core-flows/src/payment-collection/steps/cancel-payment.ts:cancelPaymentStep
+   ******** packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST
+   ******* PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
+   ****** packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
+   ***** packages/core/core-flows/src/payment/steps/complete-cart-after-payment.ts:completeCartAfterPaymentStep
+   **** packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   *** packages/core/core-flows/src/payment/steps/authorize-payment-session.ts:authorizePaymentSessionStep
    ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
    * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
    *
-   ******* packages/medusa/src/api/admin/draft-orders/[id]/edit/confirm/route.ts:POST
-   ****** packages/core/core-flows/src/draft-order/workflows/confirm-draft-order-edit.ts:confirmDraftOrderEditWorkflow
-   ***** packages/core/core-flows/src/order/workflows/create-or-update-order-payment-collection.ts:createOrUpdateOrderPaymentCollectionWorkflow
-   **** packages/core/core-flows/src/payment-collection/workflows/cancel-payment-collection.ts:cancelPaymentCollectionWorkflow
-   *** packages/core/core-flows/src/payment-collection/steps/cancel-payment.ts:cancelPaymentStep
+   ***** packages/medusa/src/api/store/carts/[id]/complete/route.ts:POST
+   **** packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   *** packages/core/core-flows/src/payment/steps/authorize-payment-session.ts:authorizePaymentSessionStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
+   *
+   ***** packages/medusa/src/api/admin/payment-collections/[id]/mark-as-paid/route.ts:POST
+   **** packages/core/core-flows/src/order/workflows/mark-payment-collection-as-paid.ts:markPaymentCollectionAsPaid
+   *** packages/core/core-flows/src/payment/steps/authorize-payment-session.ts:authorizePaymentSessionStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
+   *
+   ****** packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST
+   ***** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
+   **** packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
+   *** packages/core/core-flows/src/payment/steps/authorize-payment-session.ts:authorizePaymentSessionStep
    ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
    * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
    *
@@ -263,28 +300,17 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
    * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
    *
-   * ****** packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST.PaymentWebhookEvents.WebhookReceived
-   ***** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
-   **** packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
+   ******** packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST
+   ******* PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
+   ****** packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
+   ***** packages/core/core-flows/src/payment/steps/complete-cart-after-payment.ts:completeCartAfterPaymentStep
+   **** packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
    *** packages/core/core-flows/src/payment/steps/authorize-payment-session.ts:authorizePaymentSessionStep
-   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
-   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
-   *
-   ***** packages/medusa/src/api/admin/payment-collections/[id]/mark-as-paid/route.ts:POST
-   **** packages/core/core-flows/src/order/workflows/mark-payment-collection-as-paid.ts:markPaymentCollectionAsPaid
-   *** packages/core/core-flows/src/payment/steps/authorize-payment-session.ts:authorizePaymentSessionStep
-   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.authorizePaymentSession
    * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
    *
    ***** packages/medusa/src/api/store/carts/[id]/complete/route.ts:POST
    **** packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
-   *** packages/core/core-flows/src/payment/steps/authorize-payment-session.ts:authorizePaymentSessionStep
-   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
-   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
-   *
-   * ****** packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST.PaymentWebhookEvents.WebhookReceived
-   ***** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
-   **** packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
    *** packages/core/core-flows/src/payment/steps/authorize-payment-session.ts:authorizePaymentSessionStep
    ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.authorizePaymentSession
    * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
@@ -295,8 +321,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.authorizePaymentSession
    * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
    *
-   ***** packages/medusa/src/api/store/carts/[id]/complete/route.ts:POST
-   **** packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   ****** packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST
+   ***** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
+   **** packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
    *** packages/core/core-flows/src/payment/steps/authorize-payment-session.ts:authorizePaymentSessionStep
    ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.authorizePaymentSession
    * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.cancelPayment
@@ -315,21 +342,21 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    ***** packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
    **** packages/core/core-flows/src/payment/workflows/capture-payment.ts:capturePaymentWorkflow
    *** packages/core/core-flows/src/payment/steps/capture-payment.ts:capturePaymentStep
-   ** packages/modules/payment/src/services/payment-module.ts:capturePayment
-   * packages/modules/payment/src/services/payment-provider.ts:capturePayment
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.capturePayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.capturePayment
    *
    ****** packages/medusa/src/api/admin/payment-collections/[id]/mark-as-paid/route.ts:POST
    ***** packages/core/core-flows/src/order/workflows/mark-payment-collection-as-paid.ts:markPaymentCollectionAsPaid
    **** packages/core/core-flows/src/payment/workflows/capture-payment.ts:capturePaymentWorkflow
    *** packages/core/core-flows/src/payment/steps/capture-payment.ts:capturePaymentStep
-   ** packages/modules/payment/src/services/payment-module.ts:capturePayment
-   * packages/modules/payment/src/services/payment-provider.ts:capturePayment
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.capturePayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.capturePayment
    *
    ***** packages/medusa/src/api/admin/payments/[id]/capture/route.ts:POST
    **** packages/core/core-flows/src/payment/workflows/capture-payment.ts:capturePaymentWorkflow
    *** packages/core/core-flows/src/payment/steps/capture-payment.ts:capturePaymentStep
-   ** packages/modules/payment/src/services/payment-module.ts:capturePayment
-   * packages/modules/payment/src/services/payment-provider.ts:capturePayment
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.capturePayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.capturePayment
    */
   public async capturePayment(
     input: CapturePaymentInput,
@@ -344,8 +371,20 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    ***** packages/core/core-flows/src/order/workflows/mark-payment-collection-as-paid.ts:markPaymentCollectionAsPaid
    **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/create-payment-account-holder.ts:createPaymentAccountHolderStep
-   ** packages/modules/payment/src/services/payment-module.ts:createAccountHolder
-   * packages/modules/payment/src/services/payment-provider.ts:createAccountHolder
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createAccountHolder
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createAccountHolder
+   *
+   *********** packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST
+   ********** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
+   ********* packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
+   ******** packages/core/core-flows/src/payment/steps/complete-cart-after-payment.ts:completeCartAfterPaymentStep
+   ******* packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   ****** packages/core/core-flows/src/cart/steps/compensate-payment-if-needed.ts:compensatePaymentIfNeededStep
+   ***** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/create-payment-account-holder.ts:createPaymentAccountHolderStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createAccountHolder
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createAccountHolder
    *
    ******** packages/medusa/src/api/store/carts/[id]/complete/route.ts:POST
    ******* packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
@@ -353,14 +392,14 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    ***** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
    **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/create-payment-account-holder.ts:createPaymentAccountHolderStep
-   ** packages/modules/payment/src/services/payment-module.ts:createAccountHolder
-   * packages/modules/payment/src/services/payment-provider.ts:createAccountHolder
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createAccountHolder
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createAccountHolder
    *
    ***** packages/medusa/src/api/store/payment-collections/[id]/payment-sessions/route.ts:POST
    **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/create-payment-account-holder.ts:createPaymentAccountHolderStep
-   ** packages/modules/payment/src/services/payment-module.ts:createAccountHolder
-   * packages/modules/payment/src/services/payment-provider.ts:createAccountHolder
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createAccountHolder
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createAccountHolder
    */
   public async createAccountHolder(
     input: CreateAccountHolderInput,
@@ -375,8 +414,20 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    ***** packages/core/core-flows/src/order/workflows/mark-payment-collection-as-paid.ts:markPaymentCollectionAsPaid
    **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/create-payment-account-holder.ts:createPaymentAccountHolderStep
-   ** packages/modules/payment/src/services/payment-module.ts:deleteAccountHolder
-   * packages/modules/payment/src/services/payment-provider.ts:deleteAccountHolder
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deleteAccountHolder
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteAccountHolder
+   *
+   *********** packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST
+   ********** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
+   ********* packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
+   ******** packages/core/core-flows/src/payment/steps/complete-cart-after-payment.ts:completeCartAfterPaymentStep
+   ******* packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   ****** packages/core/core-flows/src/cart/steps/compensate-payment-if-needed.ts:compensatePaymentIfNeededStep
+   ***** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/create-payment-account-holder.ts:createPaymentAccountHolderStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deleteAccountHolder
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteAccountHolder
    *
    ******** packages/medusa/src/api/store/carts/[id]/complete/route.ts:POST
    ******* packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
@@ -384,14 +435,14 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    ***** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
    **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/create-payment-account-holder.ts:createPaymentAccountHolderStep
-   ** packages/modules/payment/src/services/payment-module.ts:deleteAccountHolder
-   * packages/modules/payment/src/services/payment-provider.ts:deleteAccountHolder
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deleteAccountHolder
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteAccountHolder
    *
    ***** packages/medusa/src/api/store/payment-collections/[id]/payment-sessions/route.ts:POST
    **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/create-payment-account-holder.ts:createPaymentAccountHolderStep
-   ** packages/modules/payment/src/services/payment-module.ts:deleteAccountHolder
-   * packages/modules/payment/src/services/payment-provider.ts:deleteAccountHolder
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deleteAccountHolder
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteAccountHolder
    */
   public async deleteAccountHolder(
     input: DeleteAccountHolderInput,
@@ -402,33 +453,26 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   }
 
   /**
-   *
-   * Unfinished!!!
-   *
-   *******
-   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
-   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
-   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
-   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
-   ** packages/modules/payment/src/services/payment-module.ts:createPaymentSession
-   * packages/modules/payment/src/services/payment-provider.ts:deleteSession
-   *
-   ******* packages/medusa/src/api/store/carts/route.ts:POST
-   ****** packages/core/core-flows/src/cart/workflows/create-carts.ts:createCartWorkflow
-   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
-   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
-   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
-   ** packages/modules/payment/src/services/payment-module.ts:createPaymentSession
-   * packages/modules/payment/src/services/payment-provider.ts:deleteSession
-   *
-   *
    ******* packages/medusa/src/api/admin/payment-collections/[id]/mark-as-paid/route.ts:POST
    ****** packages/core/core-flows/src/order/workflows/mark-payment-collection-as-paid.ts:markPaymentCollectionAsPaid
    ***** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
    **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
-   ** packages/modules/payment/src/services/payment-module.ts:createPaymentSession
-   * packages/modules/payment/src/services/payment-provider.ts:deleteSession
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deletePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ************ packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST
+   *********** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
+   ********** packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
+   ********* packages/core/core-flows/src/payment/steps/complete-cart-after-payment.ts:completeCartAfterPaymentStep
+   ******** packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   ******* packages/core/core-flows/src/cart/steps/compensate-payment-if-needed.ts:compensatePaymentIfNeededStep
+   ****** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
+   ***** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deletePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
    *
    ********* packages/medusa/src/api/store/carts/[id]/complete/route.ts:POST
    ******** packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
@@ -437,22 +481,96 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    ***** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
    **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
-   ** packages/modules/payment/src/services/payment-module.ts:createPaymentSession
-   * packages/modules/payment/src/services/payment-provider.ts:deleteSession
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deletePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
    *
    ****** packages/medusa/src/api/store/payment-collections/[id]/payment-sessions/route.ts:POST
    ***** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
    **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
-   ** packages/modules/payment/src/services/payment-module.ts:createPaymentSession
-   * packages/modules/payment/src/services/payment-provider.ts:deleteSession
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deletePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/line-items/[line_id]/route.ts:DELETE
+   ******* packages/core/core-flows/src/line-item/workflows/delete-line-items.ts:deleteLineItemsWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deletePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/line-items/[line_id]/route.ts:POST
+   ******* packages/core/core-flows/src/cart/workflows/update-line-item-in-cart.ts:updateLineItemInCartWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deletePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/route.ts:POST
+   ******* packages/core/core-flows/src/cart/workflows/update-cart.ts:updateCartWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deletePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/customer/route.ts:POST
+   ******* packages/core/core-flows/src/cart/workflows/transfer-cart-customer.ts:transferCartCustomerWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deletePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/line-items/route.ts:POST
+   ******* packages/core/core-flows/src/cart/workflows/add-to-cart.ts:addToCartWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deletePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/shipping-methods/route.ts:POST
+   ******* packages/core/core-flows/src/cart/workflows/add-shipping-method-to-cart.ts:addShippingMethodToCartWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deletePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ******* packages/medusa/src/api/store/carts/route.ts:POST
+   ****** packages/core/core-flows/src/cart/workflows/create-carts.ts:createCartWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deletePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
    *
    ****** packages/medusa/src/api/admin/payment-collections/[id]/mark-as-paid/route.ts:POST
    ***** packages/core/core-flows/src/order/workflows/mark-payment-collection-as-paid.ts:markPaymentCollectionAsPaid
    **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/create-payment-session.ts:createPaymentSessionStep
-   ** packages/modules/payment/src/services/payment-module.ts:createPaymentSession
-   * packages/modules/payment/src/services/payment-provider.ts:deleteSession
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deletePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   *********** packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST
+   ********** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
+   ********* packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
+   ******** packages/core/core-flows/src/payment/steps/complete-cart-after-payment.ts:completeCartAfterPaymentStep
+   ******* packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   ****** packages/core/core-flows/src/cart/steps/compensate-payment-if-needed.ts:compensatePaymentIfNeededStep
+   ***** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/create-payment-session.ts:createPaymentSessionStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deletePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
    *
    ******** packages/medusa/src/api/store/carts/[id]/complete/route.ts:POST
    ******* packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
@@ -460,14 +578,148 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    ***** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
    **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/create-payment-session.ts:createPaymentSessionStep
-   ** packages/modules/payment/src/services/payment-module.ts:createPaymentSession
-   * packages/modules/payment/src/services/payment-provider.ts:deleteSession
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deletePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
    *
    ***** packages/medusa/src/api/store/payment-collections/[id]/payment-sessions/route.ts:POST
    **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/create-payment-session.ts:createPaymentSessionStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.deletePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ******* packages/medusa/src/api/admin/payment-collections/[id]/mark-as-paid/route.ts:POST
+   ****** packages/core/core-flows/src/order/workflows/mark-payment-collection-as-paid.ts:markPaymentCollectionAsPaid
+   ***** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ************ packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST
+   *********** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
+   ********** packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
+   ********* packages/core/core-flows/src/payment/steps/complete-cart-after-payment.ts:completeCartAfterPaymentStep
+   ******** packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   ******* packages/core/core-flows/src/cart/steps/compensate-payment-if-needed.ts:compensatePaymentIfNeededStep
+   ****** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
+   ***** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ********* packages/medusa/src/api/store/carts/[id]/complete/route.ts:POST
+   ******** packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   ******* packages/core/core-flows/src/cart/steps/compensate-payment-if-needed.ts:compensatePaymentIfNeededStep
+   ****** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
+   ***** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ****** packages/medusa/src/api/store/payment-collections/[id]/payment-sessions/route.ts:POST
+   ***** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
    ** packages/modules/payment/src/services/payment-module.ts:createPaymentSession
-   * packages/modules/payment/src/services/payment-provider.ts:deleteSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/line-items/[line_id]/route.ts:DELETE
+   ******* packages/core/core-flows/src/line-item/workflows/delete-line-items.ts:deleteLineItemsWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/line-items/[line_id]/route.ts:POST
+   ******* packages/core/core-flows/src/cart/workflows/update-line-item-in-cart.ts:updateLineItemInCartWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/route.ts:POST
+   ******* packages/core/core-flows/src/cart/workflows/update-cart.ts:updateCartWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/customer/route.ts:POST
+   ******* packages/core/core-flows/src/cart/workflows/transfer-cart-customer.ts:transferCartCustomerWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/line-items/route.ts:POST
+   ******* packages/core/core-flows/src/cart/workflows/add-to-cart.ts:addToCartWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/shipping-methods/route.ts:POST
+   ******* packages/core/core-flows/src/cart/workflows/add-shipping-method-to-cart.ts:addShippingMethodToCartWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ******* packages/medusa/src/api/store/carts/route.ts:POST
+   ****** packages/core/core-flows/src/cart/workflows/create-carts.ts:createCartWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ****** packages/medusa/src/api/admin/payment-collections/[id]/mark-as-paid/route.ts:POST
+   ***** packages/core/core-flows/src/order/workflows/mark-payment-collection-as-paid.ts:markPaymentCollectionAsPaid
+   **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/create-payment-session.ts:createPaymentSessionStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   *********** packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST
+   ********** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
+   ********* packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
+   ******** packages/core/core-flows/src/payment/steps/complete-cart-after-payment.ts:completeCartAfterPaymentStep
+   ******* packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   ****** packages/core/core-flows/src/cart/steps/compensate-payment-if-needed.ts:compensatePaymentIfNeededStep
+   ***** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/create-payment-session.ts:createPaymentSessionStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/complete/route.ts:POST
+   ******* packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   ****** packages/core/core-flows/src/cart/steps/compensate-payment-if-needed.ts:compensatePaymentIfNeededStep
+   ***** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/create-payment-session.ts:createPaymentSessionStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
+   *
+   ***** packages/medusa/src/api/store/payment-collections/[id]/payment-sessions/route.ts:POST
+   **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/create-payment-session.ts:createPaymentSessionStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.deleteSession
    */
   public async deletePayment(
     input: DeletePaymentInput,
@@ -481,7 +733,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    * We don't see this method being used anywhere.
    * Are these assumptions correct?
    *
-   * packages/modules/payment/src/services/payment-provider.ts:getStatus
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.getStatus
    */
   public async getPaymentStatus(
     input: GetPaymentStatusInput,
@@ -494,8 +746,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   /**
    **** packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST
    *** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
-   ** packages/modules/payment/src/services/payment-module.ts:getWebhookActionAndData
-   * packages/modules/payment/src/services/payment-provider.ts:getWebhookActionAndData
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.getWebhookActionAndData
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.getWebhookActionAndData
    */
   public async getWebhookActionAndData(
     input: ProviderWebhookPayload['payload'],
@@ -506,20 +758,124 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   }
 
   /**
-   *
-   * Unfinished!!!
-   *
+   ******* packages/medusa/src/api/admin/payment-collections/[id]/mark-as-paid/route.ts:POST
+   ****** packages/core/core-flows/src/order/workflows/mark-payment-collection-as-paid.ts:markPaymentCollectionAsPaid
+   ***** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
    **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
-   ** packages/modules/payment/src/services/payment-module.ts:createPaymentSession
-   * packages/modules/payment/src/services/payment-provider.ts:createSession
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createSession
+   *
+   ************ packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST
+   *********** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
+   ********** packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
+   ********* packages/core/core-flows/src/payment/steps/complete-cart-after-payment.ts:completeCartAfterPaymentStep
+   ******** packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   ******* packages/core/core-flows/src/cart/steps/compensate-payment-if-needed.ts:compensatePaymentIfNeededStep
+   ****** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
+   ***** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createSession
+   *
+   ********* packages/medusa/src/api/store/carts/[id]/complete/route.ts:POST
+   ******** packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   ******* packages/core/core-flows/src/cart/steps/compensate-payment-if-needed.ts:compensatePaymentIfNeededStep
+   ****** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
+   ***** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createSession
+   *
+   ****** packages/medusa/src/api/store/payment-collections/[id]/payment-sessions/route.ts:POST
+   ***** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/line-items/[line_id]/route.ts:DELETE
+   ******* packages/core/core-flows/src/line-item/workflows/delete-line-items.ts:deleteLineItemsWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/line-items/[line_id]/route.ts:POST
+   ******* packages/core/core-flows/src/cart/workflows/update-line-item-in-cart.ts:updateLineItemInCartWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/route.ts:POST
+   ******* packages/core/core-flows/src/cart/workflows/update-cart.ts:updateCartWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/customer/route.ts:POST
+   ******* packages/core/core-flows/src/cart/workflows/transfer-cart-customer.ts:transferCartCustomerWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/line-items/route.ts:POST
+   ******* packages/core/core-flows/src/cart/workflows/add-to-cart.ts:addToCartWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createSession
+   *
+   ******** packages/medusa/src/api/store/carts/[id]/shipping-methods/route.ts:POST
+   ******* packages/core/core-flows/src/cart/workflows/add-shipping-method-to-cart.ts:addShippingMethodToCartWorkflow
+   ****** packages/core/core-flows/src/cart/workflows/refresh-cart-items.ts:refreshCartItemsWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createSession
+   *
+   ******* packages/medusa/src/api/store/carts/route.ts:POST
+   ****** packages/core/core-flows/src/cart/workflows/create-carts.ts:createCartWorkflow
+   ***** packages/core/core-flows/src/cart/workflows/refresh-payment-collection.ts:refreshPaymentCollectionForCartWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/delete-payment-sessions.ts:deletePaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/delete-payment-sessions.ts:deletePaymentSessionsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createSession
    *
    ****** packages/medusa/src/api/admin/payment-collections/[id]/mark-as-paid/route.ts:POST
    ***** packages/core/core-flows/src/order/workflows/mark-payment-collection-as-paid.ts:markPaymentCollectionAsPaid
    **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/create-payment-session.ts:createPaymentSessionStep
-   ** packages/modules/payment/src/services/payment-module.ts:createPaymentSession
-   * packages/modules/payment/src/services/payment-provider.ts:createSession
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createSession
+   *
+   *********** packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST
+   ********** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
+   ********* packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
+   ******** packages/core/core-flows/src/payment/steps/complete-cart-after-payment.ts:completeCartAfterPaymentStep
+   ******* packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   ****** packages/core/core-flows/src/cart/steps/compensate-payment-if-needed.ts:compensatePaymentIfNeededStep
+   ***** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
+   **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
+   *** packages/core/core-flows/src/payment-collection/steps/create-payment-session.ts:createPaymentSessionStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createSession
    *
    ******** packages/medusa/src/api/store/carts/[id]/complete/route.ts:POST
    ******* packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
@@ -527,14 +883,14 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    ***** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
    **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/create-payment-session.ts:createPaymentSessionStep
-   ** packages/modules/payment/src/services/payment-module.ts:createPaymentSession
-   * packages/modules/payment/src/services/payment-provider.ts:createSession
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createSession
    *
    ***** packages/medusa/src/api/store/payment-collections/[id]/payment-sessions/route.ts:POST
    **** packages/core/core-flows/src/payment-collection/workflows/create-payment-session.ts:createPaymentSessionsWorkflow
    *** packages/core/core-flows/src/payment-collection/steps/create-payment-session.ts:createPaymentSessionStep
-   ** packages/modules/payment/src/services/payment-module.ts:createPaymentSession
-   * packages/modules/payment/src/services/payment-provider.ts:createSession
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.createSession
    */
   public async initiatePayment(
     input: InitiatePaymentInput,
@@ -551,11 +907,11 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    * We don't see this method being used beyond the Payment Module.
    * Are these assumptions correct?
    *
-   ** packages/modules/payment/src/services/payment-module.ts:listAndCountPaymentMethods
-   * packages/modules/payment/src/services/payment-provider.ts:listPaymentMethods
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.listAndCountPaymentMethods
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.listPaymentMethods
    *
-   ** packages/modules/payment/src/services/payment-module.ts:listPaymentMethods
-   * packages/modules/payment/src/services/payment-provider.ts:listPaymentMethods
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.listPaymentMethods
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.listPaymentMethods
    */
   public async listPaymentMethods(input: ListPaymentMethodsInput) {
     this.log('listPaymentMethods', input)
@@ -582,28 +938,40 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   }
 
   /**
+   *********** packages/medusa/src/api/hooks/payment/[provider]/route.ts:POST
+   ********** PaymentWebhookEvents.WebhookReceived:packages/medusa/src/subscribers/payment-webhook.ts:paymentWebhookhandler
+   ********* packages/core/core-flows/src/payment/workflows/process-payment.ts:processPaymentWorkflow
+   ******** packages/core/core-flows/src/payment/steps/complete-cart-after-payment.ts:completeCartAfterPaymentStep
+   ******* packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
+   ****** packages/core/core-flows/src/cart/steps/compensate-payment-if-needed.ts:compensatePaymentIfNeededStep
+   ***** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
+   **** packages/core/core-flows/src/payment/workflows/refund-payments.ts:refundPaymentsWorkflow
+   *** packages/core/core-flows/src/payment/steps/refund-payments.ts:refundPaymentsStep
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.refundPayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.refundPayment
+   *
    ******** packages/medusa/src/api/store/carts/[id]/complete/route.ts:POST
    ******* packages/core/core-flows/src/cart/workflows/complete-cart.ts:completeCartWorkflow
    ****** packages/core/core-flows/src/cart/steps/compensate-payment-if-needed.ts:compensatePaymentIfNeededStep
    ***** packages/core/core-flows/src/cart/workflows/refund-payment-recreate-payment-session.ts:refundPaymentAndRecreatePaymentSessionWorkflow
    **** packages/core/core-flows/src/payment/workflows/refund-payments.ts:refundPaymentsWorkflow
    *** packages/core/core-flows/src/payment/steps/refund-payments.ts:refundPaymentsStep
-   ** packages/modules/payment/src/services/payment-module.ts:refundPayment
-   * packages/modules/payment/src/services/payment-provider.ts:refundPayment
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.refundPayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.refundPayment
    *
    ******* packages/medusa/src/api/admin/orders/[id]/cancel/route.ts:POST
    ****** packages/core/core-flows/src/order/workflows/cancel-order.ts:cancelOrderWorkflow
    ***** packages/core/core-flows/src/order/workflows/payments/refund-captured-payments.ts:refundCapturedPaymentsWorkflow
    **** packages/core/core-flows/src/payment/workflows/refund-payments.ts:refundPaymentsWorkflow
    *** packages/core/core-flows/src/payment/steps/refund-payments.ts:refundPaymentsStep
-   ** packages/modules/payment/src/services/payment-module.ts:refundPayment
-   * packages/modules/payment/src/services/payment-provider.ts:refundPayment
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.refundPayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.refundPayment
    *
    ***** packages/medusa/src/api/admin/payments/[id]/refund/route.ts:POST
    **** packages/core/core-flows/src/payment/workflows/refund-payment.ts:refundPaymentWorkflow
    *** packages/core/core-flows/src/payment/steps/refund-payment.ts:refundPaymentStep
-   ** packages/modules/payment/src/services/payment-module.ts:refundPayment
-   * packages/modules/payment/src/services/payment-provider.ts:refundPayment
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.refundPayment
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.refundPayment
    */
   public async refundPayment(
     input: RefundPaymentInput,
@@ -623,8 +991,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    *
    * Are these assumptions correct? What are we missing here?
    *
-   * packages/modules/payment/src/services/payment-module.ts:cancelPayment
-   * packages/modules/payment/src/services/payment-module.ts:refundPayment
+   * packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.cancelPayment
+   * packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.refundPayment
    */
   public async retrievePayment(
     input: RetrievePaymentInput,
@@ -638,8 +1006,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    * We don't see this method being used beyond the Payment Module.
    * Are these assumptions correct?
    *
-   ** packages/modules/payment/src/services/payment-module.ts:createPaymentMethods
-   * packages/modules/payment/src/services/payment-provider.ts:savePaymentMethod
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentMethods
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.savePaymentMethod
    */
   public async savePaymentMethod(
     input: SavePaymentMethodInput,
@@ -653,8 +1021,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    * We don't see this method being used beyond the Payment Module.
    * Are these assumptions correct?
    *
-   ** packages/modules/payment/src/services/payment-module.ts:updateAccountHolder
-   * packages/modules/payment/src/services/payment-provider.ts:updateAccountHolder
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.updateAccountHolder
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.updateAccountHolder
    */
   public async updateAccountHolder(
     input: UpdateAccountHolderInput,
@@ -668,8 +1036,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
    * We don't see this method being used beyond the Payment Module.
    * Are these assumptions correct?
    *
-   ** packages/modules/payment/src/services/payment-module.ts:updatePaymentSession
-   * packages/modules/payment/src/services/payment-provider.ts:updateSession
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.updatePaymentSession
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.updateSession
    */
   public async updatePayment(
     input: UpdatePaymentInput,
