@@ -853,7 +853,7 @@ export class SystemProviderService extends AbstractPaymentProvider {
   public async savePaymentMethod(
     input: SavePaymentMethodInput,
   ): Promise<SavePaymentMethodOutput> {
-    return { id: '' }
+    return { data: {}, id: input.context?.customer?.id || crypto.randomUUID() }
   }
 
   /**
@@ -866,7 +866,7 @@ export class SystemProviderService extends AbstractPaymentProvider {
   public async updateAccountHolder(
     input: UpdateAccountHolderInput,
   ): Promise<UpdateAccountHolderOutput> {
-    return {}
+    return { data: {} }
   }
 }
 
