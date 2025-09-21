@@ -17,11 +17,17 @@ import {
   GetPaymentStatusOutput,
   InitiatePaymentInput,
   InitiatePaymentOutput,
+  ListPaymentMethodsInput,
+  ListPaymentMethodsOutput,
   ProviderWebhookPayload,
   RefundPaymentInput,
   RefundPaymentOutput,
   RetrievePaymentInput,
   RetrievePaymentOutput,
+  SavePaymentMethodInput,
+  SavePaymentMethodOutput,
+  UpdateAccountHolderInput,
+  UpdateAccountHolderOutput,
   UpdatePaymentInput,
   UpdatePaymentOutput,
   WebhookActionResult,
@@ -817,6 +823,50 @@ export class SystemProviderService extends AbstractPaymentProvider {
     data: ProviderWebhookPayload['payload'],
   ): Promise<WebhookActionResult> {
     return { action: PaymentActions.NOT_SUPPORTED }
+  }
+
+  /** Added Methods */
+
+  /**
+   * We don't see this method being used beyond the Payment Module.
+   * Are these assumptions correct?
+   *
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.listAndCountPaymentMethods
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.listPaymentMethods
+   *
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.listPaymentMethods
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.listPaymentMethods
+   */
+  public async listPaymentMethods(
+    input: ListPaymentMethodsInput,
+  ): Promise<ListPaymentMethodsOutput> {
+    return []
+  }
+
+  /**
+   * We don't see this method being used beyond the Payment Module.
+   * Are these assumptions correct?
+   *
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.createPaymentMethods
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.savePaymentMethod
+   */
+  public async savePaymentMethod(
+    input: SavePaymentMethodInput,
+  ): Promise<SavePaymentMethodOutput> {
+    return { id: '' }
+  }
+
+  /**
+   * We don't see this method being used beyond the Payment Module.
+   * Are these assumptions correct?
+   *
+   ** packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.updateAccountHolder
+   * packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.updateAccountHolder
+   */
+  public async updateAccountHolder(
+    input: UpdateAccountHolderInput,
+  ): Promise<UpdateAccountHolderOutput> {
+    return {}
   }
 }
 
