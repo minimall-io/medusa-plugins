@@ -5,9 +5,9 @@ import compareAddresses from "@lib/util/compare-addresses"
 import { CheckCircleSolid } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
 import { Heading, Text, useToggleState } from "@medusajs/ui"
+import { useCheckoutSteps } from "@modules/checkout/hooks"
 import Divider from "@modules/common/components/divider"
 import Spinner from "@modules/common/icons/spinner"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useActionState } from "react"
 import BillingAddress from "../billing_address"
 import ErrorMessage from "../error-message"
@@ -21,21 +21,13 @@ const Addresses = ({
   cart: HttpTypes.StoreCart | null
   customer: HttpTypes.StoreCustomer | null
 }) => {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const pathname = usePathname()
-
-  const isOpen = searchParams.get("step") === "address"
+  const { goToAddress, isAddress: isOpen } = useCheckoutSteps()
 
   const { state: sameAsBilling, toggle: toggleSameAsBilling } = useToggleState(
     cart?.shipping_address && cart?.billing_address
       ? compareAddresses(cart?.shipping_address, cart?.billing_address)
       : true
   )
-
-  const handleEdit = () => {
-    router.push(pathname + "?step=address")
-  }
 
   const [message, formAction] = useActionState(setAddresses, null)
 
@@ -52,7 +44,7 @@ const Addresses = ({
         {!isOpen && cart?.shipping_address && (
           <Text>
             <button
-              onClick={handleEdit}
+              onClick={goToAddress}
               className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
               data-testid="edit-address-button"
             >

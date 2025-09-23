@@ -9,9 +9,9 @@ import ErrorMessage from "@modules/checkout/components/error-message"
 import PaymentContainer, {
   StripeCardContainer,
 } from "@modules/checkout/components/payment-container"
+import { useCheckoutSteps } from "@modules/checkout/hooks"
 import Divider from "@modules/common/components/divider"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 
 const Payment = ({
   cart,
@@ -32,11 +32,7 @@ const Payment = ({
     activeSession?.provider_id ?? ""
   )
 
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const pathname = usePathname()
-
-  const isOpen = searchParams.get("step") === "payment"
+  const { isPayment: isOpen, goToPayment, goToReview } = useCheckoutSteps()
 
   const isStripe = isStripeFunc(selectedPaymentMethod)
 
@@ -56,22 +52,6 @@ const Payment = ({
   const paymentReady =
     (activeSession && cart?.shipping_methods.length !== 0) || paidByGiftcard
 
-  const createQueryString = useCallback(
-    (name: string, value: string) => {
-      const params = new URLSearchParams(searchParams)
-      params.set(name, value)
-
-      return params.toString()
-    },
-    [searchParams]
-  )
-
-  const handleEdit = () => {
-    router.push(pathname + "?" + createQueryString("step", "payment"), {
-      scroll: false,
-    })
-  }
-
   const handleSubmit = async () => {
     setIsLoading(true)
     try {
@@ -88,12 +68,7 @@ const Payment = ({
       }
 
       if (!shouldInputCard) {
-        return router.push(
-          pathname + "?" + createQueryString("step", "review"),
-          {
-            scroll: false,
-          }
-        )
+        return goToReview()
       }
     } catch (err: any) {
       setError(err.message)
@@ -125,7 +100,7 @@ const Payment = ({
         {!isOpen && paymentReady && (
           <Text>
             <button
-              onClick={handleEdit}
+              onClick={goToPayment}
               className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
               data-testid="edit-payment-button"
             >
