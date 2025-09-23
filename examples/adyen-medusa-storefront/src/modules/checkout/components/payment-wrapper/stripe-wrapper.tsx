@@ -1,27 +1,24 @@
 "use client"
 
-import { Stripe, StripeElementsOptions } from "@stripe/stripe-js"
-import { Elements } from "@stripe/react-stripe-js"
+import { isStripe } from "@lib/constants"
 import { HttpTypes } from "@medusajs/types"
+import { Elements } from "@stripe/react-stripe-js"
+import { StripeElementsOptions, loadStripe } from "@stripe/stripe-js"
 import { createContext } from "react"
 
 type StripeWrapperProps = {
   paymentSession: HttpTypes.StorePaymentSession
-  stripeKey?: string
-  stripePromise: Promise<Stripe | null> | null
   children: React.ReactNode
 }
 
+const stripeKey = process.env.NEXT_PUBLIC_STRIPE_KEY
+const stripePromise = stripeKey ? loadStripe(stripeKey) : null
+
 export const StripeContext = createContext(false)
 
-const StripeWrapper: React.FC<StripeWrapperProps> = ({
-  paymentSession,
-  stripeKey,
-  stripePromise,
-  children,
-}) => {
-  const options: StripeElementsOptions = {
-    clientSecret: paymentSession!.data?.client_secret as string | undefined,
+const StripeWrapper = ({ paymentSession, children }: StripeWrapperProps) => {
+  if (!isStripe(paymentSession?.provider_id)) {
+    throw new Error("The session payment provider isn't Stripe!")
   }
 
   if (!stripeKey) {
@@ -40,6 +37,10 @@ const StripeWrapper: React.FC<StripeWrapperProps> = ({
     throw new Error(
       "Stripe client secret is missing. Cannot initialize Stripe."
     )
+  }
+
+  const options: StripeElementsOptions = {
+    clientSecret: paymentSession.data.client_secret as string | undefined,
   }
 
   return (

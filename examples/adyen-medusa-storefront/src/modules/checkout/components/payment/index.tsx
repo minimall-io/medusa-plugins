@@ -1,48 +1,45 @@
 "use client"
 
-import { RadioGroup } from "@headlessui/react"
-import { isStripe as isStripeFunc, paymentInfoMap } from "@lib/constants"
+import { isStripe, paymentInfoMap } from "@lib/constants"
 import { initiatePaymentSession } from "@lib/data/cart"
 import { CheckCircleSolid, CreditCard } from "@medusajs/icons"
+import { HttpTypes } from "@medusajs/types"
 import { Button, Container, Heading, Text, clx } from "@medusajs/ui"
 import ErrorMessage from "@modules/checkout/components/error-message"
-import PaymentContainer, {
-  StripeCardContainer,
-} from "@modules/checkout/components/payment-container"
-import { useCheckoutSteps } from "@modules/checkout/hooks"
+import PaymentProviders from "@modules/checkout/components/payment-providers"
+import { useActiveSession, useCheckoutSteps } from "@modules/checkout/hooks"
 import Divider from "@modules/common/components/divider"
+import { StripeCardElementChangeEvent } from "@stripe/stripe-js"
 import { useEffect, useState } from "react"
 
 interface Props {
   cart: any
-  availablePaymentMethods: any[]
+  paymentProviders: HttpTypes.StorePaymentProvider[]
 }
 
-const Payment = ({ cart, availablePaymentMethods }: Props) => {
-  const activeSession = cart.payment_collection?.payment_sessions?.find(
-    (paymentSession: any) => paymentSession.status === "pending"
-  )
+const Payment = ({ cart, paymentProviders }: Props) => {
+  const activeSession = useActiveSession(cart)
+  const providerId = activeSession?.provider_id ?? ""
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cardBrand, setCardBrand] = useState<string | null>(null)
   const [cardComplete, setCardComplete] = useState(false)
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
-    activeSession?.provider_id ?? ""
-  )
+  const [selectedPaymentProvider, setSelectedPaymentProvider] =
+    useState(providerId)
+
+  const handleProviderUpdate = (event: StripeCardElementChangeEvent) => {
+    if (event.brand)
+      setCardBrand(event.brand.charAt(0).toUpperCase() + event.brand.slice(1))
+    if (event.error) setError(event.error.message || null)
+    if (event.complete) setCardComplete(event.complete)
+  }
 
   const { isPayment: isOpen, goToPayment, goToReview } = useCheckoutSteps()
 
-  const isStripe = isStripeFunc(selectedPaymentMethod)
-
-  const setPaymentMethod = async (method: string) => {
+  const selectPaymentProvider = (method: string) => {
     setError(null)
-    setSelectedPaymentMethod(method)
-    if (isStripeFunc(method)) {
-      await initiatePaymentSession(cart, {
-        provider_id: method,
-      })
-    }
+    setSelectedPaymentProvider(method)
   }
 
   const paidByGiftcard =
@@ -55,14 +52,14 @@ const Payment = ({ cart, availablePaymentMethods }: Props) => {
     setIsLoading(true)
     try {
       const shouldInputCard =
-        isStripeFunc(selectedPaymentMethod) && !activeSession
+        isStripe(selectedPaymentProvider) && !activeSession
 
       const checkActiveSession =
-        activeSession?.provider_id === selectedPaymentMethod
+        activeSession?.provider_id === selectedPaymentProvider
 
       if (!checkActiveSession) {
         await initiatePaymentSession(cart, {
-          provider_id: selectedPaymentMethod,
+          provider_id: selectedPaymentProvider,
         })
       }
 
@@ -110,34 +107,13 @@ const Payment = ({ cart, availablePaymentMethods }: Props) => {
       </div>
       <div>
         <div className={isOpen ? "block" : "hidden"}>
-          {!paidByGiftcard && availablePaymentMethods?.length && (
-            <>
-              <RadioGroup
-                value={selectedPaymentMethod}
-                onChange={(value: string) => setPaymentMethod(value)}
-              >
-                {availablePaymentMethods.map((paymentMethod) => (
-                  <div key={paymentMethod.id}>
-                    {isStripeFunc(paymentMethod.id) ? (
-                      <StripeCardContainer
-                        paymentProviderId={paymentMethod.id}
-                        selectedPaymentOptionId={selectedPaymentMethod}
-                        paymentInfoMap={paymentInfoMap}
-                        setCardBrand={setCardBrand}
-                        setError={setError}
-                        setCardComplete={setCardComplete}
-                      />
-                    ) : (
-                      <PaymentContainer
-                        paymentInfoMap={paymentInfoMap}
-                        paymentProviderId={paymentMethod.id}
-                        selectedPaymentOptionId={selectedPaymentMethod}
-                      />
-                    )}
-                  </div>
-                ))}
-              </RadioGroup>
-            </>
+          {!paidByGiftcard && paymentProviders?.length && (
+            <PaymentProviders
+              cart={cart}
+              providers={paymentProviders}
+              onUpdate={handleProviderUpdate}
+              onSelect={selectPaymentProvider}
+            />
           )}
 
           {paidByGiftcard && (
@@ -165,12 +141,12 @@ const Payment = ({ cart, availablePaymentMethods }: Props) => {
             onClick={handleSubmit}
             isLoading={isLoading}
             disabled={
-              (isStripe && !cardComplete) ||
-              (!selectedPaymentMethod && !paidByGiftcard)
+              (isStripe(selectedPaymentProvider) && !cardComplete) ||
+              (!selectedPaymentProvider && !paidByGiftcard)
             }
             data-testid="submit-payment-button"
           >
-            {!activeSession && isStripeFunc(selectedPaymentMethod)
+            {!activeSession && isStripe(selectedPaymentProvider)
               ? " Enter card details"
               : "Continue to review"}
           </Button>
@@ -200,12 +176,12 @@ const Payment = ({ cart, availablePaymentMethods }: Props) => {
                   data-testid="payment-details-summary"
                 >
                   <Container className="flex items-center h-7 w-fit p-2 bg-ui-button-neutral-hover">
-                    {paymentInfoMap[selectedPaymentMethod]?.icon || (
+                    {paymentInfoMap[selectedPaymentProvider]?.icon || (
                       <CreditCard />
                     )}
                   </Container>
                   <Text>
-                    {isStripeFunc(selectedPaymentMethod) && cardBrand
+                    {isStripe(selectedPaymentProvider) && cardBrand
                       ? cardBrand
                       : "Another step will appear"}
                   </Text>
