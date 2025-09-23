@@ -16,7 +16,7 @@ import { useEffect, useState } from "react"
 const PICKUP_OPTION_ON = "__PICKUP_ON"
 const PICKUP_OPTION_OFF = "__PICKUP_OFF"
 
-type ShippingProps = {
+type Props = {
   cart: HttpTypes.StoreCart
   availableShippingMethods: HttpTypes.StoreCartShippingOption[] | null
 }
@@ -47,10 +47,7 @@ function formatAddress(address: HttpTypes.StoreCartAddress) {
   return ret
 }
 
-const Shipping: React.FC<ShippingProps> = ({
-  cart,
-  availableShippingMethods,
-}) => {
+const Shipping = ({ cart, availableShippingMethods }: Props) => {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingPrices, setIsLoadingPrices] = useState(true)
 
@@ -155,9 +152,9 @@ const Shipping: React.FC<ShippingProps> = ({
           )}
         </Heading>
         {!isOpen &&
-          cart?.shipping_address &&
-          cart?.billing_address &&
-          cart?.email && (
+          cart.shipping_address &&
+          cart.billing_address &&
+          cart.email && (
             <Text>
               <button
                 onClick={goToDelivery}
@@ -262,12 +259,12 @@ const Shipping: React.FC<ShippingProps> = ({
                           {option.price_type === "flat" ? (
                             convertToLocale({
                               amount: option.amount!,
-                              currency_code: cart?.currency_code,
+                              currency_code: cart.currency_code,
                             })
                           ) : calculatedPricesMap[option.id] ? (
                             convertToLocale({
                               amount: calculatedPricesMap[option.id],
-                              currency_code: cart?.currency_code,
+                              currency_code: cart.currency_code,
                             })
                           ) : isLoadingPrices ? (
                             <Loader />
@@ -339,7 +336,7 @@ const Shipping: React.FC<ShippingProps> = ({
                           <span className="justify-self-end text-ui-fg-base">
                             {convertToLocale({
                               amount: option.amount!,
-                              currency_code: cart?.currency_code,
+                              currency_code: cart.currency_code,
                             })}
                           </span>
                         </Radio>
@@ -380,7 +377,7 @@ const Shipping: React.FC<ShippingProps> = ({
                   {cart.shipping_methods!.at(-1)!.name}{" "}
                   {convertToLocale({
                     amount: cart.shipping_methods!.at(-1)!.amount!,
-                    currency_code: cart?.currency_code,
+                    currency_code: cart.currency_code,
                   })}
                 </Text>
               </div>

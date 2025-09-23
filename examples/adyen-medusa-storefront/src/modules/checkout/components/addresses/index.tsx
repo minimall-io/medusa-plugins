@@ -14,18 +14,17 @@ import ErrorMessage from "../error-message"
 import ShippingAddress from "../shipping-address"
 import { SubmitButton } from "../submit-button"
 
-const Addresses = ({
-  cart,
-  customer,
-}: {
-  cart: HttpTypes.StoreCart | null
+interface Props {
+  cart: HttpTypes.StoreCart
   customer: HttpTypes.StoreCustomer | null
-}) => {
+}
+
+const Addresses = ({ cart, customer }: Props) => {
   const { goToAddress, isAddress: isOpen } = useCheckoutSteps()
 
   const { state: sameAsBilling, toggle: toggleSameAsBilling } = useToggleState(
-    cart?.shipping_address && cart?.billing_address
-      ? compareAddresses(cart?.shipping_address, cart?.billing_address)
+    cart.shipping_address && cart.billing_address
+      ? compareAddresses(cart.shipping_address, cart.billing_address)
       : true
   )
 
@@ -41,7 +40,7 @@ const Addresses = ({
           Shipping Address
           {!isOpen && <CheckCircleSolid />}
         </Heading>
-        {!isOpen && cart?.shipping_address && (
+        {!isOpen && cart.shipping_address && (
           <Text>
             <button
               onClick={goToAddress}

@@ -13,13 +13,12 @@ import { useCheckoutSteps } from "@modules/checkout/hooks"
 import Divider from "@modules/common/components/divider"
 import { useEffect, useState } from "react"
 
-const Payment = ({
-  cart,
-  availablePaymentMethods,
-}: {
+interface Props {
   cart: any
   availablePaymentMethods: any[]
-}) => {
+}
+
+const Payment = ({ cart, availablePaymentMethods }: Props) => {
   const activeSession = cart.payment_collection?.payment_sessions?.find(
     (paymentSession: any) => paymentSession.status === "pending"
   )
