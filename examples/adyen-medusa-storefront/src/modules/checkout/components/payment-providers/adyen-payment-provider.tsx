@@ -33,6 +33,9 @@ const AdyenCardPaymentProvider = () => {
         // If you need to map generic 'onChange' to Adyen events, you'd add them here:
         // onFieldValid: (state) => { /* handle field validity changes */ },
         // onBrand: (brand) => { /* handle brand detection */ }
+        onConfigSuccess: () => {
+          return null
+        },
       })
       // Mount the component to the ref's current element
       customCardInstance.mount(adyenContainerRef.current)
