@@ -25,9 +25,7 @@ const PaymentWrapper: React.FC<PaymentWrapperProps> = ({ cart, children }) => {
     )
 
   if (isAdyen(provider_id))
-    return (
-      <AdyenWrapper paymentSession={paymentSession}>{children}</AdyenWrapper>
-    )
+    return <AdyenWrapper cart={cart}>{children}</AdyenWrapper>
 
   return children
 }

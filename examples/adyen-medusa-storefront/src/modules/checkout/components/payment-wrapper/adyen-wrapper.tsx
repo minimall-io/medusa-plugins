@@ -2,7 +2,6 @@
 
 import { AdyenCheckout, Core } from "@adyen/adyen-web"
 import "@adyen/adyen-web/styles/adyen.css"
-import { isAdyen } from "@lib/constants"
 import { HttpTypes } from "@medusajs/types"
 import { createContext, useMemo, useState } from "react"
 
@@ -15,7 +14,7 @@ type AdyenEnvironment =
   | "live-in"
 
 interface Props {
-  paymentSession: HttpTypes.StorePaymentSession
+  cart: HttpTypes.StoreCart
   children: React.ReactNode
 }
 
@@ -39,12 +38,9 @@ export const AdyenContext = createContext<IAdyenContext>({
   onSubmit,
 })
 
-const AdyenWrapper = ({ paymentSession, children }: Props) => {
+const AdyenWrapper = ({ cart, children }: Props) => {
   const [checkout, setCheckout] = useState<Core | null>(null)
-
-  if (!isAdyen(paymentSession?.provider_id)) {
-    throw new Error("The session payment provider isn't Adyen!")
-  }
+  const countryCode = cart.billing_address?.country_code
 
   if (!clientKey) {
     throw new Error(
@@ -52,8 +48,13 @@ const AdyenWrapper = ({ paymentSession, children }: Props) => {
     )
   }
 
+  if (!countryCode) {
+    throw new Error("Cart billing address (country code) is missing.")
+  }
+
   const config = {
     locale: "en_US",
+    countryCode,
     environment,
     clientKey,
     onSubmit,
