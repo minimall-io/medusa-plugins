@@ -27,7 +27,8 @@ const PaymentProviders = ({ cart, providers, onSelect, onUpdate }: Props) => {
   const selectProvider = async (provider: string) => {
     onSelect(provider)
     setSelectedProvider(provider)
-    if (isStripe(provider)) {
+    const isProvider = isStripe(provider) || isAdyen(provider)
+    if (isProvider) {
       await initiatePaymentSession(cart, {
         provider_id: provider,
       })
