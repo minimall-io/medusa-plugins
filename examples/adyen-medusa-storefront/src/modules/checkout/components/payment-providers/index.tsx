@@ -1,12 +1,13 @@
 "use client"
 
 import { RadioGroup } from "@headlessui/react"
-import { isStripe, paymentInfoMap } from "@lib/constants"
+import { isAdyen, isStripe, isUnknown, paymentInfoMap } from "@lib/constants"
 import { initiatePaymentSession } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { useActiveSession } from "@modules/checkout/hooks"
 import { StripeCardElementChangeEvent } from "@stripe/stripe-js"
 import { useState } from "react"
+import AdyenCardPaymentProvider from "./adyen-payment-provider"
 import PaymentProvider from "./payment-provider"
 import StripeCardPaymentProvider from "./stripe-payment-provider"
 
@@ -41,7 +42,7 @@ const PaymentProviders = ({ cart, providers, onSelect, onUpdate }: Props) => {
       >
         {providers.map((provider) => (
           <div key={provider.id}>
-            {isStripe(provider.id) ? (
+            {isStripe(provider.id) && (
               <PaymentProvider
                 paymentInfoMap={paymentInfoMap}
                 paymentProviderId={provider.id}
@@ -49,7 +50,17 @@ const PaymentProviders = ({ cart, providers, onSelect, onUpdate }: Props) => {
               >
                 <StripeCardPaymentProvider onChange={onUpdate} />
               </PaymentProvider>
-            ) : (
+            )}
+            {isAdyen(provider.id) && (
+              <PaymentProvider
+                paymentInfoMap={paymentInfoMap}
+                paymentProviderId={provider.id}
+                selectedPaymentProviderId={selectedProvider}
+              >
+                <AdyenCardPaymentProvider />
+              </PaymentProvider>
+            )}
+            {isUnknown(provider.id) && (
               <PaymentProvider
                 paymentInfoMap={paymentInfoMap}
                 paymentProviderId={provider.id}
