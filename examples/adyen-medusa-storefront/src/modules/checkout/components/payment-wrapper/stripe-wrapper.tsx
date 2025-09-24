@@ -6,7 +6,7 @@ import { Elements } from "@stripe/react-stripe-js"
 import { StripeElementsOptions, loadStripe } from "@stripe/stripe-js"
 import { createContext } from "react"
 
-type StripeWrapperProps = {
+interface Props {
   paymentSession: HttpTypes.StorePaymentSession
   children: React.ReactNode
 }
@@ -16,7 +16,7 @@ const stripePromise = stripeKey ? loadStripe(stripeKey) : null
 
 export const StripeContext = createContext(false)
 
-const StripeWrapper = ({ paymentSession, children }: StripeWrapperProps) => {
+const StripeWrapper = ({ paymentSession, children }: Props) => {
   if (!isStripe(paymentSession?.provider_id)) {
     throw new Error("The session payment provider isn't Stripe!")
   }

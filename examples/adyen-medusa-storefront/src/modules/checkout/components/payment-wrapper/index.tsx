@@ -1,9 +1,10 @@
 "use client"
 
-import { isStripe } from "@lib/constants"
+import { isAdyen, isStripe } from "@lib/constants"
 import { HttpTypes } from "@medusajs/types"
 import { useActiveSession } from "@modules/checkout/hooks"
 import React from "react"
+import AdyenWrapper from "./adyen-wrapper"
 import StripeWrapper from "./stripe-wrapper"
 
 type PaymentWrapperProps = {
@@ -21,6 +22,11 @@ const PaymentWrapper: React.FC<PaymentWrapperProps> = ({ cart, children }) => {
   if (isStripe(provider_id))
     return (
       <StripeWrapper paymentSession={paymentSession}>{children}</StripeWrapper>
+    )
+
+  if (isAdyen(provider_id))
+    return (
+      <AdyenWrapper paymentSession={paymentSession}>{children}</AdyenWrapper>
     )
 
   return children
