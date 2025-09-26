@@ -1,10 +1,8 @@
 import { Radio as RadioGroupOption } from "@headlessui/react"
-import { Text, clx } from "@medusajs/ui"
-import React, { type JSX } from "react"
-
-import Radio from "@modules/common/components/radio"
-
 import { isManual } from "@lib/constants"
+import { Text, clx } from "@medusajs/ui"
+import Radio from "@modules/common/components/radio"
+import React, { type JSX } from "react"
 import PaymentTest from "../payment-test"
 
 interface Props {
@@ -17,7 +15,7 @@ interface Props {
 
 const isDevelopment = process.env.NODE_ENV === "development"
 
-const PaymentProvider = ({
+const PaymentProviderOption = ({
   paymentProviderId,
   selectedPaymentProviderId,
   paymentInfoMap,
@@ -57,4 +55,4 @@ const PaymentProvider = ({
   </RadioGroupOption>
 )
 
-export default PaymentProvider
+export default PaymentProviderOption
