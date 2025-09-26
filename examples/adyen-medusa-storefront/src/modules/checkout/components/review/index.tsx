@@ -1,11 +1,17 @@
 "use client"
 
+import { HttpTypes } from "@medusajs/types"
 import { Heading, Text, clx } from "@medusajs/ui"
 
-import { useCheckoutSteps } from "@modules/checkout/hooks"
+import { useCheckoutSteps, usePaymentSession } from "@modules/checkout/hooks"
 import PaymentButton from "../payment-button"
 
-const Review = ({ cart }: { cart: any }) => {
+interface Props {
+  cart: HttpTypes.StoreCart & { gift_cards?: any }
+}
+
+const Review = ({ cart }: Props) => {
+  const session = usePaymentSession(cart)
   const { isReview: isOpen } = useCheckoutSteps()
 
   const paidByGiftcard =
@@ -13,8 +19,8 @@ const Review = ({ cart }: { cart: any }) => {
 
   const previousStepsCompleted =
     cart.shipping_address &&
-    cart.shipping_methods.length > 0 &&
-    (cart.payment_collection || paidByGiftcard)
+    (cart.shipping_methods?.length ?? 0) > 0 &&
+    (session || paidByGiftcard)
 
   return (
     <div className="bg-white">
