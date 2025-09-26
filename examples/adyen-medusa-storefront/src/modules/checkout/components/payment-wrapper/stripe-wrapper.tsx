@@ -1,49 +1,27 @@
 "use client"
 
 import { HttpTypes } from "@medusajs/types"
+import { IStripePayment, useStripePayment } from "@modules/checkout/hooks"
 import { Elements } from "@stripe/react-stripe-js"
-import { StripeElementsOptions, loadStripe } from "@stripe/stripe-js"
 import { createContext } from "react"
 
 interface Props {
-  paymentSession: HttpTypes.StorePaymentSession
+  cart: HttpTypes.StoreCart
   children: React.ReactNode
 }
 
-const stripeKey = process.env.NEXT_PUBLIC_STRIPE_KEY
-const stripePromise = stripeKey ? loadStripe(stripeKey) : null
+export const StripePayment = createContext<IStripePayment | null>(null)
 
-export const StripeContext = createContext(false)
-
-const StripeWrapper = ({ paymentSession, children }: Props) => {
-  if (!stripeKey) {
-    throw new Error(
-      "Stripe key is missing. Set NEXT_PUBLIC_STRIPE_KEY environment variable."
-    )
-  }
-
-  if (!stripePromise) {
-    throw new Error(
-      "Stripe promise is missing. Make sure you have provided a valid Stripe key."
-    )
-  }
-
-  if (!paymentSession.data?.client_secret) {
-    throw new Error(
-      "Stripe client secret is missing. Cannot initialize Stripe."
-    )
-  }
-
-  const options: StripeElementsOptions = {
-    clientSecret: paymentSession.data.client_secret as string | undefined,
-  }
+const StripeWrapper = ({ cart, children }: Props) => {
+  const stripePayment = useStripePayment(cart)
+  const { stripeElementsOptions, stripePromise } = stripePayment
 
   return (
-    <StripeContext.Provider value={true}>
-      <Elements options={options} stripe={stripePromise}>
+    <StripePayment.Provider value={{ ...stripePayment }}>
+      <Elements options={stripeElementsOptions} stripe={stripePromise}>
         {children}
       </Elements>
-    </StripeContext.Provider>
+    </StripePayment.Provider>
   )
 }
 

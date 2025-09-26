@@ -1,10 +1,12 @@
 "use client"
 
-import { isAdyen, isStripe } from "@lib/constants"
+import { isUnknown, PaymentProvider } from "@lib/constants"
 import { HttpTypes } from "@medusajs/types"
-import { useActiveSession } from "@modules/checkout/hooks"
+import { usePaymentSession } from "@modules/checkout/hooks"
 import React from "react"
 import AdyenWrapper from "./adyen-wrapper"
+import ManualWrapper from "./manual-wrapper"
+import ProviderWrapper from "./provider-wrapper"
 import StripeWrapper from "./stripe-wrapper"
 
 type PaymentWrapperProps = {
@@ -13,21 +15,22 @@ type PaymentWrapperProps = {
 }
 
 const PaymentWrapper: React.FC<PaymentWrapperProps> = ({ cart, children }) => {
-  const paymentSession = useActiveSession(cart)
+  const session = usePaymentSession(cart)
 
-  if (!paymentSession) return children
-
-  const { provider_id } = paymentSession
-
-  if (isStripe(provider_id))
-    return (
-      <StripeWrapper paymentSession={paymentSession}>{children}</StripeWrapper>
-    )
-
-  if (isAdyen(provider_id))
-    return <AdyenWrapper cart={cart}>{children}</AdyenWrapper>
-
-  return children
+  return (
+    <ProviderWrapper cart={cart}>
+      {session?.provider_id === PaymentProvider.StripeCreditCard && (
+        <StripeWrapper cart={cart}>{children}</StripeWrapper>
+      )}
+      {session?.provider_id === PaymentProvider.AdyenCreditCard && (
+        <AdyenWrapper cart={cart}>{children}</AdyenWrapper>
+      )}
+      {session?.provider_id === PaymentProvider.System && (
+        <ManualWrapper cart={cart}>{children}</ManualWrapper>
+      )}
+      {isUnknown(session?.provider_id) && children}
+    </ProviderWrapper>
+  )
 }
 
 export default PaymentWrapper
