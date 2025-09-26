@@ -5,32 +5,40 @@ import Bancontact from "@modules/common/icons/bancontact"
 import Ideal from "@modules/common/icons/ideal"
 import PayPal from "@modules/common/icons/paypal"
 
+export enum PaymentProvider {
+  AdyenCreditCard = "pp_adyen_MinimallLLCECOM",
+  StripeCreditCard = "pp_stripe_stripe",
+  StripeIdeal = "pp_stripe-ideal_stripe",
+  StripeBancontact = "pp_stripe-bancontact_stripe",
+  PayPal = "pp_paypal_paypal",
+  System = "pp_system_default",
+}
+
+type PaymentInfoMap = Record<string, { title: string; icon: React.JSX.Element }>
+
 /* Map of payment provider_id to their title and icon. Add in any payment providers you want to use. */
-export const paymentInfoMap: Record<
-  string,
-  { title: string; icon: React.JSX.Element }
-> = {
-  pp_adyen_MinimallLLCECOM: {
+export const paymentInfoMap: PaymentInfoMap = {
+  [PaymentProvider.AdyenCreditCard]: {
     title: "Credit Card (Adyen)",
     icon: <CreditCard />,
   },
-  pp_stripe_stripe: {
+  [PaymentProvider.StripeCreditCard]: {
     title: "Credit Card (Stripe)",
     icon: <CreditCard />,
   },
-  "pp_stripe-ideal_stripe": {
+  [PaymentProvider.StripeIdeal]: {
     title: "iDeal (Stripe)",
     icon: <Ideal />,
   },
-  "pp_stripe-bancontact_stripe": {
+  [PaymentProvider.StripeBancontact]: {
     title: "Bancontact (Stripe)",
     icon: <Bancontact />,
   },
-  pp_paypal_paypal: {
+  [PaymentProvider.PayPal]: {
     title: "PayPal",
     icon: <PayPal />,
   },
-  pp_system_default: {
+  [PaymentProvider.System]: {
     title: "Manual Payment",
     icon: <CreditCard />,
   },
