@@ -21,7 +21,6 @@ import {
   ListPaymentMethodsOutput,
   Logger,
   PaymentProviderInput,
-  PaymentSessionStatus,
   ProviderWebhookPayload,
   RefundPaymentInput,
   RefundPaymentOutput,
@@ -44,10 +43,17 @@ import {
 } from '@medusajs/framework/utils'
 import crypto from 'crypto'
 
+import {
+  getIdempotencyKey,
+  getPaymentMethodsOptions,
+  getPaymentMethodsRequest,
+} from './util'
+
 interface Options {
   apiKey: string
   merchantAccount: string
   environment?: EnvironmentEnum
+  liveEndpointUrlPrefix?: string
 }
 
 interface InjectedDependencies extends Record<string, unknown> {
@@ -69,64 +75,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     // this.logger_.info(message)
   }
 
-  private resolvePaymentSessionStatus(
-    code?: Types.checkout.PaymentResponse.ResultCodeEnum,
-  ): PaymentSessionStatus {
-    const Codes = Types.checkout.PaymentResponse.ResultCodeEnum
-    switch (code) {
-      case undefined:
-        return 'error'
-      case Codes.AuthenticationFinished:
-      case Codes.AuthenticationNotRequired:
-      case Codes.Authorised:
-        return 'authorized'
-      case Codes.Cancelled:
-        return 'canceled'
-      case Codes.ChallengeShopper:
-        return 'requires_more'
-      case Codes.Error:
-        return 'error'
-      case Codes.IdentifyShopper:
-        return 'requires_more'
-      case Codes.PartiallyAuthorised:
-        return 'authorized'
-      case Codes.Pending:
-        return 'pending'
-      case Codes.PresentToShopper:
-        return 'requires_more'
-      case Codes.Received:
-        return 'pending'
-      case Codes.RedirectShopper:
-        return 'requires_more'
-      case Codes.Refused:
-        return 'error'
-      case Codes.Success:
-        return 'captured'
-      default:
-        return 'error' // Default to error for unhandled cases
-    }
-  }
-
-  private formatAmount(currency: string, value: number) {
-    const amount: Types.checkout.Amount = {
-      currency,
-      value,
-    }
-    return amount
-  }
-
-  private formatData(input?: PaymentProviderInput) {
-    const result: Partial<Types.checkout.PaymentMethodsRequest> = {}
-
-    if (!isDefined(input)) return result
-
-    const { data } = input
-    if (data?.countryCode) result.countryCode = data.countryCode as string
-    if (data?.shopperLocale) result.shopperLocale = data.shopperLocale as string
-
-    return result
-  }
-
   static validateOptions(options: Options): void {
     const { apiKey, merchantAccount } = options
 
@@ -146,15 +94,32 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.logger_ = container.logger
     this.options_ = options
 
-    const { apiKey, environment } = options
+    const { apiKey, environment, liveEndpointUrlPrefix } = options
     const defaultEnvironment = !isDefined<EnvironmentEnum | undefined>(
       environment,
     )
       ? EnvironmentEnum.TEST
-      : EnvironmentEnum.LIVE
+      : environment
 
-    this.client = new Client({ apiKey, environment: defaultEnvironment })
+    this.client = new Client({
+      apiKey,
+      environment: defaultEnvironment,
+      liveEndpointUrlPrefix,
+    })
     this.checkoutAPI = new CheckoutAPI(this.client)
+  }
+
+  protected listPaymentMethods_(
+    input: PaymentProviderInput,
+  ): Promise<Types.checkout.PaymentMethodsResponse> {
+    const options = getPaymentMethodsOptions(input.data)
+    const request = getPaymentMethodsRequest(
+      this.options_.merchantAccount,
+      input.data,
+      input.context,
+    )
+
+    return this.checkoutAPI.PaymentsApi.paymentMethods(request, options)
   }
 
   public async authorizePayment(
@@ -243,39 +208,39 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async initiatePayment(
     input: InitiatePaymentInput,
   ): Promise<InitiatePaymentOutput> {
-    this.log('initiatePayment', input)
-    // const id = input.data?.session_id as string
+    this.log('initiatePayment input', input)
+
+    const paymentMethods = await this.listPaymentMethods_(input)
+    const id = getIdempotencyKey(input.data)
+    const data = { ...paymentMethods }
+
+    this.log('initiatePayment output', { data, id })
+
     // const status = input.data?.status as PaymentSessionStatus
-    // const { currency_code, amount } = input
-    // const data = { currency_code, amount, ...input.data }
-    return { data: {}, id: crypto.randomUUID() }
+    return { data, id }
   }
 
   public async listPaymentMethods(
     input: ListPaymentMethodsInput,
   ): Promise<ListPaymentMethodsOutput> {
-    this.log('listPaymentMethods', input)
-    // const { data } = input
-    // const amount = this.formatAmount(
-    //   data?.currency_code as string,
-    //   data?.amount as number,
-    // )
-    // const { countryCode, shopperLocale } = this.formatData(data)
-    // const request: Types.checkout.PaymentMethodsRequest = {
-    //   merchantAccount: this.options_.merchantAccount,
-    //   countryCode,
-    //   shopperLocale,
-    //   amount,
-    // }
-    // const options = { idempotencyKey: 'UUID' }
+    this.log('listPaymentMethods input', input)
 
-    // const response = await this.checkoutAPI.PaymentsApi.paymentMethods(
-    //   request,
-    //   options,
-    // )
-    // const { paymentMethods, storedPaymentMethods } = response
-    // return { paymentMethods, storedPaymentMethods }
-    return []
+    const methods = await this.listPaymentMethods_(input)
+
+    const filteredStored =
+      methods.storedPaymentMethods?.filter(
+        (method) => method.id !== undefined,
+      ) || []
+
+    const storedMethods =
+      filteredStored.map((method) => ({
+        id: method.id!,
+        data: method as Record<string, unknown>,
+      })) || []
+
+    this.log('listPaymentMethods output', storedMethods)
+
+    return [...storedMethods]
   }
 
   public async refundPayment(
