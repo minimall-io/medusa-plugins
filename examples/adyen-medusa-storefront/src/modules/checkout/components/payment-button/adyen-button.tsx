@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@medusajs/ui"
-import { AdyenPayment } from "@modules/checkout/components/payment-wrapper/adyen-wrapper"
+import { ProviderSelector } from "@modules/checkout/components/payment-wrapper"
 import { useContext, useState } from "react"
 import ErrorMessage from "../error-message"
 
@@ -11,17 +11,15 @@ type Props = {
 
 const AdyenPaymentButton = ({ ready }: Props) => {
   const [submitting, setSubmitting] = useState<boolean>(false)
-  const adyenPayment = useContext(AdyenPayment)
+  const providerSelector = useContext(ProviderSelector)
 
-  console.log("AdyenPaymentButton/adyenPayment/", adyenPayment)
-
-  const disabled = !ready || !adyenPayment?.ready
-  const error = adyenPayment?.error
+  const disabled = !ready || !providerSelector?.ready
+  const error = providerSelector?.error
 
   const handlePayment = async () => {
     if (disabled) return
     setSubmitting(true)
-    await adyenPayment.pay()
+    await providerSelector.onPay()
     setSubmitting(false)
   }
 

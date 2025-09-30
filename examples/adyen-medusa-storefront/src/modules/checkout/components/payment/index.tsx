@@ -6,9 +6,7 @@ import { HttpTypes } from "@medusajs/types"
 import { Button, clx, Heading, Text } from "@medusajs/ui"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import PaymentProviders from "@modules/checkout/components/payment-providers"
-import { AdyenPayment } from "@modules/checkout/components/payment-wrapper/adyen-wrapper"
-import { ProviderSelector } from "@modules/checkout/components/payment-wrapper/provider-wrapper"
-import { StripePayment } from "@modules/checkout/components/payment-wrapper/stripe-wrapper"
+import { ProviderSelector } from "@modules/checkout/components/payment-wrapper"
 import { useCheckoutSteps, usePaymentSession } from "@modules/checkout/hooks"
 import Divider from "@modules/common/components/divider"
 import { useContext, useState } from "react"
@@ -22,16 +20,8 @@ const Payment = ({ cart }: Props) => {
   const [isLoading, setIsLoading] = useState(false)
   const { isPayment: isOpen, goToPayment, goToReview } = useCheckoutSteps()
   const providerSelector = useContext(ProviderSelector)
-  const adyenPayment = useContext(AdyenPayment)
-  const stripePayment = useContext(StripePayment)
 
-  let selectedProvider = ""
-  let ready = false
-  let error = null
-  let updatePayment = () => Promise.resolve()
-  if (providerSelector) ({ selectedProvider } = providerSelector)
-  if (adyenPayment) ({ ready, error, updatePayment } = adyenPayment)
-  if (stripePayment) ({ ready, error, updatePayment } = stripePayment)
+  const { ready, error, onUpdate, selectedProvider } = providerSelector || {}
 
   const paidByGiftcard =
     cart.gift_cards && cart.gift_cards?.length > 0 && cart.total === 0
@@ -42,12 +32,11 @@ const Payment = ({ cart }: Props) => {
     (session || paidByGiftcard)
 
   const handleSubmit = async () => {
+    if (!providerSelector || !ready) return
     setIsLoading(true)
-    if (ready) {
-      await updatePayment()
-      return goToReview()
-    }
+    await onUpdate?.()
     setIsLoading(false)
+    return goToReview()
   }
 
   return (
@@ -127,7 +116,8 @@ const Payment = ({ cart }: Props) => {
               >
                 {paidByGiftcard
                   ? "Gift card"
-                  : paymentInfoMap[selectedProvider]?.title || selectedProvider}
+                  : paymentInfoMap[selectedProvider || ""]?.title ||
+                    selectedProvider}
               </Text>
             </div>
           ) : null}

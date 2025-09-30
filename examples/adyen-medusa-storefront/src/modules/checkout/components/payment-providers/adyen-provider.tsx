@@ -1,18 +1,21 @@
 import { Card } from "@adyen/adyen-web"
-import { AdyenPayment } from "@modules/checkout/components/payment-wrapper/adyen-wrapper"
-import { useContext, useEffect, useRef } from "react"
+import { IAdyenPaymentConfig } from "@modules/checkout/hooks"
+import { useEffect, useRef } from "react"
 
-const AdyenProviderOption = () => {
-  const adyenPayment = useContext(AdyenPayment)
+interface Props {
+  config: IAdyenPaymentConfig | null
+}
+
+const AdyenProviderOption = ({ config }: Props) => {
   const adyenContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!adyenPayment || !adyenPayment.checkout || !adyenContainerRef.current) {
+    if (!config || !config.checkout || !adyenContainerRef.current) {
       return
     }
 
     try {
-      const card = new Card(adyenPayment.checkout)
+      const card = new Card(config.checkout)
       card.mount(adyenContainerRef.current)
 
       return () => {
@@ -21,9 +24,9 @@ const AdyenProviderOption = () => {
     } catch (error) {
       console.error("Error mounting Adyen CustomCard:", error)
     }
-  }, [adyenPayment?.checkout])
+  }, [config?.checkout])
 
-  if (!adyenPayment?.checkout) {
+  if (!config?.checkout) {
     return null
   }
 

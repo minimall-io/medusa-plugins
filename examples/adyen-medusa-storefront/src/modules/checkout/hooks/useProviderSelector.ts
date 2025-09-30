@@ -1,10 +1,13 @@
-import { initiatePaymentSession } from "@lib/data/cart"
+import { isAdyen, isManual, isStripe } from "@lib/constants"
 import { listCartPaymentMethods } from "@lib/data/payment"
 import { HttpTypes } from "@medusajs/types"
 import {
   IProviderSelector,
   Providers,
+  useAdyenPayment,
+  useManualPayment,
   usePaymentSession,
+  useStripePayment,
 } from "@modules/checkout/hooks"
 import { useCallback, useEffect, useState } from "react"
 
@@ -15,16 +18,32 @@ const useProviderSelector = (cart: HttpTypes.StoreCart): IProviderSelector => {
 
   const [providers, setProviders] = useState<Providers | null>(null)
   const [selectedProvider, setSelectedProvider] = useState<string>(providerId)
+  const adyenPayment = useAdyenPayment(selectedProvider, cart)
+  const stripePayment = useStripePayment(selectedProvider, cart)
+  const manualPayment = useManualPayment(selectedProvider, cart)
 
-  const selectProvider = useCallback(
-    async (selectedProviderId: string) => {
-      setSelectedProvider(selectedProviderId)
-      if (providerId !== selectedProviderId) {
-        await initiatePaymentSession(cart, { provider_id: selectedProviderId })
-      }
-    },
-    [providerId]
-  )
+  const determinePayment = () => {
+    if (isAdyen(selectedProvider)) return adyenPayment
+    if (isStripe(selectedProvider)) return stripePayment
+    if (isManual(selectedProvider)) return manualPayment
+    return {
+      id: selectedProvider,
+      ready: false,
+      error: null,
+      onUpdate: () => Promise.resolve(),
+      onPay: () => Promise.resolve(),
+      config: null,
+    }
+  }
+
+  const payment = determinePayment()
+
+  const { onUpdate } = payment
+
+  const selectProvider = useCallback(async (providerId: string) => {
+    setSelectedProvider(providerId)
+    if (selectedProvider !== providerId) await onUpdate()
+  }, [])
 
   const loadProviders = useCallback(async () => {
     const paymentProviders = await listCartPaymentMethods(regionId)
@@ -39,6 +58,7 @@ const useProviderSelector = (cart: HttpTypes.StoreCart): IProviderSelector => {
     providers,
     selectedProvider,
     selectProvider,
+    ...payment,
   }
 }
 

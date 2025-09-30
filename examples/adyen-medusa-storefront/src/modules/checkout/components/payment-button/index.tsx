@@ -1,6 +1,6 @@
 "use client"
 
-import { PaymentProvider } from "@lib/constants"
+import { isAdyen, isManual, isStripe } from "@lib/constants"
 import { HttpTypes } from "@medusajs/types"
 import { usePaymentSession } from "@modules/checkout/hooks"
 import AdyenPaymentButton from "./adyen-button"
@@ -22,11 +22,10 @@ const PaymentButton = ({ cart }: Props) => {
     cart.billing_address !== undefined &&
     (cart.shipping_methods?.length ?? 0) > 0
 
-  if (ready && providerId === PaymentProvider.AdyenCreditCard)
-    return <AdyenPaymentButton ready={ready} />
-  if (ready && providerId === PaymentProvider.StripeCreditCard)
+  if (ready && isAdyen(providerId)) return <AdyenPaymentButton ready={ready} />
+  if (ready && isStripe(providerId))
     return <StripePaymentButton ready={ready} cart={cart} />
-  if (ready && providerId === PaymentProvider.System)
+  if (ready && isManual(providerId))
     return <ManualTestPaymentButton ready={ready} />
 }
 

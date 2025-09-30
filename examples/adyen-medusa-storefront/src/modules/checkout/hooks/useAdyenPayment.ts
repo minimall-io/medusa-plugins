@@ -4,25 +4,31 @@ import {
   Core,
   OnChangeData,
   PaymentData,
+  PaymentMethodsResponse,
   UIElement,
 } from "@adyen/adyen-web"
 import "@adyen/adyen-web/styles/adyen.css"
-import { PaymentProvider } from "@lib/constants"
+import { isAdyen } from "@lib/constants"
 import { initiatePaymentSession, placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { useCallback, useEffect, useState } from "react"
-import { AdyenEnvironment, IAdyenPayment } from "./interfaces"
+import { AdyenEnvironment, ChannelEnum, IAdyenPayment } from "./interfaces"
 
 const clientKey = process.env.NEXT_PUBLIC_ADYEN_KEY
 const environment = (process.env.NEXT_PUBLIC_ADYEN_ENVIRONMENT ||
   "test") as AdyenEnvironment
-const providerId = PaymentProvider.AdyenCreditCard
+const channel = ChannelEnum.Web
 
-const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
+const useAdyenPayment = (
+  providerId: string,
+  cart: HttpTypes.StoreCart
+): IAdyenPayment => {
   const [checkout, setCheckout] = useState<Core | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState<boolean>(false)
-  const [paymentData, setPaymentData] = useState<PaymentData | null>(null)
+  const [payment, setPayment] = useState<PaymentData | null>(null)
+  const [paymentMethods, setPaymentMethods] =
+    useState<PaymentMethodsResponse | null>(null)
   const countryCode = cart.billing_address?.country_code
 
   if (!clientKey) {
@@ -31,21 +37,19 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
     )
   }
 
-  if (!countryCode) {
-    throw new Error("Cart billing address (country code) is missing.")
-  }
-
   const onChange = useCallback((state: OnChangeData, component: UIElement) => {
     console.log("Adyen change state:", state)
+    console.log("Adyen change component:", component)
     const { data, isValid, errors } = state
 
     setReady(isValid)
-    setPaymentData(isValid ? data : null)
-
-    if (!errors) return
-
-    const error = Object.values(errors).find((error) => error !== null)
-    setError(error?.errorMessage || null)
+    setPayment(data)
+    setError(() => {
+      if (!errors) return null
+      const error = Object.values(errors).find((error) => error !== null)
+      if (!error) return null
+      return error.errorMessage
+    })
   }, [])
 
   const onError = useCallback(
@@ -55,14 +59,23 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
     []
   )
 
-  const updatePayment = useCallback(async () => {
-    if (!ready || !providerId || !paymentData) return
-    const provider_id = providerId
-    const data = paymentData as unknown as Record<string, unknown>
-    await initiatePaymentSession(cart, { provider_id, data })
-  }, [cart, paymentData, ready])
+  const onUpdate = useCallback(async () => {
+    if (!isAdyen(providerId)) return
+    const data = { cart, payment, ready, channel }
+    const options = { provider_id: providerId, data }
+    const response = await initiatePaymentSession(cart, options)
+    const session = response.payment_collection?.payment_sessions?.find(
+      (session) => session.provider_id === providerId
+    )
+    setPaymentMethods(() => {
+      if (session) return session.data as PaymentMethodsResponse
+      return null
+    })
+    console.log("Adyen updatePayment data:", data)
+    console.log("Adyen updatePayment session:", session)
+  }, [providerId, cart, payment, ready])
 
-  const pay = useCallback(async () => {
+  const onPay = useCallback(async () => {
     if (!ready) return
     try {
       setError(null)
@@ -72,14 +85,12 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
     }
   }, [ready])
 
-  const initAdyenCheckout = useCallback(async () => {
-    if (!clientKey || !countryCode || !environment) return
+  const onInit = useCallback(async () => {
     try {
       const config = {
-        locale: "en_US",
-        countryCode,
         environment,
         clientKey,
+        countryCode,
         showPayButton: false,
         onChange,
         onError,
@@ -90,24 +101,31 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
       setCheckout(null)
       console.error("Error initializing Adyen checkout configuration:", error)
     }
-  }, [countryCode, environment, clientKey])
+  }, [countryCode])
 
   useEffect(() => {
-    if (clientKey && countryCode) initAdyenCheckout()
+    if (clientKey && countryCode) onInit()
 
     return () => {
+      setError(null)
+      setReady(false)
       setCheckout(null)
+      setPayment(null)
+      setPaymentMethods(null)
     }
-  }, [countryCode, environment, clientKey])
+  }, [countryCode])
 
   return {
     id: providerId,
-    error,
     ready,
-    pay,
-    updatePayment,
-    checkout,
-    onChange,
+    error,
+    onUpdate,
+    onPay,
+    config: {
+      checkout,
+      onChange,
+      ...paymentMethods,
+    },
   }
 }
 

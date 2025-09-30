@@ -2,7 +2,7 @@
 
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@medusajs/ui"
-import { StripePayment } from "@modules/checkout/components/payment-wrapper/stripe-wrapper"
+import { ProviderSelector } from "@modules/checkout/components/payment-wrapper"
 import { usePaymentSession } from "@modules/checkout/hooks"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
 import { ConfirmCardPaymentData } from "@stripe/stripe-js"
@@ -17,7 +17,7 @@ type Props = {
 const StripePaymentButton = ({ cart, ready }: Props) => {
   const session = usePaymentSession(cart)
   const [submitting, setSubmitting] = useState<boolean>(false)
-  const stripePayment = useContext(StripePayment)
+  const providerSelector = useContext(ProviderSelector)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const stripe = useStripe()
   const elements = useElements()
@@ -27,18 +27,18 @@ const StripePaymentButton = ({ cart, ready }: Props) => {
 
   const disabled =
     !ready ||
-    !stripePayment?.ready ||
+    !providerSelector?.ready ||
     !stripe ||
     !elements ||
     !card ||
     !clientSecret
 
-  const error = stripePayment?.error || errorMessage
+  const error = providerSelector?.error || errorMessage
 
   const handlePayment = async () => {
     if (disabled) return
 
-    const { pay } = stripePayment
+    const { onPay } = providerSelector
 
     const data: ConfirmCardPaymentData = {
       payment_method: {
@@ -67,11 +67,11 @@ const StripePaymentButton = ({ cart, ready }: Props) => {
       const result = await stripe.confirmCardPayment(clientSecret, data)
       const status = result.paymentIntent?.status
       if (status && (status === "succeeded" || status === "requires_capture"))
-        await pay()
+        await onPay()
     } catch (error: any) {
       const status = error.payment_intent?.status
       if (status && (status === "succeeded" || status === "requires_capture"))
-        await pay()
+        await onPay()
       setErrorMessage(error.message || null)
     } finally {
       setSubmitting(false)

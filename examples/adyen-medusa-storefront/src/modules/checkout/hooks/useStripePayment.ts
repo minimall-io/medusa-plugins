@@ -1,4 +1,4 @@
-import { PaymentProvider } from "@lib/constants"
+import { isStripe } from "@lib/constants"
 import { initiatePaymentSession, placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import {
@@ -8,16 +8,18 @@ import {
 } from "@stripe/stripe-js"
 import { useCallback, useState } from "react"
 import { IStripePayment } from "./interfaces"
-import usePaymentSession from "./usePaymentSession"
 
 const stripeKey = process.env.NEXT_PUBLIC_STRIPE_KEY
 const stripePromise = stripeKey ? loadStripe(stripeKey) : null
-const providerId = PaymentProvider.StripeCreditCard
 
-const useStripePayment = (cart: HttpTypes.StoreCart): IStripePayment => {
-  const session = usePaymentSession(cart)
+const useStripePayment = (
+  providerId: string,
+  cart: HttpTypes.StoreCart
+): IStripePayment => {
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState<boolean>(false)
+  const [clientSecret, setClientSecret] = useState<string | undefined>()
+  const stripeElementsOptions: StripeElementsOptions = { clientSecret }
 
   if (!stripeKey) {
     throw new Error(
@@ -31,50 +33,50 @@ const useStripePayment = (cart: HttpTypes.StoreCart): IStripePayment => {
     )
   }
 
-  if (!session) {
-    throw new Error("Payment session is missing. Cannot initialize Stripe.")
-  }
-
-  if (!session.data?.client_secret) {
-    throw new Error(
-      "Stripe client secret is missing. Cannot initialize Stripe."
-    )
-  }
-
-  const stripeElementsOptions: StripeElementsOptions = {
-    clientSecret: session.data.client_secret as string | undefined,
-  }
-
   const onChange = useCallback((event: StripeElementChangeEvent) => {
     console.log("Stripe change event:", event)
     setError(event?.error?.message || null)
     setReady(event.complete)
   }, [])
 
-  const updatePayment = useCallback(async () => {
-    if (!providerId) return
-    const provider_id = providerId
-    await initiatePaymentSession(cart, { provider_id })
-  }, [cart])
+  const onUpdate = useCallback(async () => {
+    if (!isStripe(providerId)) return
+    const options = { provider_id: providerId }
+    const response = await initiatePaymentSession(cart, options)
+    const session = response.payment_collection?.payment_sessions?.find(
+      (session) => session.provider_id === providerId
+    )
+    const secret = session?.data?.client_secret as string | undefined
+    if (!secret) {
+      throw new Error(
+        "Stripe client secret is missing. Cannot initialize Stripe."
+      )
+    }
+    setClientSecret(secret)
+    console.log("Stripe updatePayment session:", session)
+  }, [providerId, cart])
 
-  const pay = useCallback(async () => {
+  const onPay = useCallback(async () => {
+    if (!ready) return
     try {
       setError(null)
       await placeOrder()
     } catch (error: any) {
       setError(error.message)
     }
-  }, [])
+  }, [ready])
 
   return {
     id: providerId,
-    error,
     ready,
-    pay,
-    updatePayment,
-    stripePromise,
-    stripeElementsOptions,
-    onChange,
+    error,
+    onUpdate,
+    onPay,
+    config: {
+      stripePromise,
+      stripeElementsOptions,
+      onChange,
+    },
   }
 }
 

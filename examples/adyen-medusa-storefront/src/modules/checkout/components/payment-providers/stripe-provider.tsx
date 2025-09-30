@@ -1,9 +1,12 @@
 import { Text } from "@medusajs/ui"
-import { StripePayment } from "@modules/checkout/components/payment-wrapper/stripe-wrapper"
+import { IStripePaymentConfig } from "@modules/checkout/hooks"
 import SkeletonCardDetails from "@modules/skeletons/components/skeleton-card-details"
 import { CardElement } from "@stripe/react-stripe-js"
 import { StripeCardElementOptions } from "@stripe/stripe-js"
-import { useContext } from "react"
+
+interface Props {
+  config: IStripePaymentConfig | null
+}
 
 const options: StripeCardElementOptions = {
   style: {
@@ -20,18 +23,15 @@ const options: StripeCardElementOptions = {
   },
 }
 
-const StripeProviderOption = () => {
-  const stripePayment = useContext(StripePayment)
-
-  if (!stripePayment) return <SkeletonCardDetails />
-  const { onChange } = stripePayment
+const StripeProviderOption = ({ config }: Props) => {
+  if (!config) return <SkeletonCardDetails />
 
   return (
     <div className="my-4 transition-all duration-150 ease-in-out">
       <Text className="txt-medium-plus text-ui-fg-base mb-1">
         Enter your card details:
       </Text>
-      <CardElement options={options} onChange={onChange} />
+      <CardElement options={options} onChange={config.onChange} />
     </div>
   )
 }

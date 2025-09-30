@@ -1,35 +1,45 @@
 "use client"
 
-import { isUnknown, PaymentProvider } from "@lib/constants"
+import { isStripe } from "@lib/constants"
 import { HttpTypes } from "@medusajs/types"
-import { usePaymentSession } from "@modules/checkout/hooks"
-import React from "react"
-import AdyenWrapper from "./adyen-wrapper"
-import ManualWrapper from "./manual-wrapper"
-import ProviderWrapper from "./provider-wrapper"
-import StripeWrapper from "./stripe-wrapper"
+import {
+  IProviderSelector,
+  IStripePaymentConfig,
+  useProviderSelector,
+} from "@modules/checkout/hooks"
+import { Elements } from "@stripe/react-stripe-js"
+import { createContext } from "react"
 
-type PaymentWrapperProps = {
+interface Props {
   cart: HttpTypes.StoreCart
   children: React.ReactNode
 }
 
-const PaymentWrapper: React.FC<PaymentWrapperProps> = ({ cart, children }) => {
-  const session = usePaymentSession(cart)
+export const ProviderSelector = createContext<IProviderSelector | null>(null)
+
+const PaymentWrapper = ({ cart, children }: Props) => {
+  const providerSelector = useProviderSelector(cart)
+  const { selectedProvider, config } = providerSelector
+  const { stripeElementsOptions, stripePromise } =
+    (config as IStripePaymentConfig) || {}
+
+  if (
+    isStripe(selectedProvider) &&
+    stripeElementsOptions?.clientSecret &&
+    stripePromise
+  )
+    return (
+      <ProviderSelector.Provider value={{ ...providerSelector }}>
+        <Elements options={stripeElementsOptions} stripe={stripePromise}>
+          {children}
+        </Elements>
+      </ProviderSelector.Provider>
+    )
 
   return (
-    <ProviderWrapper cart={cart}>
-      {session?.provider_id === PaymentProvider.StripeCreditCard && (
-        <StripeWrapper cart={cart}>{children}</StripeWrapper>
-      )}
-      {session?.provider_id === PaymentProvider.AdyenCreditCard && (
-        <AdyenWrapper cart={cart}>{children}</AdyenWrapper>
-      )}
-      {session?.provider_id === PaymentProvider.System && (
-        <ManualWrapper cart={cart}>{children}</ManualWrapper>
-      )}
-      {isUnknown(session?.provider_id) && children}
-    </ProviderWrapper>
+    <ProviderSelector.Provider value={{ ...providerSelector }}>
+      {children}
+    </ProviderSelector.Provider>
   )
 }
 
