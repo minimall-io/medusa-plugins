@@ -1,19 +1,74 @@
+import { Types } from '@adyen/api-library'
 import {
   AccountHolderDTO,
+  BigNumberInput,
   PaymentProviderContext,
   PaymentSessionStatus,
   StoreCart,
 } from '@medusajs/framework/types'
+import { BigNumber, MathBN } from '@medusajs/framework/utils'
 import crypto from 'crypto'
-
-import { Types } from '@adyen/api-library'
+import { CURRENCY_MULTIPLIERS } from './constants'
 
 interface IData {
-  payment?: Partial<Types.checkout.PaymentRequest>
+  payment?: Partial<Types.checkout.PaymentRequest> | null
   cart?: StoreCart
   ready?: boolean
   channel?: string
   session_id?: string
+}
+
+export const getCurrencyMultiplier = (currency: string) => {
+  const currencyCode = currency.toUpperCase()
+  const multiplier = CURRENCY_MULTIPLIERS[currencyCode]
+  // Instead of using the default multiplier,
+  // we may have to throw an error for unsupported currency.
+  const defaultMultiplier = CURRENCY_MULTIPLIERS.DEFAULT
+  const power = multiplier !== undefined ? multiplier : defaultMultiplier
+  return Math.pow(10, power)
+}
+
+/**
+ * Converts an amount to the format required by Adyen based on currency.
+ * https://docs.adyen.com/development-resources/currency-codes
+ * @param {BigNumberInput} amount - The amount to be converted.
+ * @param {string} currency - The currency code (e.g., 'USD', 'JOD').
+ * @returns {number} - The converted amount in the smallest currency unit.
+ */
+export const getMinorUnit = (
+  amount: BigNumberInput,
+  currency: string,
+): number => {
+  const multiplier = getCurrencyMultiplier(currency)
+
+  const formattedAmount =
+    Math.round(new BigNumber(MathBN.mult(amount, multiplier)).numeric) /
+    multiplier
+
+  const smallestAmount = new BigNumber(MathBN.mult(formattedAmount, multiplier))
+  const { numeric } = smallestAmount
+  const nearestTenNumeric = Math.ceil(numeric / 10) * 10
+
+  // Check if the currency requires rounding to the nearest ten
+  const numericAmount = multiplier === 1e3 ? nearestTenNumeric : numeric
+
+  return parseInt(numericAmount.toString().split('.').shift()!, 10)
+}
+
+/**
+ * Converts an amount from the minor currency unit to the standard unit based on currency.
+ * @param {BigNumberInput} amount - The amount in the smallest currency unit.
+ * @param {string} currency - The currency code (e.g., 'USD', 'JOD').
+ * @returns {number} - The converted amount in the standard currency unit.
+ */
+export function getAmountFromMinorUnit(
+  amount: BigNumberInput,
+  currency: string,
+): number {
+  const multiplier = getCurrencyMultiplier(currency)
+  const standardAmount = new BigNumber(MathBN.div(amount, multiplier))
+  const { numeric } = standardAmount
+  return numeric
 }
 
 export const resolvePaymentSessionStatus = (
@@ -79,11 +134,12 @@ export const getPaymentMethodsRequest = (
   if (cart) {
     const amount: Types.checkout.Amount = {
       currency: cart.currency_code,
-      value: cart.total, // format the value
+      value: getMinorUnit(cart.total, cart.currency_code), // format the value
     }
     request.amount = amount
     request.shopperConversionId = cart.id
     request.shopperEmail = cart.email
+    // request.shopperIP = ??? Where do we get this data from?
     request.telephoneNumber = cart.shipping_address?.phone
     request.countryCode = cart.shipping_address?.country_code
   }
@@ -97,6 +153,8 @@ export const getPaymentMethodsRequest = (
       context.account_holder as AccountHolderDTO | undefined
     )?.id
   }
+
+  console.log('getPaymentMethodsRequest/request', request)
 
   return request
 
