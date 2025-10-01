@@ -1,47 +1,46 @@
 "use client"
 
 import { RadioGroup } from "@headlessui/react"
-import { isAdyen, isStripe, paymentInfoMap } from "@lib/constants"
-import { ProviderSelector } from "@modules/checkout/components/payment-wrapper"
-import {
-  IAdyenPaymentConfig,
-  IStripePaymentConfig,
-} from "@modules/checkout/hooks"
-import { useContext } from "react"
-import AdyenCardPaymentProviderOption from "./adyen-provider"
+import { HttpTypes } from "@medusajs/types"
+import { PaymentProvider } from "@modules/checkout/components/payment-wrapper"
+import { useContext, useState } from "react"
+
 import PaymentProviderOption from "./payment-provider"
-import StripeCardPaymentProviderOption from "./stripe-provider"
 
-const PaymentProviderOptions = () => {
-  const providerSelector = useContext(ProviderSelector)
+interface Props {
+  providers: HttpTypes.StorePaymentProvider[]
+}
 
-  if (!providerSelector) return null
-  const { selectedProvider, selectProvider, providers, config } =
-    providerSelector
+const PaymentProviderOptions = ({ providers }: Props) => {
+  const paymentProvider = useContext(PaymentProvider)
+  // The `selectedProvider` is pretty nasty design decision,
+  // with the sole purpose to keep the radio selected while the
+  // paymentProvider does the async roundtrip to the backend.
+  // The `usePaymentProvider` hook and, potentially, other checkout hooks
+  // need more work to find a better solution than the current one.
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
 
-  if (!providers) return null
+  if (!paymentProvider) return null
+  const { id, selectProvider } = paymentProvider
+
+  const handleOnChange = (providerId: string) => {
+    setSelectedProvider(providerId)
+    selectProvider(providerId)
+  }
 
   return (
     <>
-      <RadioGroup value={selectedProvider} onChange={selectProvider}>
+      <RadioGroup value={id} onChange={handleOnChange}>
         {providers.map((provider) => (
           <div key={provider.id}>
             <PaymentProviderOption
-              paymentInfoMap={paymentInfoMap}
               providerId={provider.id}
-              selectedProviderId={selectedProvider}
-            >
-              {isStripe(provider.id) && (
-                <StripeCardPaymentProviderOption
-                  config={config as IStripePaymentConfig}
-                />
-              )}
-              {isAdyen(provider.id) && (
-                <AdyenCardPaymentProviderOption
-                  config={config as IAdyenPaymentConfig}
-                />
-              )}
-            </PaymentProviderOption>
+              paymentProvider={paymentProvider}
+              selected={
+                (selectedProvider && provider.id === selectedProvider) ||
+                (!selectedProvider && provider.id === id)
+              }
+            />
           </div>
         ))}
       </RadioGroup>

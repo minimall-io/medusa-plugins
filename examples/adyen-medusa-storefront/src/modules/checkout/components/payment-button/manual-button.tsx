@@ -1,25 +1,25 @@
 "use client"
 
 import { Button } from "@medusajs/ui"
-import { ProviderSelector } from "@modules/checkout/components/payment-wrapper"
-import { useContext, useState } from "react"
+import { IManualPayment } from "@modules/checkout/hooks"
+import { useState } from "react"
 import ErrorMessage from "../error-message"
 
 type Props = {
   ready: boolean
+  payment: IManualPayment
 }
 
-const ManualTestPaymentButton = ({ ready }: Props) => {
+const ManualTestPaymentButton = ({ ready, payment }: Props) => {
   const [submitting, setSubmitting] = useState<boolean>(false)
-  const providerSelector = useContext(ProviderSelector)
 
-  const disabled = !ready || !providerSelector?.ready
-  const error = providerSelector?.error
+  const disabled = !ready || !payment.ready
+  const error = payment.error
 
   const handlePayment = async () => {
     if (disabled) return
     setSubmitting(true)
-    await providerSelector.onPay()
+    await payment.onPay()
     setSubmitting(false)
   }
 

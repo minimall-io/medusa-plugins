@@ -1,4 +1,3 @@
-import { isStripe } from "@lib/constants"
 import { initiatePaymentSession, placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import {
@@ -12,10 +11,7 @@ import { IStripePayment } from "./interfaces"
 const stripeKey = process.env.NEXT_PUBLIC_STRIPE_KEY
 const stripePromise = stripeKey ? loadStripe(stripeKey) : null
 
-const useStripePayment = (
-  providerId: string,
-  cart: HttpTypes.StoreCart
-): IStripePayment => {
+const useStripePayment = (cart: HttpTypes.StoreCart): IStripePayment => {
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState<boolean>(false)
   const [clientSecret, setClientSecret] = useState<string | undefined>()
@@ -39,22 +35,29 @@ const useStripePayment = (
     setReady(event.complete)
   }, [])
 
-  const onUpdate = useCallback(async () => {
-    if (!isStripe(providerId)) return
-    const options = { provider_id: providerId }
-    const response = await initiatePaymentSession(cart, options)
-    const session = response.payment_collection?.payment_sessions?.find(
-      (session) => session.provider_id === providerId
-    )
-    const secret = session?.data?.client_secret as string | undefined
-    if (!secret) {
-      throw new Error(
-        "Stripe client secret is missing. Cannot initialize Stripe."
-      )
-    }
-    setClientSecret(secret)
-    console.log("Stripe updatePayment session:", session)
-  }, [providerId, cart])
+  const onUpdate = useCallback(
+    async (providerId: string) => {
+      try {
+        setError(null)
+        const options = { provider_id: providerId }
+        const response = await initiatePaymentSession(cart, options)
+        const session = response.payment_collection?.payment_sessions?.find(
+          (session) => session.provider_id === providerId
+        )
+        const secret = session?.data?.client_secret as string | undefined
+        if (!secret) {
+          throw new Error(
+            "Stripe client secret is missing. Cannot initialize Stripe."
+          )
+        }
+        setClientSecret(secret)
+        console.log("Stripe updatePayment session:", session)
+      } catch (error: any) {
+        setError(error.message)
+      }
+    },
+    [cart]
+  )
 
   const onPay = useCallback(async () => {
     if (!ready) return
@@ -67,7 +70,6 @@ const useStripePayment = (
   }, [ready])
 
   return {
-    id: providerId,
     ready,
     error,
     onUpdate,

@@ -1,11 +1,11 @@
 import { Text } from "@medusajs/ui"
-import { IStripePaymentConfig } from "@modules/checkout/hooks"
+import { IStripePayment } from "@modules/checkout/hooks"
 import SkeletonCardDetails from "@modules/skeletons/components/skeleton-card-details"
 import { CardElement } from "@stripe/react-stripe-js"
 import { StripeCardElementOptions } from "@stripe/stripe-js"
 
 interface Props {
-  config: IStripePaymentConfig | null
+  payment: IStripePayment
 }
 
 const options: StripeCardElementOptions = {
@@ -23,7 +23,9 @@ const options: StripeCardElementOptions = {
   },
 }
 
-const StripeProviderOption = ({ config }: Props) => {
+const StripeProviderOption = ({ payment }: Props) => {
+  const { config } = payment
+
   if (!config) return <SkeletonCardDetails />
 
   return (

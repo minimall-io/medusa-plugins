@@ -5,23 +5,25 @@ import { CheckCircleSolid } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
 import { Button, clx, Heading, Text } from "@medusajs/ui"
 import ErrorMessage from "@modules/checkout/components/error-message"
-import PaymentProviders from "@modules/checkout/components/payment-providers"
-import { ProviderSelector } from "@modules/checkout/components/payment-wrapper"
+import PaymentProviderOptions from "@modules/checkout/components/payment-providers"
+import { PaymentProvider } from "@modules/checkout/components/payment-wrapper"
 import { useCheckoutSteps, usePaymentSession } from "@modules/checkout/hooks"
 import Divider from "@modules/common/components/divider"
 import { useContext, useState } from "react"
 
 interface Props {
   cart: HttpTypes.StoreCart & { gift_cards?: any }
+  providers: HttpTypes.StorePaymentProvider[]
 }
 
-const Payment = ({ cart }: Props) => {
+const Payment = ({ cart, providers }: Props) => {
   const session = usePaymentSession(cart)
   const [isLoading, setIsLoading] = useState(false)
   const { isPayment: isOpen, goToPayment, goToReview } = useCheckoutSteps()
-  const providerSelector = useContext(ProviderSelector)
+  const provider = useContext(PaymentProvider)
 
-  const { ready, error, onUpdate, selectedProvider } = providerSelector || {}
+  const providerId = provider?.id || ""
+  const { ready, error, onUpdate } = provider?.payment || {}
 
   const paidByGiftcard =
     cart.gift_cards && cart.gift_cards?.length > 0 && cart.total === 0
@@ -32,9 +34,9 @@ const Payment = ({ cart }: Props) => {
     (session || paidByGiftcard)
 
   const handleSubmit = async () => {
-    if (!providerSelector || !ready) return
+    if (!provider || !ready) return
     setIsLoading(true)
-    await onUpdate?.()
+    await onUpdate?.(providerId)
     setIsLoading(false)
     return goToReview()
   }
@@ -69,7 +71,7 @@ const Payment = ({ cart }: Props) => {
       </div>
       <div>
         <div className={isOpen ? "block" : "hidden"}>
-          {!paidByGiftcard && <PaymentProviders />}
+          {!paidByGiftcard && <PaymentProviderOptions providers={providers} />}
 
           {paidByGiftcard && (
             <div className="flex flex-col w-1/3">
@@ -95,10 +97,10 @@ const Payment = ({ cart }: Props) => {
             className="mt-6"
             onClick={handleSubmit}
             isLoading={isLoading}
-            disabled={!ready || (!selectedProvider && !paidByGiftcard)}
+            disabled={!ready || (!providerId && !paidByGiftcard)}
             data-testid="submit-payment-button"
           >
-            {!ready || (!selectedProvider && !paidByGiftcard)
+            {!ready || (!providerId && !paidByGiftcard)
               ? "Enter payment details"
               : "Continue to review"}
           </Button>
@@ -116,8 +118,7 @@ const Payment = ({ cart }: Props) => {
               >
                 {paidByGiftcard
                   ? "Gift card"
-                  : paymentInfoMap[selectedProvider || ""]?.title ||
-                    selectedProvider}
+                  : paymentInfoMap[providerId || ""]?.title || providerId}
               </Text>
             </div>
           ) : null}

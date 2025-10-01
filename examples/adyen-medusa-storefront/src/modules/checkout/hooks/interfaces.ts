@@ -34,10 +34,9 @@ export interface IStripePaymentConfig {
 }
 
 export interface IPayment<Config> {
-  id: string
   ready: boolean
   error: string | null
-  onUpdate: () => Promise<void>
+  onUpdate: (providerId: string) => Promise<void>
   onPay: () => Promise<void>
   config: Config
 }
@@ -46,9 +45,13 @@ export type IAdyenPayment = IPayment<IAdyenPaymentConfig>
 export type IStripePayment = IPayment<IStripePaymentConfig>
 export type IManualPayment = IPayment<null>
 
-export interface IProviderSelector
-  extends IPayment<IAdyenPaymentConfig | IStripePaymentConfig | null> {
-  providers: Providers | null
-  selectedProvider: string
-  selectProvider: (providerId: string) => void
+export interface IPaymentProvider<Config> {
+  id: string
+  payment: IPayment<Config> | null
+  selectProvider: (providerId: string) => Promise<void>
+  isAdyen: boolean
+  isStripe: boolean
+  isPaypal: boolean
+  isManual: boolean
+  isUnknown: boolean
 }

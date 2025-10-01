@@ -2,22 +2,21 @@
 
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@medusajs/ui"
-import { ProviderSelector } from "@modules/checkout/components/payment-wrapper"
-import { usePaymentSession } from "@modules/checkout/hooks"
+import { IStripePayment, usePaymentSession } from "@modules/checkout/hooks"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
 import { ConfirmCardPaymentData } from "@stripe/stripe-js"
-import { useContext, useState } from "react"
+import { useState } from "react"
 import ErrorMessage from "../error-message"
 
 type Props = {
   cart: HttpTypes.StoreCart
   ready: boolean
+  payment: IStripePayment
 }
 
-const StripePaymentButton = ({ cart, ready }: Props) => {
+const StripePaymentButton = ({ cart, ready, payment }: Props) => {
   const session = usePaymentSession(cart)
   const [submitting, setSubmitting] = useState<boolean>(false)
-  const providerSelector = useContext(ProviderSelector)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const stripe = useStripe()
   const elements = useElements()
@@ -26,19 +25,14 @@ const StripePaymentButton = ({ cart, ready }: Props) => {
   const clientSecret = session?.data.client_secret as string
 
   const disabled =
-    !ready ||
-    !providerSelector?.ready ||
-    !stripe ||
-    !elements ||
-    !card ||
-    !clientSecret
+    !ready || !payment?.ready || !stripe || !elements || !card || !clientSecret
 
-  const error = providerSelector?.error || errorMessage
+  const error = payment?.error || errorMessage
 
   const handlePayment = async () => {
     if (disabled) return
 
-    const { onPay } = providerSelector
+    const { onPay } = payment
 
     const data: ConfirmCardPaymentData = {
       payment_method: {

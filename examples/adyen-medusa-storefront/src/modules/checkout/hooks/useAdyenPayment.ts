@@ -8,7 +8,6 @@ import {
   UIElement,
 } from "@adyen/adyen-web"
 import "@adyen/adyen-web/styles/adyen.css"
-import { isAdyen } from "@lib/constants"
 import { initiatePaymentSession, placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { useCallback, useEffect, useState } from "react"
@@ -19,10 +18,7 @@ const environment = (process.env.NEXT_PUBLIC_ADYEN_ENVIRONMENT ||
   "test") as AdyenEnvironment
 const channel = ChannelEnum.Web
 
-const useAdyenPayment = (
-  providerId: string,
-  cart: HttpTypes.StoreCart
-): IAdyenPayment => {
+const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
   const [checkout, setCheckout] = useState<Core | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState<boolean>(false)
@@ -59,21 +55,28 @@ const useAdyenPayment = (
     []
   )
 
-  const onUpdate = useCallback(async () => {
-    if (!isAdyen(providerId)) return
-    const data = { cart, payment, ready, channel }
-    const options = { provider_id: providerId, data }
-    const response = await initiatePaymentSession(cart, options)
-    const session = response.payment_collection?.payment_sessions?.find(
-      (session) => session.provider_id === providerId
-    )
-    setPaymentMethods(() => {
-      if (session) return session.data as PaymentMethodsResponse
-      return null
-    })
-    console.log("Adyen updatePayment data:", data)
-    console.log("Adyen updatePayment session:", session)
-  }, [providerId, cart, payment, ready])
+  const onUpdate = useCallback(
+    async (providerId: string) => {
+      try {
+        setError(null)
+        const data = { cart, payment, ready, channel }
+        const options = { provider_id: providerId, data }
+        const response = await initiatePaymentSession(cart, options)
+        const session = response.payment_collection?.payment_sessions?.find(
+          (session) => session.provider_id === providerId
+        )
+        setPaymentMethods(() => {
+          if (session) return session.data as PaymentMethodsResponse
+          return null
+        })
+        console.log("Adyen updatePayment data:", data)
+        console.log("Adyen updatePayment session:", session)
+      } catch (error: any) {
+        setError(error.message)
+      }
+    },
+    [cart, payment, ready]
+  )
 
   const onPay = useCallback(async () => {
     if (!ready) return
@@ -116,7 +119,6 @@ const useAdyenPayment = (
   }, [countryCode])
 
   return {
-    id: providerId,
     ready,
     error,
     onUpdate,

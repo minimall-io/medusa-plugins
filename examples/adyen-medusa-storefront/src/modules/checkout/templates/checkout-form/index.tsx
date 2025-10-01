@@ -15,9 +15,9 @@ export default async function CheckoutForm({ cart, customer }: Props) {
   if (!cart) return null
 
   const shippingMethods = await listCartShippingMethods(cart.id)
-  const paymentProviders = await listCartPaymentMethods(cart.region?.id ?? "")
+  const providers = await listCartPaymentMethods(cart.region?.id ?? "")
 
-  if (!shippingMethods || !paymentProviders) return null
+  if (!shippingMethods || !providers) return null
 
   return (
     <div className="w-full grid grid-cols-1 gap-y-8">
@@ -25,7 +25,7 @@ export default async function CheckoutForm({ cart, customer }: Props) {
 
       <Shipping cart={cart} availableShippingMethods={shippingMethods} />
 
-      <Payment cart={cart} />
+      <Payment cart={cart} providers={providers} />
 
       <Review cart={cart} />
     </div>

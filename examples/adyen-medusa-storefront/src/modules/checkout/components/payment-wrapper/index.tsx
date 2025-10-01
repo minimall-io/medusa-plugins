@@ -1,11 +1,10 @@
 "use client"
 
-import { isStripe } from "@lib/constants"
 import { HttpTypes } from "@medusajs/types"
 import {
-  IProviderSelector,
-  IStripePaymentConfig,
-  useProviderSelector,
+  IPaymentProvider,
+  IStripePayment,
+  usePaymentProvider,
 } from "@modules/checkout/hooks"
 import { Elements } from "@stripe/react-stripe-js"
 import { createContext } from "react"
@@ -15,31 +14,30 @@ interface Props {
   children: React.ReactNode
 }
 
-export const ProviderSelector = createContext<IProviderSelector | null>(null)
+export const PaymentProvider = createContext<IPaymentProvider<unknown> | null>(
+  null
+)
 
 const PaymentWrapper = ({ cart, children }: Props) => {
-  const providerSelector = useProviderSelector(cart)
-  const { selectedProvider, config } = providerSelector
-  const { stripeElementsOptions, stripePromise } =
-    (config as IStripePaymentConfig) || {}
+  const provider = usePaymentProvider(cart)
 
-  if (
-    isStripe(selectedProvider) &&
-    stripeElementsOptions?.clientSecret &&
-    stripePromise
-  )
+  if (provider.isStripe) {
+    const { config } = provider.payment as IStripePayment
+    const { stripeElementsOptions, stripePromise } = config
+
     return (
-      <ProviderSelector.Provider value={{ ...providerSelector }}>
+      <PaymentProvider.Provider value={{ ...provider }}>
         <Elements options={stripeElementsOptions} stripe={stripePromise}>
           {children}
         </Elements>
-      </ProviderSelector.Provider>
+      </PaymentProvider.Provider>
     )
+  }
 
   return (
-    <ProviderSelector.Provider value={{ ...providerSelector }}>
+    <PaymentProvider.Provider value={{ ...provider }}>
       {children}
-    </ProviderSelector.Provider>
+    </PaymentProvider.Provider>
   )
 }
 
