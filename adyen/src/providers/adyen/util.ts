@@ -154,7 +154,7 @@ export const getPaymentMethodsRequest = (
     )?.id
   }
 
-  console.log('getPaymentMethodsRequest/request', request)
+  console.log('getPaymentMethodsRequest/request', JSON.stringify(request))
 
   return request
 
