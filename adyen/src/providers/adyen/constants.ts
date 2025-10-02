@@ -146,3 +146,5 @@ export const CURRENCY_MULTIPLIERS: Record<string, number> = {
   ZAR: 2,
   ZMW: 2,
 }
+
+export const ADYEN = 'Adyen payment provider'

@@ -39,19 +39,23 @@ import {
   isDefined,
   MedusaError,
   PaymentActions,
-  PaymentSessionStatus as SessionStatus,
 } from '@medusajs/framework/utils'
 import crypto from 'crypto'
 
 import {
   getIdempotencyKey,
-  getPaymentMethodsOptions,
   getPaymentMethodsRequest,
+  getPaymentOptions,
+  getPaymentRequest,
+  resolvePaymentSessionStatus,
 } from './util'
+
+import { ADYEN } from './constants'
 
 interface Options {
   apiKey: string
   merchantAccount: string
+  returnUrlBase: string
   environment?: EnvironmentEnum
   liveEndpointUrlPrefix?: string
 }
@@ -59,8 +63,6 @@ interface Options {
 interface InjectedDependencies extends Record<string, unknown> {
   logger: Logger
 }
-
-const ADYEN = 'Adyen payment provider'
 
 class AdyenProviderService extends AbstractPaymentProvider<Options> {
   static readonly identifier: string = 'adyen'
@@ -76,7 +78,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   }
 
   static validateOptions(options: Options): void {
-    const { apiKey, merchantAccount } = options
+    const { apiKey, merchantAccount, returnUrlBase } = options
 
     if (!isDefined<string>(apiKey)) {
       const errorMessage = `${ADYEN} API key is not configured!`
@@ -85,6 +87,11 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
     if (!isDefined<string>(merchantAccount)) {
       const errorMessage = `${ADYEN} merchant account is not configured!`
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, errorMessage)
+    }
+
+    if (!isDefined<string>(returnUrlBase)) {
+      const errorMessage = `${ADYEN} authorization return url base is not configured!`
       throw new MedusaError(MedusaError.Types.INVALID_DATA, errorMessage)
     }
   }
@@ -112,7 +119,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   protected listPaymentMethods_(
     input: PaymentProviderInput,
   ): Promise<Types.checkout.PaymentMethodsResponse> {
-    const options = getPaymentMethodsOptions(input.data)
+    const options = getPaymentOptions(input.data)
     const request = getPaymentMethodsRequest(
       this.options_.merchantAccount,
       input.data,
@@ -125,28 +132,26 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async authorizePayment(
     input: AuthorizePaymentInput,
   ): Promise<AuthorizePaymentOutput> {
-    this.log('authorizePayment', input)
+    this.log('authorizePayment input', input)
 
-    // const request: Types.checkout.PaymentRequest = {
-    //   merchantAccount: this.options_.merchantAccount,
-    //   reference: '',
-    //   amount: {
-    //     currency: '',
-    //     value: 0,
-    //   },
-    //   paymentMethod: {},
-    //   returnUrl: '',
-    // }
-    // const options = { idempotencyKey: 'UUID' }
+    const options = getPaymentOptions(input.data)
+    const request = getPaymentRequest(
+      this.options_.merchantAccount,
+      this.options_.returnUrlBase,
+      input.data,
+      input.context,
+    )
+    const response = await this.checkoutAPI.PaymentsApi.payments(
+      request,
+      options,
+    )
+    const { resultCode } = response
+    const status = resolvePaymentSessionStatus(resultCode)
+    const data = { paymentResponse: response }
 
-    // const response = await this.checkoutAPI.PaymentsApi.payments(
-    //   request,
-    //   options,
-    // )
-    // const { resultCode } = response
-    // const status = this.resolvePaymentSessionStatus(resultCode)
+    this.log('authorizePayment output', { data, status })
 
-    return { data: {}, status: SessionStatus.AUTHORIZED }
+    return { data, status }
   }
 
   public async cancelPayment(
@@ -216,7 +221,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
     this.log('initiatePayment output', { data, id })
 
-    // const status = input.data?.status as PaymentSessionStatus
     return { data, id }
   }
 
