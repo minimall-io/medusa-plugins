@@ -45,7 +45,6 @@ import crypto from 'crypto'
 import {
   getIdempotencyKey,
   getPaymentMethodsRequest,
-  getPaymentOptions,
   getPaymentRequest,
   resolvePaymentSessionStatus,
 } from './util'
@@ -70,12 +69,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   protected logger_: Logger
   protected client: Client
   protected checkoutAPI: CheckoutAPI
-
-  private log(title: string, data: any) {
-    const message = `${title}: ${JSON.stringify(data, null, 2)}`
-    console.log(message)
-    // this.logger_.info(message)
-  }
 
   static validateOptions(options: Options): void {
     const { apiKey, merchantAccount, returnUrlBase } = options
@@ -116,42 +109,54 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.checkoutAPI = new CheckoutAPI(this.client)
   }
 
+  protected log(title: string, data: any, level: keyof Logger = 'debug') {
+    const message = `${title}: ${JSON.stringify(data, null, 2)}`
+    switch (level) {
+      case 'error':
+        this.logger_.error(message)
+      case 'warn':
+        this.logger_.warn(message)
+      case 'info':
+        this.logger_.info(message)
+      default:
+        console.log(message) // remove after debugging
+    }
+  }
+
   protected listPaymentMethods_(
     input: PaymentProviderInput,
   ): Promise<Types.checkout.PaymentMethodsResponse> {
-    const options = getPaymentOptions(input.data)
+    // const options = getPaymentOptions(input)
     const request = getPaymentMethodsRequest(
       this.options_.merchantAccount,
-      input.data,
-      input.context,
+      input,
     )
 
-    return this.checkoutAPI.PaymentsApi.paymentMethods(request, options)
+    return this.checkoutAPI.PaymentsApi.paymentMethods(request)
   }
 
   public async authorizePayment(
     input: AuthorizePaymentInput,
   ): Promise<AuthorizePaymentOutput> {
-    this.log('authorizePayment input', input)
-
-    const options = getPaymentOptions(input.data)
-    const request = getPaymentRequest(
-      this.options_.merchantAccount,
-      this.options_.returnUrlBase,
-      input.data,
-      input.context,
-    )
-    const response = await this.checkoutAPI.PaymentsApi.payments(
-      request,
-      options,
-    )
-    const { resultCode } = response
-    const status = resolvePaymentSessionStatus(resultCode)
-    const data = { paymentResponse: response }
-
-    this.log('authorizePayment output', { data, status })
-
-    return { data, status }
+    try {
+      // this.log('authorizePayment/input', input)
+      // const options = getPaymentOptions(input)
+      const id = getIdempotencyKey(input)
+      const request = getPaymentRequest(
+        this.options_.merchantAccount,
+        this.options_.returnUrlBase,
+        input,
+      )
+      const response = await this.checkoutAPI.PaymentsApi.payments(request)
+      const { resultCode } = response
+      const status = resolvePaymentSessionStatus(resultCode)
+      const data = { paymentResponse: response, idempotencyKey: id }
+      this.log('authorizePayment/output', { data, status })
+      return { data, status }
+    } catch (error) {
+      this.log('authorizePayment/error', error)
+      throw error
+    }
   }
 
   public async cancelPayment(
@@ -213,38 +218,43 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async initiatePayment(
     input: InitiatePaymentInput,
   ): Promise<InitiatePaymentOutput> {
-    this.log('initiatePayment input', input)
-
-    const paymentMethods = await this.listPaymentMethods_(input)
-    const id = getIdempotencyKey(input.data)
-    const data = { ...paymentMethods }
-
-    this.log('initiatePayment output', { data, id })
-
-    return { data, id }
+    try {
+      // this.log('initiatePayment/input', input)
+      const id = getIdempotencyKey(input)
+      const paymentMethods = await this.listPaymentMethods_(input)
+      const data = { ...paymentMethods, idempotencyKey: id }
+      this.log('initiatePayment/output', { data, id })
+      return { data, id }
+    } catch (error) {
+      this.log('initiatePayment/error', error)
+      throw error
+    }
   }
 
   public async listPaymentMethods(
     input: ListPaymentMethodsInput,
   ): Promise<ListPaymentMethodsOutput> {
-    this.log('listPaymentMethods input', input)
+    try {
+      // this.log('listPaymentMethods/input', input)
+      const methods = await this.listPaymentMethods_(input)
 
-    const methods = await this.listPaymentMethods_(input)
+      const filteredStored =
+        methods.storedPaymentMethods?.filter(
+          (method) => method.id !== undefined,
+        ) || []
 
-    const filteredStored =
-      methods.storedPaymentMethods?.filter(
-        (method) => method.id !== undefined,
-      ) || []
+      const storedMethods =
+        filteredStored.map((method) => ({
+          id: method.id!,
+          data: method as Record<string, unknown>,
+        })) || []
 
-    const storedMethods =
-      filteredStored.map((method) => ({
-        id: method.id!,
-        data: method as Record<string, unknown>,
-      })) || []
-
-    this.log('listPaymentMethods output', storedMethods)
-
-    return [...storedMethods]
+      this.log('listPaymentMethods/output', storedMethods)
+      return [...storedMethods]
+    } catch (error) {
+      this.log('listPaymentMethods/error', error)
+      throw error
+    }
   }
 
   public async refundPayment(

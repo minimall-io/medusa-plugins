@@ -3,6 +3,7 @@ import {
   AccountHolderDTO,
   BigNumberInput,
   PaymentProviderContext,
+  PaymentProviderInput,
   PaymentSessionStatus,
   StoreCart,
   StoreCartAddress,
@@ -17,6 +18,7 @@ interface IData {
   ready?: boolean
   channel?: string
   session_id?: string
+  idempotencyKey?: string
 }
 
 const capitalize = (currency: string): string => currency.toUpperCase()
@@ -226,6 +228,12 @@ const getChannel = (
   return { channel }
 }
 
+const getInputData = (input: PaymentProviderInput): IData =>
+  input?.data as IData
+
+const getInputContext = (input: PaymentProviderInput): PaymentProviderContext =>
+  input?.context as PaymentProviderContext
+
 export const resolvePaymentSessionStatus = (
   code?: Types.checkout.PaymentResponse.ResultCodeEnum,
 ): PaymentSessionStatus => {
@@ -257,24 +265,54 @@ export const resolvePaymentSessionStatus = (
   }
 }
 
-export const getIdempotencyKey = (data?: IData) =>
-  data?.session_id || crypto.randomUUID()
+export const getIdempotencyKey = (input: PaymentProviderInput): string => {
+  const data = getInputData(input)
+  const context = getInputContext(input)
+  console.log(
+    'getIdempotencyKey/data/idempotencyKey',
+    JSON.stringify(data?.idempotencyKey, null, 2),
+  )
+  console.log(
+    'getIdempotencyKey/context/idempotency_key',
+    JSON.stringify(context?.idempotency_key, null, 2),
+  )
+  console.log(
+    'getIdempotencyKey/data/session_id',
+    JSON.stringify(data?.session_id, null, 2),
+  )
+  console.log(
+    'getIdempotencyKey/data/cart/id',
+    JSON.stringify(data?.cart?.id, null, 2),
+  )
+  if (data.idempotencyKey) return data.idempotencyKey
+  if (context.idempotency_key) return context.idempotency_key
+  if (data.session_id) return data.session_id
+  if (data.cart?.id) return data.cart.id
+  return crypto.randomUUID()
+}
 
-export const getPaymentOptions = (data?: IData) => ({
-  idempotencyKey: getIdempotencyKey(data),
+export const getPaymentOptions = (input: PaymentProviderInput) => ({
+  idempotencyKey: getIdempotencyKey(input),
 })
 
 export const getPaymentMethodsRequest = (
   merchantAccount: string,
-  data?: IData,
-  context?: PaymentProviderContext,
+  input: PaymentProviderInput,
 ): Types.checkout.PaymentMethodsRequest => {
+  const data = getInputData(input)
+  const context = getInputContext(input)
+
+  const channelDetails = getChannel(data?.channel)
+  const cartDetails = getCartDetails(data?.cart)
+  const paymenDetails = getPaymentDetails(data?.payment)
+  const contextDetails = getContextDetails(context)
+
   const request: Types.checkout.PaymentMethodsRequest = {
+    ...channelDetails,
+    ...cartDetails,
+    ...paymenDetails,
+    ...contextDetails,
     merchantAccount,
-    ...getChannel(data?.channel),
-    ...getCartDetails(data?.cart),
-    ...getPaymentDetails(data?.payment),
-    ...getContextDetails(context),
   }
 
   console.log(
@@ -288,16 +326,19 @@ export const getPaymentMethodsRequest = (
 export const getPaymentRequest = (
   merchantAccount: string,
   returnUrl: string,
-  data?: IData,
-  context?: PaymentProviderContext,
+  input: PaymentProviderInput,
 ): Types.checkout.PaymentRequest => {
+  const data = getInputData(input)
+  const context = getInputContext(input)
+
+  const channelDetails = getChannel(data?.channel)
   const cartDetails = getCartDetails(data?.cart)
   const paymenDetails = getPaymentDetails(data?.payment)
   const contextDetails = getContextDetails(context)
-  const channelDetails = getChannel(data?.channel)
-  const reference = getIdempotencyKey(data)
 
-  if (!cartDetails || !paymenDetails || !channelDetails) {
+  const reference = getIdempotencyKey(input)
+
+  if (!channelDetails || !cartDetails || !paymenDetails) {
     throw new Error('Missing data for generating payment request!')
   }
 
@@ -322,10 +363,10 @@ export const getPaymentRequest = (
   const { paymentMethod } = paymenDetails
 
   const request: Types.checkout.PaymentRequest = {
-    ...paymenDetails,
-    ...cartDetails,
-    ...contextDetails,
     ...channelDetails,
+    ...cartDetails,
+    ...paymenDetails,
+    ...contextDetails,
     merchantAccount,
     returnUrl,
     reference,
