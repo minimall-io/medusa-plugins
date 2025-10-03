@@ -9,12 +9,10 @@ import {
   StoreCartAddress,
 } from '@medusajs/framework/types'
 import { BigNumber, MathBN } from '@medusajs/framework/utils'
-import crypto from 'crypto'
 import { CURRENCY_MULTIPLIERS } from './constants'
 
 interface ITransientData {
   sessionId: string
-  idempotencyKey: string
   paymentResponse: Partial<Types.checkout.PaymentResponse> | null
 }
 
@@ -271,7 +269,6 @@ export const getTransientData = (
     ? (input.context as PaymentProviderContext)
     : undefined
 
-  const idempotencyKey = data?.idempotencyKey || crypto.randomUUID()
   const paymentResponse = data?.paymentResponse || null
   const sessionId =
     data?.sessionId || data?.session_id || context?.idempotency_key
@@ -281,7 +278,6 @@ export const getTransientData = (
   }
 
   return {
-    idempotencyKey,
     paymentResponse,
     sessionId,
   }

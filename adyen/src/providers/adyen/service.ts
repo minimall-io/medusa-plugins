@@ -146,16 +146,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     try {
       // this.log('authorizePayment/input', input)
       const transientData = getTransientData(input)
-      const { idempotencyKey } = transientData
       const request = getPaymentRequest(
         this.options_.merchantAccount,
         this.options_.returnUrlPrefix,
         input,
       )
-      const paymentResponse = await this.checkoutAPI.PaymentsApi.payments(
-        request,
-        { idempotencyKey },
-      )
+      const paymentResponse =
+        await this.checkoutAPI.PaymentsApi.payments(request)
       const { resultCode } = paymentResponse
       const data = { ...transientData, paymentResponse }
       const status = resolvePaymentSessionStatus(resultCode)
@@ -181,7 +178,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     try {
       this.log('capturePayment/input', input)
       const transientData = getTransientData(input)
-      const { idempotencyKey, paymentResponse } = transientData
+      const { paymentResponse } = transientData
       const request = getPaymentCaptureRequest(
         this.options_.merchantAccount,
         input,
@@ -194,7 +191,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         await this.checkoutAPI.ModificationsApi.captureAuthorisedPayment(
           paymentResponse.pspReference,
           request,
-          { idempotencyKey },
         )
 
       const data = { ...transientData, captureResponse }
@@ -254,15 +250,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     try {
       // this.log('initiatePayment/input', input)
       const transientData = getTransientData(input)
-      const { idempotencyKey, sessionId } = transientData
+      const { sessionId } = transientData
       const request = getPaymentMethodsRequest(
         this.options_.merchantAccount,
         input,
       )
-      const paymentMethods = await this.checkoutAPI.PaymentsApi.paymentMethods(
-        request,
-        { idempotencyKey },
-      )
+      const paymentMethods =
+        await this.checkoutAPI.PaymentsApi.paymentMethods(request)
       const data = { ...paymentMethods, ...transientData }
       this.log('initiatePayment/output', { data, id: sessionId })
       return { data, id: sessionId }
