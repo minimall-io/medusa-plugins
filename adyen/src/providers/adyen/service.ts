@@ -45,9 +45,10 @@ import {
   getPaymentCancelRequest,
   getPaymentCaptureRequest,
   getPaymentMethodsRequest,
+  getPaymentRefundRequest,
   getPaymentRequest,
+  getPaymentSessionStatus,
   getTransientData,
-  resolvePaymentSessionStatus,
 } from './util'
 
 import { ADYEN } from './constants'
@@ -156,7 +157,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         await this.checkoutAPI.PaymentsApi.payments(request)
       const { resultCode } = paymentResponse
       const data = { ...transientData, paymentResponse }
-      const status = resolvePaymentSessionStatus(resultCode)
+      const status = getPaymentSessionStatus(resultCode)
+      this.log('authorizePayment/request', request)
       this.log('authorizePayment/output', { data, status })
       return { data, status }
     } catch (error) {
@@ -177,13 +179,14 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         input,
       )
 
-      const cancelResponse =
+      const paymentCancelResponse =
         await this.checkoutAPI.ModificationsApi.cancelAuthorisedPaymentByPspReference(
           paymentResponse!.pspReference!,
           request,
         )
 
-      const data = { ...transientData, cancelResponse }
+      const data = { ...transientData, paymentCancelResponse }
+      this.log('cancelPayment/request', request)
       this.log('cancelPayment/output', { data })
       return { data }
     } catch (error) {
@@ -196,7 +199,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     input: CapturePaymentInput,
   ): Promise<CapturePaymentOutput> {
     try {
-      this.log('capturePayment/input', input)
+      // this.log('capturePayment/input', input)
       const transientData = getTransientData(input)
       const { paymentResponse } = transientData
       const request = getPaymentCaptureRequest(
@@ -204,13 +207,14 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         input,
       )
 
-      const captureResponse =
+      const paymentCaptureResponse =
         await this.checkoutAPI.ModificationsApi.captureAuthorisedPayment(
           paymentResponse!.pspReference!,
           request,
         )
 
-      const data = { ...transientData, captureResponse }
+      const data = { ...transientData, paymentCaptureResponse }
+      this.log('capturePayment/request', request)
       this.log('capturePayment/output', { data })
       return { data }
     } catch (error) {
@@ -273,6 +277,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       const paymentMethods =
         await this.checkoutAPI.PaymentsApi.paymentMethods(request)
       const data = { ...paymentMethods, ...transientData }
+      this.log('initiatePayment/request', request)
       this.log('initiatePayment/output', { data, id: sessionId })
       return { data, id: sessionId }
     } catch (error) {
@@ -303,6 +308,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
           data: method as Record<string, unknown>,
         })) || []
 
+      this.log('listPaymentMethods/request', request)
       this.log('listPaymentMethods/output', storedMethods)
       return [...storedMethods]
     } catch (error) {
@@ -314,9 +320,29 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async refundPayment(
     input: RefundPaymentInput,
   ): Promise<RefundPaymentOutput> {
-    this.log('refundPayment', input)
-    // TODO: Implement refundPayment logic
-    return { data: {} }
+    try {
+      this.log('refundPayment/input', input)
+      const transientData = getTransientData(input)
+      const { paymentCaptureResponse } = transientData
+      const request = getPaymentRefundRequest(
+        this.options_.merchantAccount,
+        input,
+      )
+
+      const paymentRefundResponse =
+        await this.checkoutAPI.ModificationsApi.refundCapturedPayment(
+          paymentCaptureResponse!.pspReference!,
+          request,
+        )
+
+      const data = { ...transientData, paymentRefundResponse }
+      this.log('refundPayment/request', request)
+      this.log('refundPayment/output', { data })
+      return { data }
+    } catch (error) {
+      this.log('refundPayment/error', error)
+      throw error
+    }
   }
 
   public async retrievePayment(

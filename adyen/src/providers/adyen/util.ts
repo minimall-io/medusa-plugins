@@ -5,6 +5,7 @@ import {
   PaymentProviderContext,
   PaymentProviderInput,
   PaymentSessionStatus,
+  RefundPaymentInput,
   StoreCart,
   StoreCartAddress,
 } from '@medusajs/framework/types'
@@ -14,6 +15,7 @@ import { CURRENCY_MULTIPLIERS } from './constants'
 interface ITransientData {
   sessionId: string
   paymentResponse: Partial<Types.checkout.PaymentResponse> | null
+  paymentCaptureResponse: Partial<Types.checkout.PaymentCaptureResponse> | null
 }
 
 interface IData extends Partial<ITransientData> {
@@ -230,7 +232,20 @@ const getDataPaymentResponse = (
   return { ...paymentResponse, reference: paymentResponse.merchantReference }
 }
 
-export const resolvePaymentSessionStatus = (
+const getDataPaymentCaptureResponse = (
+  data?: IData,
+): Partial<
+  Types.checkout.PaymentCaptureResponse & { capturePspReference?: string }
+> | null => {
+  if (!data || !data.paymentCaptureResponse) return null
+  const { paymentCaptureResponse } = data
+  return {
+    ...paymentCaptureResponse,
+    capturePspReference: paymentCaptureResponse.pspReference,
+  }
+}
+
+export const getPaymentSessionStatus = (
   code?: Types.checkout.PaymentResponse.ResultCodeEnum,
 ): PaymentSessionStatus => {
   const Codes = Types.checkout.PaymentResponse.ResultCodeEnum
@@ -270,6 +285,7 @@ export const getTransientData = (
     : undefined
 
   const paymentResponse = data?.paymentResponse || null
+  const paymentCaptureResponse = data?.paymentCaptureResponse || null
   const sessionId =
     data?.sessionId || data?.session_id || context?.idempotency_key
 
@@ -281,8 +297,9 @@ export const getTransientData = (
   }
 
   return {
-    paymentResponse,
     sessionId,
+    paymentResponse,
+    paymentCaptureResponse,
   }
 }
 
@@ -305,7 +322,7 @@ export const getPaymentMethodsRequest = (
 
   const { shopperReference } = context
 
-  const request: Types.checkout.PaymentMethodsRequest = {
+  return {
     channel,
     amount,
     shopperConversionId,
@@ -316,13 +333,6 @@ export const getPaymentMethodsRequest = (
     browserInfo,
     merchantAccount,
   }
-
-  console.log(
-    'getPaymentMethodsRequest/request',
-    JSON.stringify(request, null, 2),
-  )
-
-  return request
 }
 
 export const getPaymentRequest = (
@@ -371,7 +381,7 @@ export const getPaymentRequest = (
 
   const { amount, paymentMethod } = data
 
-  const request: Types.checkout.PaymentRequest = {
+  return {
     ...data,
     ...context,
     merchantAccount,
@@ -380,10 +390,6 @@ export const getPaymentRequest = (
     amount,
     paymentMethod,
   }
-
-  console.log('getPaymentRequest/request', JSON.stringify(request, null, 2))
-
-  return request
 }
 
 export const getPaymentCaptureRequest = (
@@ -401,18 +407,11 @@ export const getPaymentCaptureRequest = (
 
   const { amount, reference } = data
 
-  const request: Types.checkout.PaymentCaptureRequest = {
+  return {
     merchantAccount,
     reference,
     amount,
   }
-
-  console.log(
-    'getPaymentCaptureRequest/request',
-    JSON.stringify(request, null, 2),
-  )
-
-  return request
 }
 
 export const getPaymentCancelRequest = (
@@ -430,15 +429,42 @@ export const getPaymentCancelRequest = (
 
   const { reference } = data
 
-  const request: Types.checkout.PaymentCancelRequest = {
+  return {
     merchantAccount,
     reference,
   }
+}
 
-  console.log(
-    'getPaymentCancelRequest/request',
-    JSON.stringify(request, null, 2),
-  )
+export const getPaymentRefundRequest = (
+  merchantAccount: string,
+  input: RefundPaymentInput,
+): Types.checkout.PaymentRefundRequest => {
+  const data = getDataPaymentCaptureResponse(input?.data)
 
-  return request
+  if (
+    !data ||
+    !data.amount ||
+    !data.pspReference ||
+    !data.capturePspReference ||
+    !data.reference
+  ) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      'Missing data for generating payment refund request!',
+    )
+  }
+
+  const { capturePspReference, reference } = data
+
+  const amount: Types.checkout.Amount = {
+    currency: capitalize(data.amount.currency),
+    value: getMinorUnit(input.amount, data.amount.currency),
+  }
+
+  return {
+    merchantAccount,
+    capturePspReference,
+    reference,
+    amount,
+  }
 }
