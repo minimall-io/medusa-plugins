@@ -13,7 +13,7 @@ import { HttpTypes } from "@medusajs/types"
 import { useCallback, useEffect, useState } from "react"
 import { AdyenEnvironment, ChannelEnum, IAdyenPayment } from "./interfaces"
 
-const clientKey = process.env.NEXT_PUBLIC_ADYEN_KEY
+const clientKey = process.env.NEXT_PUBLIC_ADYEN_CLIENT_KEY
 const environment = (process.env.NEXT_PUBLIC_ADYEN_ENVIRONMENT ||
   "test") as AdyenEnvironment
 const channel = ChannelEnum.Web
