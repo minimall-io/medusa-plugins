@@ -42,6 +42,7 @@ import {
 import crypto from 'crypto'
 
 import {
+  getPaymentCancelRequest,
   getPaymentCaptureRequest,
   getPaymentMethodsRequest,
   getPaymentRequest,
@@ -167,9 +168,28 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async cancelPayment(
     input: CancelPaymentInput,
   ): Promise<CancelPaymentOutput> {
-    // TODO: Implement cancelPayment logic
-    this.log('cancelPayment', input)
-    return { data: {} }
+    try {
+      this.log('cancelPayment/input', input)
+      const transientData = getTransientData(input)
+      const { paymentResponse } = transientData
+      const request = getPaymentCancelRequest(
+        this.options_.merchantAccount,
+        input,
+      )
+
+      const cancelResponse =
+        await this.checkoutAPI.ModificationsApi.cancelAuthorisedPaymentByPspReference(
+          paymentResponse!.pspReference!,
+          request,
+        )
+
+      const data = { ...transientData, cancelResponse }
+      this.log('cancelPayment/output', { data })
+      return { data }
+    } catch (error) {
+      this.log('cancelPayment/error', error)
+      throw error
+    }
   }
 
   public async capturePayment(
@@ -183,13 +203,10 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         this.options_.merchantAccount,
         input,
       )
-      if (!paymentResponse || !paymentResponse.pspReference) {
-        throw new Error('The pspReference is missing!')
-      }
 
       const captureResponse =
         await this.checkoutAPI.ModificationsApi.captureAuthorisedPayment(
-          paymentResponse.pspReference,
+          paymentResponse!.pspReference!,
           request,
         )
 
@@ -200,8 +217,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       this.log('capturePayment/error', error)
       throw error
     }
-
-    // TODO: Implement capturePayment logic
   }
 
   public async createAccountHolder(

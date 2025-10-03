@@ -8,7 +8,7 @@ import {
   StoreCart,
   StoreCartAddress,
 } from '@medusajs/framework/types'
-import { BigNumber, MathBN } from '@medusajs/framework/utils'
+import { BigNumber, MathBN, MedusaError } from '@medusajs/framework/utils'
 import { CURRENCY_MULTIPLIERS } from './constants'
 
 interface ITransientData {
@@ -274,7 +274,10 @@ export const getTransientData = (
     data?.sessionId || data?.session_id || context?.idempotency_key
 
   if (!sessionId) {
-    throw new Error('No session ID could be extracted!')
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      'No session ID could be extracted!',
+    )
   }
 
   return {
@@ -332,23 +335,38 @@ export const getPaymentRequest = (
   const { sessionId: reference } = getTransientData(input)
 
   if (!data.channel) {
-    throw new Error('Missing data for generating payment request!')
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      'Missing data for generating payment request!',
+    )
   }
 
   if (!data.amount) {
-    throw new Error('Missing amount for generating payment request!')
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      'Missing amount for generating payment request!',
+    )
   }
 
   if (!data.shopperEmail) {
-    throw new Error('Missing shopper email for generating payment request!')
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      'Missing shopper email for generating payment request!',
+    )
   }
 
   if (!data.billingAddress) {
-    throw new Error('Missing billing address for generating payment request!')
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      'Missing billing address for generating payment request!',
+    )
   }
 
   if (!data.paymentMethod) {
-    throw new Error('Missing payment method for generating payment request!')
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      'Missing payment method for generating payment request!',
+    )
   }
 
   const { amount, paymentMethod } = data
@@ -375,7 +393,10 @@ export const getPaymentCaptureRequest = (
   const data = getDataPaymentResponse(input?.data)
 
   if (!data || !data.amount || !data.reference || !data.pspReference) {
-    throw new Error('Missing data for generating payment capture!')
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      'Missing data for generating payment capture request!',
+    )
   }
 
   const { amount, reference } = data
@@ -388,6 +409,34 @@ export const getPaymentCaptureRequest = (
 
   console.log(
     'getPaymentCaptureRequest/request',
+    JSON.stringify(request, null, 2),
+  )
+
+  return request
+}
+
+export const getPaymentCancelRequest = (
+  merchantAccount: string,
+  input: PaymentProviderInput,
+): Types.checkout.PaymentCancelRequest => {
+  const data = getDataPaymentResponse(input?.data)
+
+  if (!data || !data.reference || !data.pspReference) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      'Missing data for generating payment cancel request!',
+    )
+  }
+
+  const { reference } = data
+
+  const request: Types.checkout.PaymentCancelRequest = {
+    merchantAccount,
+    reference,
+  }
+
+  console.log(
+    'getPaymentCancelRequest/request',
     JSON.stringify(request, null, 2),
   )
 
