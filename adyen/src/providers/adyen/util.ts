@@ -12,18 +12,24 @@ import { BigNumber, MathBN } from '@medusajs/framework/utils'
 import crypto from 'crypto'
 import { CURRENCY_MULTIPLIERS } from './constants'
 
-interface IData {
+interface ITransientData {
+  sessionId: string
+  idempotencyKey: string
+  paymentResponse: Partial<Types.checkout.PaymentResponse> | null
+}
+
+interface IData extends Partial<ITransientData> {
   payment?: Partial<Types.checkout.PaymentRequest> | null
+  paymentResponse?: Partial<Types.checkout.PaymentResponse> | null
   cart?: StoreCart
   ready?: boolean
   channel?: string
   session_id?: string
-  idempotencyKey?: string
 }
 
 const capitalize = (currency: string): string => currency.toUpperCase()
 
-const getCurrencyMultiplier = (currency: string) => {
+const getCurrencyMultiplier = (currency: string): number => {
   const currencyCode = capitalize(currency)
   const multiplier = CURRENCY_MULTIPLIERS[currencyCode]
   // Instead of using the default multiplier,
@@ -122,22 +128,21 @@ const parseStreetAddress = (fullAddress: string): [number, string] | null => {
   return null
 }
 
-const getAmount = (
-  amount: number,
-  currency: string,
-): Types.checkout.Amount => ({
-  currency: capitalize(currency),
-  value: getMinorUnit(amount, currency),
-})
+const getCartBillingAddressDetails = (
+  billingAddress?: StoreCartAddress,
+): Types.checkout.BillingAddress | null => {
+  if (!billingAddress) return null
 
-const getBillingAddress = (
-  country: string,
-  stateOrProvince: string,
-  postalCode: string,
-  city: string,
-  address: string,
-): Types.checkout.BillingAddress => {
-  const streetAddress = parseStreetAddress(address)
+  const { country_code, province, postal_code, city, address_1 } =
+    billingAddress
+
+  if (!country_code || !province || !postal_code || !city || !address_1)
+    return null
+
+  const country = capitalize(country_code)
+  const stateOrProvince = province
+  const postalCode = postal_code
+  const streetAddress = parseStreetAddress(address_1)
 
   const houseNumberOrName =
     streetAddress !== null ? streetAddress[0].toString() : ''
@@ -145,7 +150,7 @@ const getBillingAddress = (
   const street = streetAddress !== null ? streetAddress[1] : ''
 
   return {
-    country: capitalize(country),
+    country,
     stateOrProvince,
     postalCode,
     city,
@@ -154,85 +159,78 @@ const getBillingAddress = (
   }
 }
 
-const getCartBillingAddressDetails = (
-  billingAddress?: StoreCartAddress,
-): Types.checkout.PaymentRequest['billingAddress'] | null => {
-  if (
-    !billingAddress ||
-    !billingAddress.country_code ||
-    !billingAddress.province ||
-    !billingAddress.postal_code ||
-    !billingAddress.city ||
-    !billingAddress.address_1
-  )
-    return null
+const getDataPaymentRequest = (
+  data?: IData,
+): Partial<Types.checkout.PaymentRequest> => {
+  let request: Partial<Types.checkout.PaymentRequest> = {}
 
-  return getBillingAddress(
-    billingAddress.country_code,
-    billingAddress.province,
-    billingAddress.postal_code,
-    billingAddress.city,
-    billingAddress.address_1,
-  )
-}
+  if (!data) return request
+  const { channel: paymentChannel, payment, cart } = data
 
-const getCartDetails = (
-  cart?: StoreCart,
-): Partial<Types.checkout.PaymentRequest> | null => {
-  if (!cart) return null
-
-  const { id, email, shipping_address, billing_address, total, currency_code } =
-    cart
-  const { phone, country_code } = shipping_address || {}
-
-  const amount = getAmount(total, currency_code)
-  const shopperConversionId = id
-  const shopperEmail = email
-  const telephoneNumber = phone
-  const countryCode = country_code && capitalize(country_code)
-  const billingAddress = getCartBillingAddressDetails(billing_address)
-
-  return {
-    amount,
-    shopperConversionId,
-    shopperEmail,
-    telephoneNumber,
-    countryCode,
-    billingAddress,
-    // shopperIP, ??? Where do we get this data from?
+  if (paymentChannel) {
+    const channel =
+      paymentChannel as Types.checkout.PaymentMethodsRequest.ChannelEnum
+    request = { ...request, channel }
   }
+
+  if (payment) {
+    request = { ...request, ...payment }
+  }
+
+  if (cart) {
+    const {
+      id,
+      email,
+      shipping_address,
+      billing_address,
+      total,
+      currency_code,
+    } = cart
+    const { phone, country_code } = shipping_address || {}
+
+    const amount: Types.checkout.Amount = {
+      currency: capitalize(currency_code),
+      value: getMinorUnit(total, currency_code),
+    }
+    const shopperConversionId = id
+    const shopperEmail = email
+    const telephoneNumber = phone
+    const countryCode = country_code && capitalize(country_code)
+    const billingAddress = getCartBillingAddressDetails(billing_address)
+
+    request = {
+      ...request,
+      amount,
+      shopperConversionId,
+      shopperEmail,
+      telephoneNumber,
+      countryCode,
+      billingAddress,
+      // shopperIP, ??? Where do we get this data from?
+    }
+  }
+
+  return request
 }
 
-const getPaymentDetails = (
-  payment?: Partial<Types.checkout.PaymentRequest> | null,
-): Partial<Types.checkout.PaymentRequest> | null => {
-  if (!payment) return null
-  return { ...payment }
-}
-
-const getContextDetails = (
+const getContextPaymentRequest = (
   context?: PaymentProviderContext,
-): Partial<Types.checkout.PaymentRequest> | null => {
-  if (!context || !context.account_holder) return null
+): Partial<Types.checkout.PaymentRequest> => {
+  let request: Partial<Types.checkout.PaymentRequest> = {}
+  if (!context || !context.account_holder) return request
   const { account_holder } = context
   const accountHolder = account_holder as AccountHolderDTO
   const shopperReference = accountHolder.id
   return { shopperReference }
 }
 
-const getChannel = (
-  rawChannel?: string,
-): Partial<Types.checkout.PaymentRequest> | null => {
-  if (!rawChannel) return null
-  const channel = rawChannel as Types.checkout.PaymentMethodsRequest.ChannelEnum
-  return { channel }
+const getDataPaymentResponse = (
+  data?: IData,
+): Partial<Types.checkout.PaymentResponse & { reference?: string }> | null => {
+  if (!data || !data.paymentResponse) return null
+  const { paymentResponse } = data
+  return { ...paymentResponse, reference: paymentResponse.merchantReference }
 }
-
-const getInputData = (input: PaymentProviderInput): IData =>
-  input?.data as IData
-
-const getInputContext = (input: PaymentProviderInput): PaymentProviderContext =>
-  input?.context as PaymentProviderContext
 
 export const resolvePaymentSessionStatus = (
   code?: Types.checkout.PaymentResponse.ResultCodeEnum,
@@ -265,53 +263,58 @@ export const resolvePaymentSessionStatus = (
   }
 }
 
-export const getIdempotencyKey = (input: PaymentProviderInput): string => {
-  const data = getInputData(input)
-  const context = getInputContext(input)
-  console.log(
-    'getIdempotencyKey/data/idempotencyKey',
-    JSON.stringify(data?.idempotencyKey, null, 2),
-  )
-  console.log(
-    'getIdempotencyKey/context/idempotency_key',
-    JSON.stringify(context?.idempotency_key, null, 2),
-  )
-  console.log(
-    'getIdempotencyKey/data/session_id',
-    JSON.stringify(data?.session_id, null, 2),
-  )
-  console.log(
-    'getIdempotencyKey/data/cart/id',
-    JSON.stringify(data?.cart?.id, null, 2),
-  )
-  if (data.idempotencyKey) return data.idempotencyKey
-  if (context.idempotency_key) return context.idempotency_key
-  if (data.session_id) return data.session_id
-  if (data.cart?.id) return data.cart.id
-  return crypto.randomUUID()
-}
+export const getTransientData = (
+  input: PaymentProviderInput,
+): ITransientData => {
+  const data = input?.data ? (input.data as IData) : undefined
+  const context = input?.context
+    ? (input.context as PaymentProviderContext)
+    : undefined
 
-export const getPaymentOptions = (input: PaymentProviderInput) => ({
-  idempotencyKey: getIdempotencyKey(input),
-})
+  const idempotencyKey = data?.idempotencyKey || crypto.randomUUID()
+  const paymentResponse = data?.paymentResponse || null
+  const sessionId =
+    data?.sessionId || data?.session_id || context?.idempotency_key
+
+  if (!sessionId) {
+    throw new Error('No session ID could be extracted!')
+  }
+
+  return {
+    idempotencyKey,
+    paymentResponse,
+    sessionId,
+  }
+}
 
 export const getPaymentMethodsRequest = (
   merchantAccount: string,
   input: PaymentProviderInput,
 ): Types.checkout.PaymentMethodsRequest => {
-  const data = getInputData(input)
-  const context = getInputContext(input)
+  const data = getDataPaymentRequest(input?.data)
+  const context = getContextPaymentRequest(input?.context)
 
-  const channelDetails = getChannel(data?.channel)
-  const cartDetails = getCartDetails(data?.cart)
-  const paymenDetails = getPaymentDetails(data?.payment)
-  const contextDetails = getContextDetails(context)
+  const {
+    channel,
+    amount,
+    shopperConversionId,
+    shopperEmail,
+    telephoneNumber,
+    countryCode,
+    browserInfo,
+  } = data
+
+  const { shopperReference } = context
 
   const request: Types.checkout.PaymentMethodsRequest = {
-    ...channelDetails,
-    ...cartDetails,
-    ...paymenDetails,
-    ...contextDetails,
+    channel,
+    amount,
+    shopperConversionId,
+    shopperReference,
+    shopperEmail,
+    telephoneNumber,
+    countryCode,
+    browserInfo,
     merchantAccount,
   }
 
@@ -328,45 +331,35 @@ export const getPaymentRequest = (
   returnUrl: string,
   input: PaymentProviderInput,
 ): Types.checkout.PaymentRequest => {
-  const data = getInputData(input)
-  const context = getInputContext(input)
+  const data = getDataPaymentRequest(input?.data)
+  const context = getContextPaymentRequest(input?.context)
+  const { sessionId: reference } = getTransientData(input)
 
-  const channelDetails = getChannel(data?.channel)
-  const cartDetails = getCartDetails(data?.cart)
-  const paymenDetails = getPaymentDetails(data?.payment)
-  const contextDetails = getContextDetails(context)
-
-  const reference = getIdempotencyKey(input)
-
-  if (!channelDetails || !cartDetails || !paymenDetails) {
+  if (!data.channel) {
     throw new Error('Missing data for generating payment request!')
   }
 
-  if (!cartDetails.amount) {
+  if (!data.amount) {
     throw new Error('Missing amount for generating payment request!')
   }
 
-  if (!cartDetails.shopperEmail) {
+  if (!data.shopperEmail) {
     throw new Error('Missing shopper email for generating payment request!')
   }
 
-  if (!cartDetails.billingAddress) {
+  if (!data.billingAddress) {
     throw new Error('Missing billing address for generating payment request!')
   }
 
-  if (!paymenDetails.paymentMethod) {
+  if (!data.paymentMethod) {
     throw new Error('Missing payment method for generating payment request!')
   }
 
-  const { amount } = cartDetails
-
-  const { paymentMethod } = paymenDetails
+  const { amount, paymentMethod } = data
 
   const request: Types.checkout.PaymentRequest = {
-    ...channelDetails,
-    ...cartDetails,
-    ...paymenDetails,
-    ...contextDetails,
+    ...data,
+    ...context,
     merchantAccount,
     returnUrl,
     reference,
@@ -375,6 +368,32 @@ export const getPaymentRequest = (
   }
 
   console.log('getPaymentRequest/request', JSON.stringify(request, null, 2))
+
+  return request
+}
+
+export const getPaymentCaptureRequest = (
+  merchantAccount: string,
+  input: PaymentProviderInput,
+): Types.checkout.PaymentCaptureRequest => {
+  const data = getDataPaymentResponse(input?.data)
+
+  if (!data || !data.amount || !data.reference || !data.pspReference) {
+    throw new Error('Missing data for generating payment capture!')
+  }
+
+  const { amount, reference } = data
+
+  const request: Types.checkout.PaymentCaptureRequest = {
+    merchantAccount,
+    reference,
+    amount,
+  }
+
+  console.log(
+    'getPaymentCaptureRequest/request',
+    JSON.stringify(request, null, 2),
+  )
 
   return request
 }

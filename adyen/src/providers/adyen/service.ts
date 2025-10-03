@@ -1,4 +1,4 @@
-import { CheckoutAPI, Client, Types } from '@adyen/api-library'
+import { CheckoutAPI, Client } from '@adyen/api-library'
 import { EnvironmentEnum } from '@adyen/api-library/lib/src/config'
 import {
   AuthorizePaymentInput,
@@ -20,7 +20,6 @@ import {
   ListPaymentMethodsInput,
   ListPaymentMethodsOutput,
   Logger,
-  PaymentProviderInput,
   ProviderWebhookPayload,
   RefundPaymentInput,
   RefundPaymentOutput,
@@ -43,9 +42,10 @@ import {
 import crypto from 'crypto'
 
 import {
-  getIdempotencyKey,
+  getPaymentCaptureRequest,
   getPaymentMethodsRequest,
   getPaymentRequest,
+  getTransientData,
   resolvePaymentSessionStatus,
 } from './util'
 
@@ -53,10 +53,11 @@ import { ADYEN } from './constants'
 
 interface Options {
   apiKey: string
+  hmacKey: string
   merchantAccount: string
-  returnUrlBase: string
+  liveEndpointUrlPrefix: string
+  returnUrlPrefix: string
   environment?: EnvironmentEnum
-  liveEndpointUrlPrefix?: string
 }
 
 interface InjectedDependencies extends Record<string, unknown> {
@@ -71,10 +72,21 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   protected checkoutAPI: CheckoutAPI
 
   static validateOptions(options: Options): void {
-    const { apiKey, merchantAccount, returnUrlBase } = options
+    const {
+      apiKey,
+      hmacKey,
+      merchantAccount,
+      liveEndpointUrlPrefix,
+      returnUrlPrefix,
+    } = options
 
     if (!isDefined<string>(apiKey)) {
       const errorMessage = `${ADYEN} API key is not configured!`
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, errorMessage)
+    }
+
+    if (!isDefined<string>(hmacKey)) {
+      const errorMessage = `${ADYEN} HMAC key is not configured!`
       throw new MedusaError(MedusaError.Types.INVALID_DATA, errorMessage)
     }
 
@@ -83,8 +95,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       throw new MedusaError(MedusaError.Types.INVALID_DATA, errorMessage)
     }
 
-    if (!isDefined<string>(returnUrlBase)) {
-      const errorMessage = `${ADYEN} authorization return url base is not configured!`
+    if (!isDefined<string>(liveEndpointUrlPrefix)) {
+      const errorMessage = `${ADYEN} live endpoint URL prefix is not configured!`
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, errorMessage)
+    }
+
+    if (!isDefined<string>(returnUrlPrefix)) {
+      const errorMessage = `${ADYEN} authorization return url prefix is not configured!`
       throw new MedusaError(MedusaError.Types.INVALID_DATA, errorMessage)
     }
   }
@@ -109,7 +126,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.checkoutAPI = new CheckoutAPI(this.client)
   }
 
-  protected log(title: string, data: any, level: keyof Logger = 'debug') {
+  protected log(title: string, data: any, level: keyof Logger = 'debug'): void {
     const message = `${title}: ${JSON.stringify(data, null, 2)}`
     switch (level) {
       case 'error':
@@ -123,34 +140,25 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     }
   }
 
-  protected listPaymentMethods_(
-    input: PaymentProviderInput,
-  ): Promise<Types.checkout.PaymentMethodsResponse> {
-    // const options = getPaymentOptions(input)
-    const request = getPaymentMethodsRequest(
-      this.options_.merchantAccount,
-      input,
-    )
-
-    return this.checkoutAPI.PaymentsApi.paymentMethods(request)
-  }
-
   public async authorizePayment(
     input: AuthorizePaymentInput,
   ): Promise<AuthorizePaymentOutput> {
     try {
       // this.log('authorizePayment/input', input)
-      // const options = getPaymentOptions(input)
-      const id = getIdempotencyKey(input)
+      const transientData = getTransientData(input)
+      const { idempotencyKey } = transientData
       const request = getPaymentRequest(
         this.options_.merchantAccount,
-        this.options_.returnUrlBase,
+        this.options_.returnUrlPrefix,
         input,
       )
-      const response = await this.checkoutAPI.PaymentsApi.payments(request)
-      const { resultCode } = response
+      const paymentResponse = await this.checkoutAPI.PaymentsApi.payments(
+        request,
+        { idempotencyKey },
+      )
+      const { resultCode } = paymentResponse
+      const data = { ...transientData, paymentResponse }
       const status = resolvePaymentSessionStatus(resultCode)
-      const data = { paymentResponse: response, idempotencyKey: id }
       this.log('authorizePayment/output', { data, status })
       return { data, status }
     } catch (error) {
@@ -170,9 +178,34 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async capturePayment(
     input: CapturePaymentInput,
   ): Promise<CapturePaymentOutput> {
-    this.log('capturePayment', input)
+    try {
+      this.log('capturePayment/input', input)
+      const transientData = getTransientData(input)
+      const { idempotencyKey, paymentResponse } = transientData
+      const request = getPaymentCaptureRequest(
+        this.options_.merchantAccount,
+        input,
+      )
+      if (!paymentResponse || !paymentResponse.pspReference) {
+        throw new Error('The pspReference is missing!')
+      }
+
+      const captureResponse =
+        await this.checkoutAPI.ModificationsApi.captureAuthorisedPayment(
+          paymentResponse.pspReference,
+          request,
+          { idempotencyKey },
+        )
+
+      const data = { ...transientData, captureResponse }
+      this.log('capturePayment/output', { data })
+      return { data }
+    } catch (error) {
+      this.log('capturePayment/error', error)
+      throw error
+    }
+
     // TODO: Implement capturePayment logic
-    return { data: {} }
   }
 
   public async createAccountHolder(
@@ -220,11 +253,19 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<InitiatePaymentOutput> {
     try {
       // this.log('initiatePayment/input', input)
-      const id = getIdempotencyKey(input)
-      const paymentMethods = await this.listPaymentMethods_(input)
-      const data = { ...paymentMethods, idempotencyKey: id }
-      this.log('initiatePayment/output', { data, id })
-      return { data, id }
+      const transientData = getTransientData(input)
+      const { idempotencyKey, sessionId } = transientData
+      const request = getPaymentMethodsRequest(
+        this.options_.merchantAccount,
+        input,
+      )
+      const paymentMethods = await this.checkoutAPI.PaymentsApi.paymentMethods(
+        request,
+        { idempotencyKey },
+      )
+      const data = { ...paymentMethods, ...transientData }
+      this.log('initiatePayment/output', { data, id: sessionId })
+      return { data, id: sessionId }
     } catch (error) {
       this.log('initiatePayment/error', error)
       throw error
@@ -236,7 +277,11 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<ListPaymentMethodsOutput> {
     try {
       // this.log('listPaymentMethods/input', input)
-      const methods = await this.listPaymentMethods_(input)
+      const request = getPaymentMethodsRequest(
+        this.options_.merchantAccount,
+        input,
+      )
+      const methods = await this.checkoutAPI.PaymentsApi.paymentMethods(request)
 
       const filteredStored =
         methods.storedPaymentMethods?.filter(
