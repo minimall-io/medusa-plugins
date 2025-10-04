@@ -1,5 +1,4 @@
 import { Types } from '@adyen/api-library'
-import { EnvironmentEnum } from '@adyen/api-library/lib/src/config'
 import {
   AccountHolderDTO,
   BigNumberInput,
@@ -9,74 +8,19 @@ import {
   PaymentSessionStatus,
   RefundPaymentInput,
 } from '@medusajs/framework/types'
-import { BigNumber, MathBN, MedusaError } from '@medusajs/framework/utils'
-import { z } from 'zod'
+import { BigNumber, MathBN } from '@medusajs/framework/utils'
 import { CURRENCY_MULTIPLIERS } from './constants'
-
-const AmountSchema = z.instanceof(Types.checkout.Amount)
-const PaymentMethodsRequestSchema = z.instanceof(
-  Types.checkout.PaymentMethodsRequest,
-)
-const PaymentRequestSchema = z.instanceof(Types.checkout.PaymentRequest)
-const PaymentResponseSchema = z.instanceof(Types.checkout.PaymentResponse)
-const PaymentCaptureResponseSchema = z.instanceof(
-  Types.checkout.PaymentCaptureResponse,
-)
-
-const TransientDataSchema = z.object({
-  sessionId: z.string(),
-  paymentResponse: PaymentResponseSchema.nullable(),
-  paymentCaptureResponse: PaymentCaptureResponseSchema.nullable(),
-})
-
-const DataSchema = TransientDataSchema.extend({
-  paymentRequest: PaymentRequestSchema.optional(),
-  ready: z.boolean().optional(),
-  session_id: z.string().optional(),
-}).optional()
-
-const OptionsSchema = z.object({
-  apiKey: z.string(),
-  hmacKey: z.string(),
-  merchantAccount: z.string(),
-  liveEndpointUrlPrefix: z.string(),
-  returnUrlPrefix: z.string(),
-  environment: z.nativeEnum(EnvironmentEnum).optional(),
-})
-
-export type Options = z.infer<typeof OptionsSchema>
-export type TransientData = z.infer<typeof TransientDataSchema>
-export type Data = z.infer<typeof DataSchema>
-
-const dataValidator =
-  (schema: z.ZodSchema) => (data: unknown, errorMessage?: string) => {
-    try {
-      const validatedData = schema.parse(data)
-      return validatedData
-    } catch (error) {
-      if (errorMessage) {
-        throw new MedusaError(MedusaError.Types.INVALID_DATA, errorMessage)
-      } else if (error instanceof z.ZodError) {
-        throw new MedusaError(MedusaError.Types.INVALID_DATA, error.message)
-      } else {
-        throw new MedusaError(MedusaError.Types.INVALID_DATA, error)
-      }
-    }
-  }
-
-const validateString = dataValidator(z.string())
-// const validateNumber = dataValidator(z.number())
-// const validateBoolean = dataValidator(z.boolean())
-const validateAmount = dataValidator(AmountSchema)
-const validatePaymentMethodsRequest = dataValidator(PaymentMethodsRequestSchema)
-const validatePaymentRequest = dataValidator(PaymentRequestSchema)
-const validatePaymentResponse = dataValidator(PaymentResponseSchema)
-const validatePaymentCaptureResponse = dataValidator(
-  PaymentCaptureResponseSchema,
-)
-const validateTransientData = dataValidator(TransientDataSchema)
-const validateData = dataValidator(DataSchema)
-export const validateOptions = dataValidator(OptionsSchema)
+import {
+  Data,
+  TransientData,
+  validateAmount,
+  validateData,
+  validatePaymentCaptureResponse,
+  validatePaymentMethodsRequest,
+  validatePaymentRequest,
+  validatePaymentResponse,
+  validateTransientData,
+} from './validators'
 
 const getCurrencyMultiplier = (currency: string): number => {
   const currencyCode = currency.toUpperCase()
@@ -177,6 +121,11 @@ export const getInputTransientData = (
     paymentCaptureResponse,
   })
 
+  console.log(
+    'getInputTransientData/transientData',
+    JSON.stringify(transientData, null, 2),
+  )
+
   return transientData
 }
 
@@ -266,12 +215,10 @@ export const getCapturePaymentRequest = (
     ...data?.paymentResponse,
     merchantAccount,
   })
-  const amount = validateAmount(paymentResponse.amount)
-  const reference = validateString(paymentResponse.merchantReference)
+  const reference = paymentResponse.merchantReference
 
   return {
     ...paymentResponse,
-    amount,
     reference,
     merchantAccount,
   }
@@ -287,7 +234,7 @@ export const getCancelPaymentRequest = (
     ...data?.paymentResponse,
     merchantAccount,
   })
-  const reference = validateString(paymentResponse.merchantReference)
+  const reference = paymentResponse.merchantReference
 
   return {
     merchantAccount,
@@ -306,10 +253,8 @@ export const getRefundPaymentRequest = (
     merchantAccount,
   })
 
-  const capturePspReference = validateString(
-    paymentCaptureResponse.pspReference,
-  )
-  const reference = validateString(paymentCaptureResponse.reference)
+  const capturePspReference = paymentCaptureResponse.pspReference
+  const reference = paymentCaptureResponse.reference
 
   const currency = paymentCaptureResponse.amount.currency.toUpperCase()
   const value = getMinorUnit(input.amount, currency)

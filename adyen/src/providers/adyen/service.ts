@@ -49,9 +49,9 @@ import {
   getListPaymentMethodsRequest,
   getPaymentSessionStatus,
   getRefundPaymentRequest,
-  Options,
-  validateOptions,
 } from './util'
+
+import { Options, validateOptions } from './validators'
 
 interface InjectedDependencies extends Record<string, unknown> {
   logger: Logger
