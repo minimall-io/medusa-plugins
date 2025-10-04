@@ -36,31 +36,22 @@ import {
 import {
   AbstractPaymentProvider,
   isDefined,
-  MedusaError,
   PaymentActions,
 } from '@medusajs/framework/utils'
 import crypto from 'crypto'
 
 import {
-  getPaymentCancelRequest,
-  getPaymentCaptureRequest,
-  getPaymentMethodsRequest,
-  getPaymentRefundRequest,
-  getPaymentRequest,
+  getAuthorizePaymentRequest,
+  getCancelPaymentRequest,
+  getCapturePaymentRequest,
+  getInitiatePaymentRequest,
+  getInputTransientData,
+  getListPaymentMethodsRequest,
   getPaymentSessionStatus,
-  getTransientData,
+  getRefundPaymentRequest,
+  Options,
+  validateOptions,
 } from './util'
-
-import { ADYEN } from './constants'
-
-interface Options {
-  apiKey: string
-  hmacKey: string
-  merchantAccount: string
-  liveEndpointUrlPrefix: string
-  returnUrlPrefix: string
-  environment?: EnvironmentEnum
-}
 
 interface InjectedDependencies extends Record<string, unknown> {
   logger: Logger
@@ -74,38 +65,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   protected checkoutAPI: CheckoutAPI
 
   static validateOptions(options: Options): void {
-    const {
-      apiKey,
-      hmacKey,
-      merchantAccount,
-      liveEndpointUrlPrefix,
-      returnUrlPrefix,
-    } = options
-
-    if (!isDefined<string>(apiKey)) {
-      const errorMessage = `${ADYEN} API key is not configured!`
-      throw new MedusaError(MedusaError.Types.INVALID_DATA, errorMessage)
-    }
-
-    if (!isDefined<string>(hmacKey)) {
-      const errorMessage = `${ADYEN} HMAC key is not configured!`
-      throw new MedusaError(MedusaError.Types.INVALID_DATA, errorMessage)
-    }
-
-    if (!isDefined<string>(merchantAccount)) {
-      const errorMessage = `${ADYEN} merchant account is not configured!`
-      throw new MedusaError(MedusaError.Types.INVALID_DATA, errorMessage)
-    }
-
-    if (!isDefined<string>(liveEndpointUrlPrefix)) {
-      const errorMessage = `${ADYEN} live endpoint URL prefix is not configured!`
-      throw new MedusaError(MedusaError.Types.INVALID_DATA, errorMessage)
-    }
-
-    if (!isDefined<string>(returnUrlPrefix)) {
-      const errorMessage = `${ADYEN} authorization return url prefix is not configured!`
-      throw new MedusaError(MedusaError.Types.INVALID_DATA, errorMessage)
-    }
+    validateOptions(options)
   }
 
   constructor(container: InjectedDependencies, options: Options) {
@@ -147,8 +107,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<AuthorizePaymentOutput> {
     try {
       // this.log('authorizePayment/input', input)
-      const transientData = getTransientData(input)
-      const request = getPaymentRequest(
+      const transientData = getInputTransientData(input)
+      const request = getAuthorizePaymentRequest(
         this.options_.merchantAccount,
         this.options_.returnUrlPrefix,
         input,
@@ -172,9 +132,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<CancelPaymentOutput> {
     try {
       this.log('cancelPayment/input', input)
-      const transientData = getTransientData(input)
+      const transientData = getInputTransientData(input)
       const { paymentResponse } = transientData
-      const request = getPaymentCancelRequest(
+      const request = getCancelPaymentRequest(
         this.options_.merchantAccount,
         input,
       )
@@ -200,9 +160,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<CapturePaymentOutput> {
     try {
       // this.log('capturePayment/input', input)
-      const transientData = getTransientData(input)
+      const transientData = getInputTransientData(input)
       const { paymentResponse } = transientData
-      const request = getPaymentCaptureRequest(
+      const request = getCapturePaymentRequest(
         this.options_.merchantAccount,
         input,
       )
@@ -250,8 +210,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async getPaymentStatus(
     input: GetPaymentStatusInput,
   ): Promise<GetPaymentStatusOutput> {
-    this.log('getPaymentStatus', input)
-    // TODO: Implement getPaymentStatus logic
+    this.log('getPaymentStatus', input, 'error')
     throw new Error('Method not implemented.')
   }
 
@@ -268,10 +227,11 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<InitiatePaymentOutput> {
     try {
       // this.log('initiatePayment/input', input)
-      const transientData = getTransientData(input)
+      const transientData = getInputTransientData(input)
       const { sessionId } = transientData
-      const request = getPaymentMethodsRequest(
+      const request = getInitiatePaymentRequest(
         this.options_.merchantAccount,
+        this.options_.returnUrlPrefix,
         input,
       )
       const paymentMethods =
@@ -291,7 +251,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<ListPaymentMethodsOutput> {
     try {
       // this.log('listPaymentMethods/input', input)
-      const request = getPaymentMethodsRequest(
+      const request = getListPaymentMethodsRequest(
         this.options_.merchantAccount,
         input,
       )
@@ -322,9 +282,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<RefundPaymentOutput> {
     try {
       this.log('refundPayment/input', input)
-      const transientData = getTransientData(input)
+      const transientData = getInputTransientData(input)
       const { paymentCaptureResponse } = transientData
-      const request = getPaymentRefundRequest(
+      const request = getRefundPaymentRequest(
         this.options_.merchantAccount,
         input,
       )

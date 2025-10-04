@@ -1,36 +1,85 @@
 import { Types } from '@adyen/api-library'
+import { EnvironmentEnum } from '@adyen/api-library/lib/src/config'
 import {
   AccountHolderDTO,
   BigNumberInput,
+  InitiatePaymentInput,
   PaymentProviderContext,
   PaymentProviderInput,
   PaymentSessionStatus,
   RefundPaymentInput,
-  StoreCart,
-  StoreCartAddress,
 } from '@medusajs/framework/types'
 import { BigNumber, MathBN, MedusaError } from '@medusajs/framework/utils'
+import { z } from 'zod'
 import { CURRENCY_MULTIPLIERS } from './constants'
 
-interface ITransientData {
-  sessionId: string
-  paymentResponse: Partial<Types.checkout.PaymentResponse> | null
-  paymentCaptureResponse: Partial<Types.checkout.PaymentCaptureResponse> | null
-}
+const AmountSchema = z.instanceof(Types.checkout.Amount)
+const PaymentMethodsRequestSchema = z.instanceof(
+  Types.checkout.PaymentMethodsRequest,
+)
+const PaymentRequestSchema = z.instanceof(Types.checkout.PaymentRequest)
+const PaymentResponseSchema = z.instanceof(Types.checkout.PaymentResponse)
+const PaymentCaptureResponseSchema = z.instanceof(
+  Types.checkout.PaymentCaptureResponse,
+)
 
-interface IData extends Partial<ITransientData> {
-  payment?: Partial<Types.checkout.PaymentRequest> | null
-  paymentResponse?: Partial<Types.checkout.PaymentResponse> | null
-  cart?: StoreCart
-  ready?: boolean
-  channel?: string
-  session_id?: string
-}
+const TransientDataSchema = z.object({
+  sessionId: z.string(),
+  paymentResponse: PaymentResponseSchema.nullable(),
+  paymentCaptureResponse: PaymentCaptureResponseSchema.nullable(),
+})
 
-const capitalize = (currency: string): string => currency.toUpperCase()
+const DataSchema = TransientDataSchema.extend({
+  paymentRequest: PaymentRequestSchema.optional(),
+  ready: z.boolean().optional(),
+  session_id: z.string().optional(),
+}).optional()
+
+const OptionsSchema = z.object({
+  apiKey: z.string(),
+  hmacKey: z.string(),
+  merchantAccount: z.string(),
+  liveEndpointUrlPrefix: z.string(),
+  returnUrlPrefix: z.string(),
+  environment: z.nativeEnum(EnvironmentEnum).optional(),
+})
+
+export type Options = z.infer<typeof OptionsSchema>
+export type TransientData = z.infer<typeof TransientDataSchema>
+export type Data = z.infer<typeof DataSchema>
+
+const dataValidator =
+  (schema: z.ZodSchema) => (data: unknown, errorMessage?: string) => {
+    try {
+      const validatedData = schema.parse(data)
+      return validatedData
+    } catch (error) {
+      if (errorMessage) {
+        throw new MedusaError(MedusaError.Types.INVALID_DATA, errorMessage)
+      } else if (error instanceof z.ZodError) {
+        throw new MedusaError(MedusaError.Types.INVALID_DATA, error.message)
+      } else {
+        throw new MedusaError(MedusaError.Types.INVALID_DATA, error)
+      }
+    }
+  }
+
+const validateString = dataValidator(z.string())
+// const validateNumber = dataValidator(z.number())
+// const validateBoolean = dataValidator(z.boolean())
+const validateAmount = dataValidator(AmountSchema)
+const validatePaymentMethodsRequest = dataValidator(PaymentMethodsRequestSchema)
+const validatePaymentRequest = dataValidator(PaymentRequestSchema)
+const validatePaymentResponse = dataValidator(PaymentResponseSchema)
+const validatePaymentCaptureResponse = dataValidator(
+  PaymentCaptureResponseSchema,
+)
+const validateTransientData = dataValidator(TransientDataSchema)
+const validateData = dataValidator(DataSchema)
+export const validateOptions = dataValidator(OptionsSchema)
 
 const getCurrencyMultiplier = (currency: string): number => {
-  const currencyCode = capitalize(currency)
+  const currencyCode = currency.toUpperCase()
   const multiplier = CURRENCY_MULTIPLIERS[currencyCode]
   // Instead of using the default multiplier,
   // we may have to throw an error for unsupported currency.
@@ -63,186 +112,21 @@ const getMinorUnit = (amount: BigNumberInput, currency: string): number => {
   return parseInt(numericAmount.toString().split('.').shift()!, 10)
 }
 
-/**
- * Converts an amount from the minor currency unit to the standard unit based on currency.
- * @param {BigNumberInput} amount - The amount in the smallest currency unit.
- * @param {string} currency - The currency code (e.g., 'USD', 'JOD').
- * @returns {number} - The converted amount in the standard currency unit.
- */
-export function getAmountFromMinorUnit(
-  amount: BigNumberInput,
-  currency: string,
-): number {
-  const multiplier = getCurrencyMultiplier(currency)
-  const standardAmount = new BigNumber(MathBN.div(amount, multiplier))
-  const { numeric } = standardAmount
-  return numeric
-}
+const getInputData = (input: PaymentProviderInput): Data =>
+  validateData(input.data)
 
-/**
- * Parses a full street address into its street number and street name.
- * Accounts for common international formats where the number might be at the beginning or end.
- *
- * @param {string} fullAddress The complete street address string.
- * @returns {[number | null, string]} A tuple (array) where the first element is the street number
- *                                   (as a number) and the second is the street name (as a string).
- *                                   Returns [null, fullAddress] if no number can be reliably extracted.
- */
-const parseStreetAddress = (fullAddress: string): [number, string] | null => {
-  const trimmedAddress = fullAddress.trim()
+const getInputContext = (
+  input: PaymentProviderInput,
+): PaymentProviderContext | undefined =>
+  input?.context ? (input.context as PaymentProviderContext) : undefined
 
-  // Pattern 1: Number at the beginning
-  // Examples: "123 Almond St", "123A Main Road", "10-B Elm Street", "221B Baker Street"
-  // The regex captures digits, optionally followed by hyphens or word characters (for 'A', 'B', '10-12', etc.).
-  const pattern1 = /^(\d+[-\w]*)\s+(.*)$/
-  let match1 = trimmedAddress.match(pattern1)
-
-  if (match1) {
-    const streetNumber = parseInt(match1[1], 10) // parseInt extracts the numerical part (e.g., "123A" -> 123)
-    const streetName = match1[2].trim()
-    // Validate if a meaningful number and name were extracted
-    if (!isNaN(streetNumber) && streetName.length > 0) {
-      return [streetNumber, streetName]
-    }
-  }
-
-  // Pattern 2: Number at the end
-  // Examples: "Almond St 123", "Main Road, 123A", "Elm Street 10-B", "Rue de la Paix 10", "Hauptstraße 50a"
-  // The regex captures the street name first (non-greedy), then one or more commas or spaces,
-  // then the number part (digits, optionally with hyphens or word characters).
-  const pattern2 = /^(.*?)[,\s]+(\d+[-\w]*)\s*$/
-  let match2 = trimmedAddress.match(pattern2)
-
-  if (match2) {
-    const streetNumber = parseInt(match2[2], 10) // Number is in the second capturing group
-    const streetName = match2[1].trim()
-    // Validate if a meaningful number and name were extracted
-    if (!isNaN(streetNumber) && streetName.length > 0) {
-      return [streetNumber, streetName]
-    }
-  }
-
-  // If no pattern matches or the extracted parts are not valid,
-  // return null for the number and the original (trimmed) address as the street name.
-  // This indicates that a street number could not be reliably parsed.
-  return null
-}
-
-const getCartBillingAddressDetails = (
-  billingAddress?: StoreCartAddress,
-): Types.checkout.BillingAddress | null => {
-  if (!billingAddress) return null
-
-  const { country_code, province, postal_code, city, address_1 } =
-    billingAddress
-
-  if (!country_code || !province || !postal_code || !city || !address_1)
-    return null
-
-  const country = capitalize(country_code)
-  const stateOrProvince = province
-  const postalCode = postal_code
-  const streetAddress = parseStreetAddress(address_1)
-
-  const houseNumberOrName =
-    streetAddress !== null ? streetAddress[0].toString() : ''
-
-  const street = streetAddress !== null ? streetAddress[1] : ''
-
-  return {
-    country,
-    stateOrProvince,
-    postalCode,
-    city,
-    houseNumberOrName,
-    street,
-  }
-}
-
-const getDataPaymentRequest = (
-  data?: IData,
-): Partial<Types.checkout.PaymentRequest> => {
-  let request: Partial<Types.checkout.PaymentRequest> = {}
-
-  if (!data) return request
-  const { channel: paymentChannel, payment, cart } = data
-
-  if (paymentChannel) {
-    const channel =
-      paymentChannel as Types.checkout.PaymentMethodsRequest.ChannelEnum
-    request = { ...request, channel }
-  }
-
-  if (payment) {
-    request = { ...request, ...payment }
-  }
-
-  if (cart) {
-    const {
-      id,
-      email,
-      shipping_address,
-      billing_address,
-      total,
-      currency_code,
-    } = cart
-    const { phone, country_code } = shipping_address || {}
-
-    const amount: Types.checkout.Amount = {
-      currency: capitalize(currency_code),
-      value: getMinorUnit(total, currency_code),
-    }
-    const shopperConversionId = id
-    const shopperEmail = email
-    const telephoneNumber = phone
-    const countryCode = country_code && capitalize(country_code)
-    const billingAddress = getCartBillingAddressDetails(billing_address)
-
-    request = {
-      ...request,
-      amount,
-      shopperConversionId,
-      shopperEmail,
-      telephoneNumber,
-      countryCode,
-      billingAddress,
-      // shopperIP, ??? Where do we get this data from?
-    }
-  }
-
-  return request
-}
-
-const getContextPaymentRequest = (
+const getContextShopperReference = (
   context?: PaymentProviderContext,
-): Partial<Types.checkout.PaymentRequest> => {
-  let request: Partial<Types.checkout.PaymentRequest> = {}
-  if (!context || !context.account_holder) return request
+): string | undefined => {
+  if (!context || !context.account_holder) return
   const { account_holder } = context
   const accountHolder = account_holder as AccountHolderDTO
-  const shopperReference = accountHolder.id
-  return { shopperReference }
-}
-
-const getDataPaymentResponse = (
-  data?: IData,
-): Partial<Types.checkout.PaymentResponse & { reference?: string }> | null => {
-  if (!data || !data.paymentResponse) return null
-  const { paymentResponse } = data
-  return { ...paymentResponse, reference: paymentResponse.merchantReference }
-}
-
-const getDataPaymentCaptureResponse = (
-  data?: IData,
-): Partial<
-  Types.checkout.PaymentCaptureResponse & { capturePspReference?: string }
-> | null => {
-  if (!data || !data.paymentCaptureResponse) return null
-  const { paymentCaptureResponse } = data
-  return {
-    ...paymentCaptureResponse,
-    capturePspReference: paymentCaptureResponse.pspReference,
-  }
+  return accountHolder.id
 }
 
 export const getPaymentSessionStatus = (
@@ -276,158 +160,134 @@ export const getPaymentSessionStatus = (
   }
 }
 
-export const getTransientData = (
+export const getInputTransientData = (
   input: PaymentProviderInput,
-): ITransientData => {
-  const data = input?.data ? (input.data as IData) : undefined
-  const context = input?.context
-    ? (input.context as PaymentProviderContext)
-    : undefined
+): TransientData => {
+  const data = getInputData(input)
+  const context = getInputContext(input)
 
   const paymentResponse = data?.paymentResponse || null
   const paymentCaptureResponse = data?.paymentCaptureResponse || null
   const sessionId =
     data?.sessionId || data?.session_id || context?.idempotency_key
 
-  if (!sessionId) {
-    throw new MedusaError(
-      MedusaError.Types.INVALID_DATA,
-      'No session ID could be extracted!',
-    )
-  }
-
-  return {
+  const transientData = validateTransientData({
     sessionId,
     paymentResponse,
     paymentCaptureResponse,
-  }
+  })
+
+  return transientData
 }
 
-export const getPaymentMethodsRequest = (
+export const getListPaymentMethodsRequest = (
   merchantAccount: string,
   input: PaymentProviderInput,
 ): Types.checkout.PaymentMethodsRequest => {
-  const data = getDataPaymentRequest(input?.data)
-  const context = getContextPaymentRequest(input?.context)
+  const data = getInputData(input)
+  const context = getInputContext(input)
 
-  const {
-    channel,
-    amount,
-    shopperConversionId,
-    shopperEmail,
-    telephoneNumber,
-    countryCode,
-    browserInfo,
-  } = data
-
-  const { shopperReference } = context
+  const dataPaymentRequest = validatePaymentMethodsRequest({
+    ...data?.paymentRequest,
+    merchantAccount,
+  })
+  const shopperReference = getContextShopperReference(context)
 
   return {
-    channel,
-    amount,
-    shopperConversionId,
+    ...dataPaymentRequest,
     shopperReference,
-    shopperEmail,
-    telephoneNumber,
-    countryCode,
-    browserInfo,
-    merchantAccount,
   }
 }
 
-export const getPaymentRequest = (
+export const getInitiatePaymentRequest = (
+  merchantAccount: string,
+  returnUrl: string,
+  input: InitiatePaymentInput,
+): Types.checkout.PaymentMethodsRequest => {
+  const data = getInputData(input)
+  const context = getInputContext(input)
+
+  const { sessionId: reference } = getInputTransientData(input)
+
+  const { currency_code, amount: total } = input
+  const currency = currency_code.toUpperCase()
+  const value = getMinorUnit(total, currency_code)
+  const amount = validateAmount({
+    currency,
+    value,
+  })
+
+  const dataPaymentRequest = validatePaymentRequest({
+    ...data?.paymentRequest,
+    amount,
+    reference,
+    returnUrl,
+    merchantAccount,
+  })
+  const shopperReference = getContextShopperReference(context)
+
+  return {
+    ...dataPaymentRequest,
+    shopperReference,
+  }
+}
+
+export const getAuthorizePaymentRequest = (
   merchantAccount: string,
   returnUrl: string,
   input: PaymentProviderInput,
 ): Types.checkout.PaymentRequest => {
-  const data = getDataPaymentRequest(input?.data)
-  const context = getContextPaymentRequest(input?.context)
-  const { sessionId: reference } = getTransientData(input)
+  const data = getInputData(input)
+  const context = getInputContext(input)
 
-  if (!data.channel) {
-    throw new MedusaError(
-      MedusaError.Types.INVALID_DATA,
-      'Missing data for generating payment request!',
-    )
-  }
+  const { sessionId: reference } = getInputTransientData(input)
 
-  if (!data.amount) {
-    throw new MedusaError(
-      MedusaError.Types.INVALID_DATA,
-      'Missing amount for generating payment request!',
-    )
-  }
-
-  if (!data.shopperEmail) {
-    throw new MedusaError(
-      MedusaError.Types.INVALID_DATA,
-      'Missing shopper email for generating payment request!',
-    )
-  }
-
-  if (!data.billingAddress) {
-    throw new MedusaError(
-      MedusaError.Types.INVALID_DATA,
-      'Missing billing address for generating payment request!',
-    )
-  }
-
-  if (!data.paymentMethod) {
-    throw new MedusaError(
-      MedusaError.Types.INVALID_DATA,
-      'Missing payment method for generating payment request!',
-    )
-  }
-
-  const { amount, paymentMethod } = data
+  const dataPaymentRequest = validatePaymentRequest({
+    ...data?.paymentRequest,
+    reference,
+    returnUrl,
+    merchantAccount,
+  })
+  const shopperReference = getContextShopperReference(context)
 
   return {
-    ...data,
-    ...context,
-    merchantAccount,
-    returnUrl,
-    reference,
-    amount,
-    paymentMethod,
+    ...dataPaymentRequest,
+    shopperReference,
   }
 }
 
-export const getPaymentCaptureRequest = (
+export const getCapturePaymentRequest = (
   merchantAccount: string,
   input: PaymentProviderInput,
 ): Types.checkout.PaymentCaptureRequest => {
-  const data = getDataPaymentResponse(input?.data)
+  const data = getInputData(input)
 
-  if (!data || !data.amount || !data.reference || !data.pspReference) {
-    throw new MedusaError(
-      MedusaError.Types.INVALID_DATA,
-      'Missing data for generating payment capture request!',
-    )
-  }
-
-  const { amount, reference } = data
+  const paymentResponse = validatePaymentResponse({
+    ...data?.paymentResponse,
+    merchantAccount,
+  })
+  const amount = validateAmount(paymentResponse.amount)
+  const reference = validateString(paymentResponse.merchantReference)
 
   return {
-    merchantAccount,
-    reference,
+    ...paymentResponse,
     amount,
+    reference,
+    merchantAccount,
   }
 }
 
-export const getPaymentCancelRequest = (
+export const getCancelPaymentRequest = (
   merchantAccount: string,
   input: PaymentProviderInput,
 ): Types.checkout.PaymentCancelRequest => {
-  const data = getDataPaymentResponse(input?.data)
+  const data = getInputData(input)
 
-  if (!data || !data.reference || !data.pspReference) {
-    throw new MedusaError(
-      MedusaError.Types.INVALID_DATA,
-      'Missing data for generating payment cancel request!',
-    )
-  }
-
-  const { reference } = data
+  const paymentResponse = validatePaymentResponse({
+    ...data?.paymentResponse,
+    merchantAccount,
+  })
+  const reference = validateString(paymentResponse.merchantReference)
 
   return {
     merchantAccount,
@@ -435,31 +295,28 @@ export const getPaymentCancelRequest = (
   }
 }
 
-export const getPaymentRefundRequest = (
+export const getRefundPaymentRequest = (
   merchantAccount: string,
   input: RefundPaymentInput,
 ): Types.checkout.PaymentRefundRequest => {
-  const data = getDataPaymentCaptureResponse(input?.data)
+  const data = getInputData(input)
 
-  if (
-    !data ||
-    !data.amount ||
-    !data.pspReference ||
-    !data.capturePspReference ||
-    !data.reference
-  ) {
-    throw new MedusaError(
-      MedusaError.Types.INVALID_DATA,
-      'Missing data for generating payment refund request!',
-    )
-  }
+  const paymentCaptureResponse = validatePaymentCaptureResponse({
+    ...data?.paymentCaptureResponse,
+    merchantAccount,
+  })
 
-  const { capturePspReference, reference } = data
+  const capturePspReference = validateString(
+    paymentCaptureResponse.pspReference,
+  )
+  const reference = validateString(paymentCaptureResponse.reference)
 
-  const amount: Types.checkout.Amount = {
-    currency: capitalize(data.amount.currency),
-    value: getMinorUnit(input.amount, data.amount.currency),
-  }
+  const currency = paymentCaptureResponse.amount.currency.toUpperCase()
+  const value = getMinorUnit(input.amount, currency)
+  const amount = validateAmount({
+    currency,
+    value,
+  })
 
   return {
     merchantAccount,
