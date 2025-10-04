@@ -150,13 +150,10 @@ export const getListPaymentMethodsRequest = (
 
 export const getInitiatePaymentRequest = (
   merchantAccount: string,
-  returnUrl: string,
   input: InitiatePaymentInput,
 ): Types.checkout.PaymentMethodsRequest => {
   const data = getInputData(input)
   const context = getInputContext(input)
-
-  const { sessionId: reference } = getInputTransientData(input)
 
   const { currency_code, amount: total } = input
   const currency = currency_code.toUpperCase()
@@ -166,11 +163,9 @@ export const getInitiatePaymentRequest = (
     value,
   })
 
-  const dataPaymentRequest = validatePaymentRequest({
+  const dataPaymentRequest = validatePaymentMethodsRequest({
     ...data?.paymentRequest,
     amount,
-    reference,
-    returnUrl,
     merchantAccount,
   })
   const shopperReference = getContextShopperReference(context)

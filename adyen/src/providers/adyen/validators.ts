@@ -1,5 +1,9 @@
+import { Types } from '@adyen/api-library'
 import { MedusaError } from '@medusajs/framework/utils'
 import { z } from 'zod'
+
+// TODO: Remove after finishing the plugin. Used for easier type reference.
+type T = Types.checkout.PaymentCaptureResponse
 
 const EnvironmentEnumSchema = z.enum(['LIVE', 'TEST'])
 
@@ -58,6 +62,13 @@ const PaymentCaptureResponseSchema = z.object({
   reference: z.string(),
 })
 
+const PaymentCancelResponseSchema = z.object({
+  merchantAccount: z.string(),
+  paymentPspReference: z.string(),
+  pspReference: z.string(),
+  reference: z.string(),
+})
+
 const PaymentMethodsRequestSchema = z.object({
   additionalData: AdditionalDataSchema.optional(),
   allowedPaymentMethods: PaymentMethodsSchema.optional(),
@@ -91,10 +102,16 @@ const TransientDataSchema = z.object({
   sessionId: z.string(),
   paymentResponse: PaymentResponseSchema.nullable(),
   paymentCaptureResponse: PaymentCaptureResponseSchema.nullable(),
+  paymentCancelResponse: PaymentCancelResponseSchema.nullable(),
 })
 
 const DataSchema = TransientDataSchema.extend({
-  paymentRequest: PaymentRequestSchema.optional(),
+  paymentRequest: z
+    .union([
+      PaymentRequestSchema.partial(),
+      PaymentMethodsRequestSchema.partial(),
+    ])
+    .optional(),
   ready: z.boolean().optional(),
   session_id: z.string().optional(),
 }).partial()

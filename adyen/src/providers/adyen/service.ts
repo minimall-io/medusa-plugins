@@ -103,6 +103,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     try {
       // this.log('authorizePayment/input', input)
       const transientData = getInputTransientData(input)
+      const { sessionId } = transientData
       const request = getAuthorizePaymentRequest(
         this.options_.merchantAccount,
         this.options_.returnUrlPrefix,
@@ -111,7 +112,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       const paymentResponse =
         await this.checkoutAPI.PaymentsApi.payments(request)
       const { resultCode } = paymentResponse
-      const data = { ...transientData, paymentResponse }
+      const data = { ...input.data, paymentResponse, sessionId }
       const status = getPaymentSessionStatus(resultCode)
       this.log('authorizePayment/request', request)
       this.log('authorizePayment/output', { data, status })
@@ -128,7 +129,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     try {
       this.log('cancelPayment/input', input)
       const transientData = getInputTransientData(input)
-      const { paymentResponse } = transientData
+      const { paymentResponse, sessionId } = transientData
       const request = getCancelPaymentRequest(
         this.options_.merchantAccount,
         input,
@@ -140,7 +141,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
           request,
         )
 
-      const data = { ...transientData, paymentCancelResponse }
+      const data = { ...input.data, paymentCancelResponse, sessionId }
       this.log('cancelPayment/request', request)
       this.log('cancelPayment/output', { data })
       return { data }
@@ -156,7 +157,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     try {
       // this.log('capturePayment/input', input)
       const transientData = getInputTransientData(input)
-      const { paymentResponse } = transientData
+      const { paymentResponse, sessionId } = transientData
       const request = getCapturePaymentRequest(
         this.options_.merchantAccount,
         input,
@@ -168,7 +169,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
           request,
         )
 
-      const data = { ...transientData, paymentCaptureResponse }
+      const data = { ...input.data, paymentCaptureResponse, sessionId }
       this.log('capturePayment/request', request)
       this.log('capturePayment/output', { data })
       return { data }
@@ -197,8 +198,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async deletePayment(
     input: DeletePaymentInput,
   ): Promise<DeletePaymentOutput> {
-    this.log('deletePayment', input)
-    // TODO: Implement deletePayment logic
     return { data: {} }
   }
 
@@ -226,12 +225,11 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       const { sessionId } = transientData
       const request = getInitiatePaymentRequest(
         this.options_.merchantAccount,
-        this.options_.returnUrlPrefix,
         input,
       )
       const paymentMethods =
         await this.checkoutAPI.PaymentsApi.paymentMethods(request)
-      const data = { ...paymentMethods, ...transientData }
+      const data = { ...paymentMethods, sessionId }
       this.log('initiatePayment/request', request)
       this.log('initiatePayment/output', { data, id: sessionId })
       return { data, id: sessionId }
@@ -278,7 +276,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     try {
       this.log('refundPayment/input', input)
       const transientData = getInputTransientData(input)
-      const { paymentCaptureResponse } = transientData
+      const { paymentCaptureResponse, sessionId } = transientData
       const request = getRefundPaymentRequest(
         this.options_.merchantAccount,
         input,
@@ -290,7 +288,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
           request,
         )
 
-      const data = { ...transientData, paymentRefundResponse }
+      const data = { ...input.data, paymentRefundResponse, sessionId }
       this.log('refundPayment/request', request)
       this.log('refundPayment/output', { data })
       return { data }
