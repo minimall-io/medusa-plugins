@@ -1,9 +1,7 @@
-import { Types } from '@adyen/api-library'
-import { EnvironmentEnum } from '@adyen/api-library/lib/src/config'
 import { MedusaError } from '@medusajs/framework/utils'
 import { z } from 'zod'
 
-export type T = Types.checkout.Amount
+const EnvironmentEnumSchema = z.enum(['LIVE', 'TEST'])
 
 const ChannelEnumSchema = z.enum(['iOS', 'Android', 'Web'])
 
@@ -107,7 +105,7 @@ const OptionsSchema = z.object({
   merchantAccount: z.string(),
   liveEndpointUrlPrefix: z.string(),
   returnUrlPrefix: z.string(),
-  environment: z.nativeEnum(EnvironmentEnum).optional(),
+  environment: EnvironmentEnumSchema.optional(),
 })
 
 export type Amount = z.infer<typeof AmountSchema>

@@ -35,7 +35,6 @@ import {
 } from '@medusajs/framework/types'
 import {
   AbstractPaymentProvider,
-  isDefined,
   PaymentActions,
 } from '@medusajs/framework/utils'
 import crypto from 'crypto'
@@ -74,15 +73,11 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.options_ = options
 
     const { apiKey, environment, liveEndpointUrlPrefix } = options
-    const defaultEnvironment = !isDefined<EnvironmentEnum | undefined>(
-      environment,
-    )
-      ? EnvironmentEnum.TEST
-      : environment
+    const defaultEnvironment = environment || 'TEST'
 
     this.client = new Client({
       apiKey,
-      environment: defaultEnvironment,
+      environment: defaultEnvironment as EnvironmentEnum,
       liveEndpointUrlPrefix,
     })
     this.checkoutAPI = new CheckoutAPI(this.client)
