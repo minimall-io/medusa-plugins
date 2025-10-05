@@ -73,11 +73,11 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.options_ = options
 
     const { apiKey, environment, liveEndpointUrlPrefix } = options
-    const defaultEnvironment = environment || 'TEST'
+    const defaultEnvironment = environment || EnvironmentEnum.TEST
 
     this.client = new Client({
       apiKey,
-      environment: defaultEnvironment as EnvironmentEnum,
+      environment: defaultEnvironment,
       liveEndpointUrlPrefix,
     })
     this.checkoutAPI = new CheckoutAPI(this.client)

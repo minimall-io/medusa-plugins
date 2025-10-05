@@ -1,9 +1,7 @@
 import { Types } from '@adyen/api-library'
 import {
-  AccountHolderDTO,
   BigNumberInput,
   InitiatePaymentInput,
-  PaymentProviderContext,
   PaymentProviderInput,
   PaymentSessionStatus,
   RefundPaymentInput,
@@ -12,11 +10,13 @@ import { BigNumber, MathBN } from '@medusajs/framework/utils'
 import { CURRENCY_MULTIPLIERS } from './constants'
 import {
   Data,
+  PaymentProviderContext,
   TransientData,
   validateAmount,
   validateData,
   validatePaymentCaptureResponse,
   validatePaymentMethodsRequest,
+  validatePaymentProviderContext,
   validatePaymentRequest,
   validatePaymentResponse,
   validateTransientData,
@@ -59,17 +59,15 @@ const getMinorUnit = (amount: BigNumberInput, currency: string): number => {
 const getInputData = (input: PaymentProviderInput): Data =>
   validateData(input.data)
 
-const getInputContext = (
-  input: PaymentProviderInput,
-): PaymentProviderContext | undefined =>
-  input?.context ? (input.context as PaymentProviderContext) : undefined
+const getInputContext = (input: PaymentProviderInput): PaymentProviderContext =>
+  validatePaymentProviderContext(input.context)
 
 const getContextShopperReference = (
   context?: PaymentProviderContext,
 ): string | undefined => {
   if (!context || !context.account_holder) return
   const { account_holder } = context
-  const accountHolder = account_holder as AccountHolderDTO
+  const accountHolder = account_holder
   return accountHolder.id
 }
 
