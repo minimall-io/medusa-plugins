@@ -1,23 +1,81 @@
 import { Types } from '@adyen/api-library'
+import { EnvironmentEnum } from '@adyen/api-library/lib/src/config'
 import { MedusaError } from '@medusajs/framework/utils'
 import { z } from 'zod'
 
 // TODO: Remove after finishing the plugin. Used for easier type reference.
-type T = Types.checkout.PaymentCaptureResponse
+type T = Types.checkout.PaymentRefundResponse
 
-const EnvironmentEnumSchema = z.enum(['LIVE', 'TEST'])
+const getValidator =
+  <T = any>(schema: z.ZodSchema) =>
+  (data: unknown, errorMessage?: string): T => {
+    try {
+      const validatedData = schema.parse(data)
+      return validatedData
+    } catch (error) {
+      if (errorMessage) {
+        throw new MedusaError(MedusaError.Types.INVALID_DATA, errorMessage)
+      } else if (error instanceof z.ZodError) {
+        throw new MedusaError(MedusaError.Types.INVALID_DATA, error.message)
+      } else {
+        throw new MedusaError(MedusaError.Types.INVALID_DATA, error)
+      }
+    }
+  }
 
-const ChannelEnumSchema = z.enum(['iOS', 'Android', 'Web'])
+const StringArraySchema = z.array(z.string())
 
-const StoreFiltrationModeEnumSchema = z.enum([
-  'exclusive',
-  'inclusive',
-  'skipFilter',
-])
+const StringRecordSchema = z.record(z.string(), z.string())
 
-const AdditionalDataSchema = z.record(z.string(), z.string())
+const AnyRecordSchema = z.record(z.string(), z.any())
 
-const PaymentMethodsSchema = z.array(z.string())
+const UnknownRecordSchema = z.record(z.string(), z.unknown())
+
+const AddressDTOSchema = z.object({
+  id: z.string().optional(),
+  address_1: z.string(),
+  address_2: z.string().optional().nullable(),
+  company: z.string().optional().nullable(),
+  country_code: z.string(),
+  city: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  postal_code: z.string().optional().nullable(),
+  province: z.string().optional().nullable(),
+  metadata: UnknownRecordSchema.optional().nullable(),
+  created_at: z.union([z.string(), z.date()]).optional(),
+  updated_at: z.union([z.string(), z.date()]).optional(),
+  deleted_at: z.union([z.string(), z.date()]).optional().nullable(),
+})
+
+const PaymentAccountHolderDTOSchema = z.object({
+  data: UnknownRecordSchema,
+})
+
+const PaymentCustomerDTOSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  company_name: z.string().optional().nullable(),
+  first_name: z.string().optional().nullable(),
+  last_name: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  billing_address: AddressDTOSchema.partial().optional().nullable(),
+})
+
+const PaymentProviderContextSchema = z.object({
+  account_holder: PaymentAccountHolderDTOSchema.optional(),
+  customer: PaymentCustomerDTOSchema.optional(),
+  idempotency_key: z.string().optional(),
+})
+
+const EnvironmentEnumSchema = z.nativeEnum(EnvironmentEnum)
+
+const ChannelEnumSchema = z.nativeEnum(
+  Types.checkout.PaymentRequest.ChannelEnum,
+)
+
+const StoreFiltrationModeEnumSchema = z.nativeEnum(
+  Types.checkout.PaymentMethodsRequest.StoreFiltrationModeEnum,
+)
 
 const OrderSchema = z.object({
   orderData: z.string(),
@@ -37,7 +95,7 @@ const BrowserInfoSchema = z.object({
 })
 
 const PaymentMethodSchema = z.intersection(
-  z.record(z.string(), z.any()),
+  AnyRecordSchema,
   z.object({
     checkoutAttemptId: z.string().optional(),
   }),
@@ -69,11 +127,20 @@ const PaymentCancelResponseSchema = z.object({
   reference: z.string(),
 })
 
+const PaymentRefundResponseSchema = z.object({
+  amount: AmountSchema,
+  capturePspReference: z.string(),
+  merchantAccount: z.string(),
+  paymentPspReference: z.string(),
+  pspReference: z.string(),
+  reference: z.string(),
+})
+
 const PaymentMethodsRequestSchema = z.object({
-  additionalData: AdditionalDataSchema.optional(),
-  allowedPaymentMethods: PaymentMethodsSchema.optional(),
+  additionalData: StringRecordSchema.optional(),
+  allowedPaymentMethods: StringArraySchema.optional(),
   amount: AmountSchema.optional().nullable(),
-  blockedPaymentMethods: PaymentMethodsSchema.optional(),
+  blockedPaymentMethods: StringArraySchema.optional(),
   browserInfo: BrowserInfoSchema.optional().nullable(),
   channel: ChannelEnumSchema.optional(),
   countryCode: z.string().optional(),
@@ -103,6 +170,7 @@ const TransientDataSchema = z.object({
   paymentResponse: PaymentResponseSchema.nullable(),
   paymentCaptureResponse: PaymentCaptureResponseSchema.nullable(),
   paymentCancelResponse: PaymentCancelResponseSchema.nullable(),
+  paymentRefundResponse: PaymentRefundResponseSchema.nullable(),
 })
 
 const DataSchema = TransientDataSchema.extend({
@@ -125,50 +193,50 @@ const OptionsSchema = z.object({
   environment: EnvironmentEnumSchema.optional(),
 })
 
+export type PaymentProviderContext = z.infer<
+  typeof PaymentProviderContextSchema
+>
 export type Amount = z.infer<typeof AmountSchema>
 export type PaymentResponse = z.infer<typeof PaymentResponseSchema>
 export type PaymentCaptureResponse = z.infer<
   typeof PaymentCaptureResponseSchema
 >
-export type Options = z.infer<typeof OptionsSchema>
+export type PaymentCancelResponse = z.infer<typeof PaymentCancelResponseSchema>
+export type PaymentRefundResponse = z.infer<typeof PaymentRefundResponseSchema>
+export type PaymentMethodsRequest = z.infer<typeof PaymentMethodsRequestSchema>
+export type PaymentRequest = z.infer<typeof PaymentRequestSchema>
+
 export type TransientData = z.infer<typeof TransientDataSchema>
 export type Data = z.infer<typeof DataSchema>
+export type Options = z.infer<typeof OptionsSchema>
 
-const dataValidator =
-  <T = any>(schema: z.ZodSchema) =>
-  (data: unknown, errorMessage?: string): T => {
-    try {
-      const validatedData = schema.parse(data)
-      return validatedData
-    } catch (error) {
-      if (errorMessage) {
-        throw new MedusaError(MedusaError.Types.INVALID_DATA, errorMessage)
-      } else if (error instanceof z.ZodError) {
-        throw new MedusaError(MedusaError.Types.INVALID_DATA, error.message)
-      } else {
-        throw new MedusaError(MedusaError.Types.INVALID_DATA, error)
-      }
-    }
-  }
+export const validatePaymentProviderContext =
+  getValidator<PaymentProviderContext>(PaymentProviderContextSchema)
 
-export const validateAmount = dataValidator<Amount>(AmountSchema)
+export const validateAmount = getValidator<Amount>(AmountSchema)
 
-export const validatePaymentMethodsRequest = dataValidator(
-  PaymentMethodsRequestSchema,
-)
-
-export const validatePaymentRequest = dataValidator(PaymentRequestSchema)
-
-export const validatePaymentResponse = dataValidator<PaymentResponse>(
+export const validatePaymentResponse = getValidator<PaymentResponse>(
   PaymentResponseSchema,
 )
 
 export const validatePaymentCaptureResponse =
-  dataValidator<PaymentCaptureResponse>(PaymentCaptureResponseSchema)
+  getValidator<PaymentCaptureResponse>(PaymentCaptureResponseSchema)
+
+export const validatePaymentCancelResponse =
+  getValidator<PaymentCancelResponse>(PaymentCancelResponseSchema)
+
+export const validatePaymentRefundResponse =
+  getValidator<PaymentRefundResponse>(PaymentRefundResponseSchema)
+
+export const validatePaymentMethodsRequest =
+  getValidator<PaymentMethodsRequest>(PaymentMethodsRequestSchema)
+
+export const validatePaymentRequest =
+  getValidator<PaymentRequest>(PaymentRequestSchema)
 
 export const validateTransientData =
-  dataValidator<TransientData>(TransientDataSchema)
+  getValidator<TransientData>(TransientDataSchema)
 
-export const validateData = dataValidator<Data>(DataSchema)
+export const validateData = getValidator<Data>(DataSchema)
 
-export const validateOptions = dataValidator<Options>(OptionsSchema)
+export const validateOptions = getValidator<Options>(OptionsSchema)
