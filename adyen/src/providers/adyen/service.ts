@@ -35,6 +35,7 @@ import {
 } from '@medusajs/framework/types'
 import {
   AbstractPaymentProvider,
+  MedusaError,
   PaymentActions,
 } from '@medusajs/framework/utils'
 import crypto from 'crypto'
@@ -100,8 +101,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async authorizePayment(
     input: AuthorizePaymentInput,
   ): Promise<AuthorizePaymentOutput> {
+    this.log('authorizePayment/input', input)
     try {
-      // this.log('authorizePayment/input', input)
       const validInput = validateAuthorizePaymentInput(input)
       const { merchantAccount, returnUrlPrefix: returnUrl } = this.options_
       const { reference, paymentRequest } = validInput.data
@@ -128,8 +129,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async cancelPayment(
     input: CancelPaymentInput,
   ): Promise<CancelPaymentOutput> {
+    this.log('cancelPayment/input', input)
     try {
-      this.log('cancelPayment/input', input)
       const validInput = validateCancelPaymentInput(input)
       const { merchantReference: reference, pspReference } =
         validInput.data.paymentResponse
@@ -158,8 +159,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async capturePayment(
     input: CapturePaymentInput,
   ): Promise<CapturePaymentOutput> {
+    this.log('capturePayment/input', input)
     try {
-      // this.log('capturePayment/input', input)
       const validInput = validateCapturePaymentInput(input)
       const {
         merchantReference: reference,
@@ -192,7 +193,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async createAccountHolder(
     input: CreateAccountHolderInput,
   ): Promise<CreateAccountHolderOutput> {
-    this.log('createAccountHolder', input)
+    this.log('createAccountHolder/input', input)
     // TODO: Implement createAccountHolder logic
     return { id: input.context.customer.id }
   }
@@ -200,7 +201,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async deleteAccountHolder(
     input: DeleteAccountHolderInput,
   ): Promise<DeleteAccountHolderOutput> {
-    this.log('deleteAccountHolder', input)
+    this.log('deleteAccountHolder/input', input)
     // TODO: Implement createAccountHolder logic
     return { data: {} }
   }
@@ -208,20 +209,24 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async deletePayment(
     input: DeletePaymentInput,
   ): Promise<DeletePaymentOutput> {
+    this.log('deletePayment/input', input)
     return { data: {} }
   }
 
   public async getPaymentStatus(
     input: GetPaymentStatusInput,
   ): Promise<GetPaymentStatusOutput> {
-    this.log('getPaymentStatus', input, 'error')
-    throw new Error('Method not implemented.')
+    this.log('getPaymentStatus/input', input, 'error')
+    throw new MedusaError(
+      MedusaError.Types.NOT_ALLOWED,
+      'Method not implemented.',
+    )
   }
 
   public async getWebhookActionAndData(
     input: ProviderWebhookPayload['payload'],
   ): Promise<WebhookActionResult> {
-    this.log('getWebhookActionAndData', input)
+    this.log('getWebhookActionAndData/input', input)
     // TODO: Implement getWebhookActionAndData logic
     return { action: PaymentActions.NOT_SUPPORTED }
   }
@@ -229,8 +234,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async initiatePayment(
     input: InitiatePaymentInput,
   ): Promise<InitiatePaymentOutput> {
+    this.log('initiatePayment/input', input)
     try {
-      // this.log('initiatePayment/input', input)
+      const paymentRequest = input?.data?.paymentRequest || {}
       const validInput = validateInitiatePaymentInput(input)
       const { reference, currency_code, amount: total } = validInput
       const currency = currency_code.toUpperCase()
@@ -251,9 +257,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       const paymentMethodsResponse =
         await this.checkoutAPI.PaymentsApi.paymentMethods(request)
       const data = {
-        paymentRequest: input?.data?.paymentRequest,
+        paymentRequest: { ...paymentRequest, amount },
         paymentMethodsResponse,
-        amount,
         reference,
       }
       this.log('initiatePayment/request', request)
@@ -268,8 +273,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async listPaymentMethods(
     input: ListPaymentMethodsInput,
   ): Promise<ListPaymentMethodsOutput> {
+    this.log('listPaymentMethods/input', input)
     try {
-      // this.log('listPaymentMethods/input', input)
       const validInput = validateListPaymentMethodsInput(input)
       const { merchantAccount } = this.options_
       const paymentRequest = validInput?.data?.paymentRequest
@@ -302,8 +307,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async refundPayment(
     input: RefundPaymentInput,
   ): Promise<RefundPaymentOutput> {
+    this.log('refundPayment/input', input)
     try {
-      this.log('refundPayment/input', input)
       const validInput = validateRefundPaymentInput(input)
       const {
         reference,
@@ -343,7 +348,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async retrievePayment(
     input: RetrievePaymentInput,
   ): Promise<RetrievePaymentOutput> {
-    this.log('retrievePayment', input)
+    this.log('retrievePayment/input', input)
     // TODO: Implement retrievePayment logic
     return {}
   }
@@ -351,7 +356,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async savePaymentMethod(
     input: SavePaymentMethodInput,
   ): Promise<SavePaymentMethodOutput> {
-    this.log('savePaymentMethod', input)
+    this.log('savePaymentMethod/input', input)
     // TODO: Implement savePaymentMethod logic
     return { data: {}, id: input.context?.customer?.id || crypto.randomUUID() }
   }
@@ -359,7 +364,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async updateAccountHolder(
     input: UpdateAccountHolderInput,
   ): Promise<UpdateAccountHolderOutput> {
-    this.log('updateAccountHolder', input)
+    this.log('updateAccountHolder/input', input)
     // TODO: Implement updateAccountHolder logic
     return { data: {} }
   }
@@ -367,7 +372,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async updatePayment(
     input: UpdatePaymentInput,
   ): Promise<UpdatePaymentOutput> {
-    this.log('updatePayment', input)
+    this.log('updatePayment/input', input)
     // TODO: Implement updatePayment logic
     return { data: {} }
   }
