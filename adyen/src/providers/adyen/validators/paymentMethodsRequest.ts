@@ -37,7 +37,6 @@ export const PaymentMethodsRequestSchema = z.object({
   browserInfo: BrowserInfoSchema.optional().nullable(),
   channel: ChannelEnumSchema.optional(),
   countryCode: z.string().optional(),
-  merchantAccount: z.string(),
   order: OrderSchema.optional().nullable(),
   shopperConversionId: z.string().optional(),
   shopperEmail: z.string().optional(),

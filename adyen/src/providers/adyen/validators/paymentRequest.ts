@@ -13,9 +13,6 @@ const PaymentMethodSchema = z.intersection(
 export const PaymentRequestSchema = z.object({
   amount: AmountSchema,
   paymentMethod: PaymentMethodSchema,
-  merchantAccount: z.string(),
-  reference: z.string(),
-  returnUrl: z.string(),
 })
 
 export type PaymentRequest = z.infer<typeof PaymentRequestSchema>

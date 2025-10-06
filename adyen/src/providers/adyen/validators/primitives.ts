@@ -2,6 +2,8 @@ import { z } from 'zod'
 
 export const StringDateUnionSchema = z.union([z.string(), z.date()])
 
+export const StringNumberUnion = z.union([z.string(), z.number()])
+
 export const StringArraySchema = z.array(z.string())
 
 export const StringRecordSchema = z.record(z.string(), z.string())
