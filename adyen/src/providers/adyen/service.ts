@@ -103,8 +103,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<AuthorizePaymentOutput> {
     this.log('authorizePayment/input', input)
     try {
-      const validInput = validateAuthorizePaymentInput(input)
       const { merchantAccount, returnUrlPrefix: returnUrl } = this.options_
+      const validInput = validateAuthorizePaymentInput(input)
       const { reference, paymentRequest } = validInput.data
       const request: Types.checkout.PaymentRequest = {
         ...paymentRequest,
@@ -131,10 +131,12 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<CancelPaymentOutput> {
     this.log('cancelPayment/input', input)
     try {
-      const validInput = validateCancelPaymentInput(input)
-      const { merchantReference: reference, pspReference } =
-        validInput.data.paymentResponse
       const { merchantAccount } = this.options_
+      const validInput = validateCancelPaymentInput(input)
+      const {
+        reference,
+        paymentResponse: { pspReference },
+      } = validInput.data
       const request: Types.checkout.PaymentCancelRequest = {
         merchantAccount,
         reference,
@@ -161,13 +163,12 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<CapturePaymentOutput> {
     this.log('capturePayment/input', input)
     try {
+      const { merchantAccount } = this.options_
       const validInput = validateCapturePaymentInput(input)
       const {
-        merchantReference: reference,
-        pspReference,
-        amount,
-      } = validInput.data.paymentResponse
-      const { merchantAccount } = this.options_
+        reference,
+        paymentResponse: { amount, pspReference },
+      } = validInput.data
       const request: Types.checkout.PaymentCaptureRequest = {
         merchantAccount,
         amount,
@@ -179,8 +180,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
           pspReference,
           request,
         )
-
-      const data = { ...input.data, paymentCaptureResponse }
+      const previousCaptures = validInput.data.paymentCaptures || []
+      const paymentCaptures = [...previousCaptures, paymentCaptureResponse]
+      const data = { ...input.data, paymentCaptures }
       this.log('capturePayment/request', request)
       this.log('capturePayment/output', { data })
       return { data }
@@ -312,11 +314,10 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       const validInput = validateRefundPaymentInput(input)
       const {
         reference,
-        pspReference: capturePspReference,
-        amount: captureAmount,
-      } = validInput.data.paymentCaptureResponse
+        paymentResponse: { pspReference, amount: paymentAmount },
+      } = validInput.data
       const { merchantAccount } = this.options_
-      const currency = captureAmount.currency.toUpperCase()
+      const currency = paymentAmount.currency.toUpperCase()
       const value = getMinorUnit(validInput.amount, currency)
       const amount: Types.checkout.Amount = {
         currency,
@@ -324,18 +325,19 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       }
       const request: Types.checkout.PaymentRefundRequest = {
         merchantAccount,
-        capturePspReference,
         reference,
         amount,
       }
 
       const paymentRefundResponse =
         await this.checkoutAPI.ModificationsApi.refundCapturedPayment(
-          capturePspReference,
+          pspReference,
           request,
         )
 
-      const data = { ...input.data, paymentRefundResponse }
+      const previousRefunds = validInput.data.paymentRefunds || []
+      const paymentRefunds = [...previousRefunds, paymentRefundResponse]
+      const data = { ...input.data, paymentRefunds }
       this.log('refundPayment/request', request)
       this.log('refundPayment/output', { data })
       return { data }
