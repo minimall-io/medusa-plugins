@@ -6,6 +6,8 @@ export const StringNumberUnion = z.union([z.string(), z.number()])
 
 export const StringArraySchema = z.array(z.string())
 
+export const UnknownArraySchema = z.array(z.unknown())
+
 export const StringRecordSchema = z.record(z.string(), z.string())
 
 export const AnyRecordSchema = z.record(z.string(), z.any())

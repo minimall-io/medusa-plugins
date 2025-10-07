@@ -1,20 +1,17 @@
 import { z } from 'zod'
-import { AmountSchema } from './amount'
+import { PaymentResponseSchema } from './core'
 import { getValidator } from './helpers'
-
-const PaymentCaptureResponseSchema = z.object({
-  amount: AmountSchema,
-  pspReference: z.string(),
-  reference: z.string(),
-})
+import { UnknownArraySchema } from './primitives'
 
 const DataSchema = z.object({
-  paymentCaptureResponse: PaymentCaptureResponseSchema,
+  reference: z.string(),
+  paymentResponse: PaymentResponseSchema,
+  paymentRefunds: UnknownArraySchema.optional(),
 })
 
 const InputSchema = z.object({
   data: DataSchema,
-  amount: z.number(),
+  amount: z.any(),
 })
 
 export type RefundPaymentInput = z.infer<typeof InputSchema>

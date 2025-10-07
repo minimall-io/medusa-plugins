@@ -1,8 +1,6 @@
-import { EnvironmentEnum } from '@adyen/api-library/lib/src/config'
 import { z } from 'zod'
+import { EnvironmentEnumSchema } from './core'
 import { getValidator } from './helpers'
-
-export const EnvironmentEnumSchema = z.nativeEnum(EnvironmentEnum)
 
 export const OptionsSchema = z.object({
   apiKey: z.string(),

@@ -1,6 +1,6 @@
 import { z } from 'zod'
+import { PaymentMethodsRequestSchema } from './core'
 import { getValidator } from './helpers'
-import { PaymentMethodsRequestSchema } from './paymentMethodsRequest'
 
 const DataSchema = z.object({
   paymentRequest: PaymentMethodsRequestSchema.optional(),

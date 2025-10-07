@@ -1,15 +1,12 @@
 import { z } from 'zod'
-import { AmountSchema } from './amount'
+import { PaymentResponseSchema } from './core'
 import { getValidator } from './helpers'
-
-const PaymentResponseSchema = z.object({
-  amount: AmountSchema,
-  merchantReference: z.string(),
-  pspReference: z.string(),
-})
+import { UnknownArraySchema } from './primitives'
 
 const DataSchema = z.object({
+  reference: z.string(),
   paymentResponse: PaymentResponseSchema,
+  paymentCaptures: UnknownArraySchema.optional(),
 })
 
 const InputSchema = z.object({

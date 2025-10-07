@@ -1,15 +1,33 @@
 import { Types } from '@adyen/api-library'
+import { EnvironmentEnum } from '@adyen/api-library/lib/src/config'
 import { z } from 'zod'
-import { AmountSchema } from './amount'
-import { getValidator } from './helpers'
-import { StringArraySchema, StringRecordSchema } from './primitives'
+import {
+  AnyRecordSchema,
+  StringArraySchema,
+  StringRecordSchema,
+} from './primitives'
 
-const OrderSchema = z.object({
+export const EnvironmentEnumSchema = z.nativeEnum(EnvironmentEnum)
+
+export const ChannelEnumSchema = z.nativeEnum(
+  Types.checkout.PaymentRequest.ChannelEnum,
+)
+
+export const StoreFiltrationModeEnumSchema = z.nativeEnum(
+  Types.checkout.PaymentMethodsRequest.StoreFiltrationModeEnum,
+)
+
+export const AmountSchema = z.object({
+  currency: z.string().length(3).toUpperCase(),
+  value: z.number(),
+})
+
+export const OrderSchema = z.object({
   orderData: z.string(),
   pspReference: z.string(),
 })
 
-const BrowserInfoSchema = z.object({
+export const BrowserInfoSchema = z.object({
   acceptHeader: z.string(),
   colorDepth: z.number(),
   javaEnabled: z.boolean(),
@@ -21,12 +39,11 @@ const BrowserInfoSchema = z.object({
   userAgent: z.string(),
 })
 
-const ChannelEnumSchema = z.nativeEnum(
-  Types.checkout.PaymentRequest.ChannelEnum,
-)
-
-const StoreFiltrationModeEnumSchema = z.nativeEnum(
-  Types.checkout.PaymentMethodsRequest.StoreFiltrationModeEnum,
+export const PaymentMethodSchema = z.intersection(
+  AnyRecordSchema,
+  z.object({
+    checkoutAttemptId: z.string().optional(),
+  }),
 )
 
 export const PaymentMethodsRequestSchema = z.object({
@@ -49,7 +66,12 @@ export const PaymentMethodsRequestSchema = z.object({
   telephoneNumber: z.string().optional(),
 })
 
-export type PaymentMethodsRequest = z.infer<typeof PaymentMethodsRequestSchema>
+export const PaymentRequestSchema = z.object({
+  amount: AmountSchema,
+  paymentMethod: PaymentMethodSchema,
+})
 
-export const validatePaymentMethodsRequest =
-  getValidator<PaymentMethodsRequest>(PaymentMethodsRequestSchema)
+export const PaymentResponseSchema = z.object({
+  amount: AmountSchema,
+  pspReference: z.string(),
+})
