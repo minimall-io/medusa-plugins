@@ -197,7 +197,7 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
       try {
         setError(null)
         const paymentRequest = getPaymentRequest(paymentData, cart)
-        const data = { paymentRequest, ready }
+        const data = { paymentRequest }
         const options = { provider_id: providerId, data }
         const response = await initiatePaymentSession(cart, options)
         const session = response.payment_collection?.payment_sessions?.find(
