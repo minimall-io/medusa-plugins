@@ -6,7 +6,7 @@ import { UnknownArraySchema } from './primitives'
 const DataSchema = z.object({
   reference: z.string(),
   paymentResponse: PaymentResponseSchema,
-  paymentRefunds: UnknownArraySchema.optional(),
+  paymentRefundResponses: UnknownArraySchema.optional(),
 })
 
 const InputSchema = z.object({

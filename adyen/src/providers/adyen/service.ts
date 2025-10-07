@@ -180,9 +180,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
           pspReference,
           request,
         )
-      const previousCaptures = validInput.data.paymentCaptures || []
-      const paymentCaptures = [...previousCaptures, paymentCaptureResponse]
-      const data = { ...input.data, paymentCaptures }
+      const captures = validInput.data.paymentCaptureResponses || []
+      const paymentCaptureResponses = [...captures, paymentCaptureResponse]
+      const data = { ...input.data, paymentCaptureResponses }
       this.log('capturePayment/request', request)
       this.log('capturePayment/output', { data })
       return { data }
@@ -335,9 +335,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
           request,
         )
 
-      const previousRefunds = validInput.data.paymentRefunds || []
-      const paymentRefunds = [...previousRefunds, paymentRefundResponse]
-      const data = { ...input.data, paymentRefunds }
+      const refunds = validInput.data.paymentRefundResponses || []
+      const paymentRefundResponses = [...refunds, paymentRefundResponse]
+      const data = { ...input.data, paymentRefundResponses }
       this.log('refundPayment/request', request)
       this.log('refundPayment/output', { data })
       return { data }
