@@ -1,8 +1,18 @@
 "use server"
 
 import { sdk } from "@lib/config"
-import { getAuthHeaders, getCacheOptions } from "./cookies"
 import { HttpTypes } from "@medusajs/types"
+import { getAuthHeaders, getCacheOptions } from "./cookies"
+
+export interface SavedPaymentMethod<Data> {
+  id: string
+  provider_id: string
+  data: Data
+}
+
+export interface StorePaymentMethodListResponse<Data> {
+  payment_methods: SavedPaymentMethod<Data>[]
+}
 
 export const listCartPaymentMethods = async (regionId: string) => {
   const headers = {
@@ -31,5 +41,25 @@ export const listCartPaymentMethods = async (regionId: string) => {
     )
     .catch(() => {
       return null
+    })
+}
+
+export const getSavedPaymentMethods = async <Data>(accountHolderId: string) => {
+  const headers = {
+    ...(await getAuthHeaders()),
+  }
+
+  return sdk.client
+    .fetch<StorePaymentMethodListResponse<Data>>(
+      `/store/payment-methods/${accountHolderId}`,
+      {
+        method: "GET",
+        headers,
+      }
+    )
+    .catch(() => {
+      return {
+        payment_methods: [],
+      }
     })
 }
