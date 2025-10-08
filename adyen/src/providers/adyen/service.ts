@@ -40,7 +40,7 @@ import {
 } from '@medusajs/framework/utils'
 import crypto from 'crypto'
 
-import { getMinorUnit, getPaymentSessionStatus } from './util'
+import { getMinorUnit, getPaymentSessionStatus } from './utils'
 
 import {
   Options,
