@@ -1,8 +1,6 @@
 import {
   AddressData,
-  AdyenCheckout,
   AdyenCheckoutError,
-  Core,
   OnChangeData,
   PaymentAmount,
   PaymentData,
@@ -12,8 +10,8 @@ import {
 import "@adyen/adyen-web/styles/adyen.css"
 import { initiatePaymentSession, placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { AdyenEnvironment, ChannelEnum, IAdyenPayment } from "./interfaces"
+import { useCallback, useMemo, useState } from "react"
+import { ChannelEnum, IAdyenPayment } from "./interfaces"
 
 interface PaymentRequest extends Partial<PaymentData> {
   channel?: ChannelEnum
@@ -25,9 +23,6 @@ interface PaymentRequest extends Partial<PaymentData> {
   // shopperIP, ??? Where do we get this data from?
 }
 
-const clientKey = process.env.NEXT_PUBLIC_ADYEN_CLIENT_KEY
-const environment = (process.env.NEXT_PUBLIC_ADYEN_ENVIRONMENT ||
-  "test") as AdyenEnvironment
 const channel = ChannelEnum.Web
 
 /**
@@ -155,20 +150,14 @@ const getPaymentRequest = (
 }
 
 const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
-  const [checkout, setCheckout] = useState<Core | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState<boolean>(false)
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null)
-  const [paymentMethods, setPaymentMethods] =
-    useState<PaymentMethodsResponse | null>(null)
+  const [paymentMethodsResponse, setPaymentMethodsResponse] = useState<
+    PaymentMethodsResponse | undefined
+  >(undefined)
 
   const { countryCode } = useMemo(() => getCartPaymentRequest(cart), [cart])
-
-  if (!clientKey) {
-    throw new Error(
-      "Adyen key is missing. Set NEXT_PUBLIC_ADYEN_KEY environment variable."
-    )
-  }
 
   const onChange = useCallback((state: OnChangeData, component: UIElement) => {
     console.log("Adyen change state:", state)
@@ -203,8 +192,8 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
         const session = response.payment_collection?.payment_sessions?.find(
           (session) => session.provider_id === providerId
         )
-        setPaymentMethods(() => {
-          if (!session) return null
+        setPaymentMethodsResponse(() => {
+          if (!session) return
           return session.data.paymentMethodsResponse as PaymentMethodsResponse
         })
         console.log("Adyen updatePayment data:", data)
@@ -226,45 +215,16 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
     }
   }, [ready])
 
-  const onInit = useCallback(async () => {
-    try {
-      const config = {
-        environment,
-        clientKey,
-        countryCode,
-        showPayButton: false,
-        onChange,
-        onError,
-      }
-      const checkout = await AdyenCheckout(config)
-      setCheckout(checkout)
-    } catch (error) {
-      setCheckout(null)
-      console.error("Error initializing Adyen checkout configuration:", error)
-    }
-  }, [countryCode])
-
-  useEffect(() => {
-    if (clientKey && countryCode) onInit()
-
-    return () => {
-      setError(null)
-      setReady(false)
-      setCheckout(null)
-      setPaymentData(null)
-      setPaymentMethods(null)
-    }
-  }, [countryCode])
-
   return {
     ready,
     error,
     onUpdate,
     onPay,
     config: {
-      checkout,
+      countryCode,
+      onError,
       onChange,
-      ...paymentMethods,
+      paymentMethodsResponse,
     },
   }
 }
