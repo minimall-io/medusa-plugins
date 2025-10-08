@@ -54,11 +54,8 @@ export const PaymentMethodSchema = z.intersection(
   }),
 )
 
-export const PaymentMethodsRequestSchema = z.object({
+export const SharedPaymentRequestSchema = z.object({
   additionalData: StringRecordSchema.optional(),
-  allowedPaymentMethods: StringArraySchema.optional(),
-  amount: AmountSchema.optional().nullable(),
-  blockedPaymentMethods: StringArraySchema.optional(),
   browserInfo: BrowserInfoSchema.optional().nullable(),
   channel: ChannelEnumSchema.optional(),
   countryCode: z.string().optional(),
@@ -68,13 +65,19 @@ export const PaymentMethodsRequestSchema = z.object({
   shopperIP: z.string().optional(),
   shopperLocale: z.string().optional(),
   shopperReference: z.string().optional(),
-  splitCardFundingSources: z.boolean().optional(),
   store: z.string().optional(),
-  storeFiltrationMode: StoreFiltrationModeEnumSchema.optional(),
   telephoneNumber: z.string().optional(),
 })
 
-export const PaymentRequestSchema = z.object({
+export const PaymentMethodsRequestSchema = SharedPaymentRequestSchema.extend({
+  allowedPaymentMethods: StringArraySchema.optional(),
+  amount: AmountSchema.optional().nullable(),
+  blockedPaymentMethods: StringArraySchema.optional(),
+  splitCardFundingSources: z.boolean().optional(),
+  storeFiltrationMode: StoreFiltrationModeEnumSchema.optional(),
+})
+
+export const PaymentRequestSchema = SharedPaymentRequestSchema.extend({
   amount: AmountSchema,
   paymentMethod: PaymentMethodSchema,
   storePaymentMethod: z.boolean().optional(),
