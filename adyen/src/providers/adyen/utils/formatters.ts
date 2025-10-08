@@ -70,3 +70,11 @@ export const getPaymentSessionStatus = (
       return 'error' // Default to error for unhandled cases
   }
 }
+
+export const getStoredPaymentMethod = (
+  method: Types.checkout.StoredPaymentMethod,
+  index: number,
+) => ({
+  id: method.id || index.toString(),
+  data: method as Record<string, unknown>,
+})
