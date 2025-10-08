@@ -51,6 +51,7 @@ import {
   validateListPaymentMethodsInput,
   validateOptions,
   validateRefundPaymentInput,
+  validateUpdatePaymentInput,
 } from './validators'
 
 interface InjectedDependencies extends Record<string, unknown> {
@@ -375,8 +376,44 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     input: UpdatePaymentInput,
   ): Promise<UpdatePaymentOutput> {
     this.log('updatePayment/input', input)
-    // TODO: Implement updatePayment logic
-    return { data: {} }
+    try {
+      const validInput = validateUpdatePaymentInput(input)
+      const {
+        reference,
+        paymentResponse: { pspReference },
+      } = validInput.data
+      const { merchantAccount } = this.options_
+      const currency = validInput.currency_code.toUpperCase()
+      const value = getMinorUnit(validInput.amount, currency)
+      const amount: Types.checkout.Amount = {
+        currency,
+        value,
+      }
+      const request: Types.checkout.PaymentAmountUpdateRequest = {
+        merchantAccount,
+        reference,
+        amount,
+      }
+
+      const paymentAmountUpdateResponse =
+        await this.checkoutAPI.ModificationsApi.updateAuthorisedAmount(
+          pspReference,
+          request,
+        )
+
+      const updates = validInput.data.paymentAmountUpdateResponses || []
+      const paymentAmountUpdateResponses = [
+        ...updates,
+        paymentAmountUpdateResponse,
+      ]
+      const data = { ...input.data, paymentAmountUpdateResponses }
+      this.log('updatePayment/request', request)
+      this.log('updatePayment/output', { data })
+      return { data }
+    } catch (error) {
+      this.log('updatePayment/error', error)
+      throw error
+    }
   }
 }
 
