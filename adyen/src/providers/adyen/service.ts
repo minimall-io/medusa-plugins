@@ -40,7 +40,11 @@ import {
 } from '@medusajs/framework/utils'
 import crypto from 'crypto'
 
-import { getMinorUnit, getPaymentSessionStatus } from './utils'
+import {
+  getMinorUnit,
+  getPaymentSessionStatus,
+  getStoredPaymentMethod,
+} from './utils'
 
 import {
   Options,
@@ -58,6 +62,12 @@ interface InjectedDependencies extends Record<string, unknown> {
   logger: Logger
 }
 
+const TEST = EnvironmentEnum.TEST
+const Web = Types.checkout.PaymentRequest.ChannelEnum.Web
+const Ecommerce = Types.checkout.PaymentRequest.ShopperInteractionEnum.Ecommerce
+const CardOnFile =
+  Types.checkout.PaymentRequest.RecurringProcessingModelEnum.CardOnFile
+
 class AdyenProviderService extends AbstractPaymentProvider<Options> {
   static readonly identifier: string = 'adyen'
   protected readonly options_: Options
@@ -72,14 +82,26 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   constructor(container: InjectedDependencies, options: Options) {
     super(container, options)
     this.logger_ = container.logger
-    this.options_ = options
 
-    const { apiKey, environment, liveEndpointUrlPrefix } = options
-    const defaultEnvironment = environment || EnvironmentEnum.TEST
+    const {
+      apiKey,
+      liveEndpointUrlPrefix,
+      environment,
+      channel,
+      shopperInteraction,
+      recurringProcessingModel,
+    } = options
+
+    this.options_ = {
+      ...options,
+      channel: channel || Web,
+      shopperInteraction: shopperInteraction || Ecommerce,
+      recurringProcessingModel: recurringProcessingModel || CardOnFile,
+    }
 
     this.client = new Client({
       apiKey,
-      environment: defaultEnvironment,
+      environment: environment || TEST,
       liveEndpointUrlPrefix,
     })
     this.checkoutAPI = new CheckoutAPI(this.client)
@@ -104,14 +126,23 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<AuthorizePaymentOutput> {
     this.log('authorizePayment/input', input)
     try {
-      const { merchantAccount, returnUrlPrefix: returnUrl } = this.options_
+      const {
+        merchantAccount,
+        returnUrlPrefix: returnUrl,
+        channel,
+        shopperInteraction,
+        recurringProcessingModel,
+      } = this.options_
       const validInput = validateAuthorizePaymentInput(input)
       const { reference, paymentRequest } = validInput.data
       const request: Types.checkout.PaymentRequest = {
         ...paymentRequest,
-        merchantAccount,
         reference,
+        merchantAccount,
         returnUrl,
+        channel,
+        shopperInteraction,
+        recurringProcessingModel,
       }
       const paymentResponse =
         await this.checkoutAPI.PaymentsApi.payments(request)
@@ -241,7 +272,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     try {
       const paymentRequest = input?.data?.paymentRequest || {}
       const validInput = validateInitiatePaymentInput(input)
-      const { reference, currency_code, amount: total } = validInput
+      const { reference, currency_code, amount: total, context } = validInput
+      const shopperReference = context?.account_holder?.id
       const currency = currency_code.toUpperCase()
       const value = getMinorUnit(total, currency_code)
       const amount: Types.checkout.Amount = {
@@ -254,15 +286,17 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
       const request: Types.checkout.PaymentMethodsRequest = {
         ...paymentMethodsRequest,
+        shopperReference,
         amount,
         merchantAccount,
       }
       const paymentMethodsResponse =
         await this.checkoutAPI.PaymentsApi.paymentMethods(request)
       const data = {
-        paymentRequest: { ...paymentRequest, amount },
+        paymentRequest: { ...paymentRequest, amount, shopperReference },
         paymentMethodsResponse,
         reference,
+        session_id: reference,
       }
       this.log('initiatePayment/request', request)
       this.log('initiatePayment/output', { data, id: reference })
@@ -280,27 +314,21 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     try {
       const validInput = validateListPaymentMethodsInput(input)
       const { merchantAccount } = this.options_
-      const paymentRequest = validInput?.data?.paymentRequest
-      const request: Types.checkout.PaymentMethodsRequest = {
-        ...paymentRequest,
+      const shopperReference = validInput.context.account_holder.data.id
+      const paymentMethodsResponse =
+        await this.checkoutAPI.RecurringApi.getTokensForStoredPaymentDetails(
+          shopperReference,
+          merchantAccount,
+        )
+      const { storedPaymentMethods } = paymentMethodsResponse
+      const storedMethods = storedPaymentMethods?.map(getStoredPaymentMethod)
+      const methods = storedMethods || []
+      this.log('listPaymentMethods/request', {
+        shopperReference,
         merchantAccount,
-      }
-      const methods = await this.checkoutAPI.PaymentsApi.paymentMethods(request)
-
-      const filteredStored =
-        methods.storedPaymentMethods?.filter(
-          (method) => method.id !== undefined,
-        ) || []
-
-      const storedMethods =
-        filteredStored.map((method) => ({
-          id: method.id!,
-          data: method as Record<string, unknown>,
-        })) || []
-
-      this.log('listPaymentMethods/request', request)
-      this.log('listPaymentMethods/output', storedMethods)
-      return [...storedMethods]
+      })
+      this.log('listPaymentMethods/output', methods)
+      return [...methods]
     } catch (error) {
       this.log('listPaymentMethods/error', error)
       throw error
