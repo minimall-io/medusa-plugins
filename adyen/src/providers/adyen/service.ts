@@ -62,12 +62,6 @@ interface InjectedDependencies extends Record<string, unknown> {
   logger: Logger
 }
 
-const TEST = EnvironmentEnum.TEST
-const Web = Types.checkout.PaymentRequest.ChannelEnum.Web
-const Ecommerce = Types.checkout.PaymentRequest.ShopperInteractionEnum.Ecommerce
-const CardOnFile =
-  Types.checkout.PaymentRequest.RecurringProcessingModelEnum.CardOnFile
-
 class AdyenProviderService extends AbstractPaymentProvider<Options> {
   static readonly identifier: string = 'adyen'
   protected readonly options_: Options
@@ -82,26 +76,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   constructor(container: InjectedDependencies, options: Options) {
     super(container, options)
     this.logger_ = container.logger
+    this.options_ = options
 
-    const {
-      apiKey,
-      liveEndpointUrlPrefix,
-      environment,
-      channel,
-      shopperInteraction,
-      recurringProcessingModel,
-    } = options
-
-    this.options_ = {
-      ...options,
-      channel: channel || Web,
-      shopperInteraction: shopperInteraction || Ecommerce,
-      recurringProcessingModel: recurringProcessingModel || CardOnFile,
-    }
+    const { apiKey, liveEndpointUrlPrefix, environment } = options
 
     this.client = new Client({
       apiKey,
-      environment: environment || TEST,
+      environment: environment || EnvironmentEnum.TEST,
       liveEndpointUrlPrefix,
     })
     this.checkoutAPI = new CheckoutAPI(this.client)
@@ -129,7 +110,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       const {
         merchantAccount,
         returnUrlPrefix: returnUrl,
-        channel,
         shopperInteraction,
         recurringProcessingModel,
       } = this.options_
@@ -140,7 +120,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         reference,
         merchantAccount,
         returnUrl,
-        channel,
         shopperInteraction,
         recurringProcessingModel,
       }

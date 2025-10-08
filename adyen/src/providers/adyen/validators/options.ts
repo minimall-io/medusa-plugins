@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import {
-  ChannelEnumSchema,
   EnvironmentEnumSchema,
   RecurringProcessingModelEnumSchema,
   ShopperInteractionEnumSchema,
@@ -14,7 +13,6 @@ export const OptionsSchema = z.object({
   liveEndpointUrlPrefix: z.string(),
   returnUrlPrefix: z.string(),
   environment: EnvironmentEnumSchema.optional(),
-  channel: ChannelEnumSchema.optional(),
   shopperInteraction: ShopperInteractionEnumSchema.optional(),
   recurringProcessingModel: RecurringProcessingModelEnumSchema.optional(),
 })
