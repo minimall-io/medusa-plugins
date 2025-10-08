@@ -376,6 +376,26 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     input: UpdatePaymentInput,
   ): Promise<UpdatePaymentOutput> {
     this.log('updatePayment/input', input)
+    /**
+     * This code is meant to work with an authorized transaction,
+     * as it expects the `input.data.paymentResponse` to be
+     * present in the `input` parameter.
+     *
+     * It will always result in error, assuming the the statement from the documentation is correct:
+     *
+     * "This method updates a payment in the third-party service
+     * that was previously initiated with the `initiatePayment` method."
+     * (https://docs.medusajs.com/resources/references/payment/provider#updatepayment)
+     *
+     *
+     * Also, at the time of this writing, we can't trace this method beyond the Payment Module source code.
+     * The `updatePaymentSession` keyword doesn't appear anywhere else in the medusa source code.
+     * We are not sure if we are missing something from this observation.
+     *
+     * --- packages/modules/payment/src/services/payment-module.ts:PaymentModuleService.updatePaymentSession
+     * -- packages/modules/payment/src/services/payment-provider.ts:PaymentProviderService.updateSession
+     * - adyen/src/providers/adyen/service.ts:AdyenProviderService.updatePayment
+     */
     try {
       const validInput = validateUpdatePaymentInput(input)
       const {
