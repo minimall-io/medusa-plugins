@@ -204,8 +204,8 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
           (session) => session.provider_id === providerId
         )
         setPaymentMethods(() => {
-          if (session) return session.data as PaymentMethodsResponse
-          return null
+          if (!session) return null
+          return session.data.paymentMethodsResponse as PaymentMethodsResponse
         })
         console.log("Adyen updatePayment data:", data)
         console.log("Adyen updatePayment session:", session)
