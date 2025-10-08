@@ -13,6 +13,14 @@ export const ChannelEnumSchema = z.nativeEnum(
   Types.checkout.PaymentRequest.ChannelEnum,
 )
 
+export const RecurringProcessingModelEnumSchema = z.nativeEnum(
+  Types.checkout.PaymentRequest.RecurringProcessingModelEnum,
+)
+
+export const ShopperInteractionEnumSchema = z.nativeEnum(
+  Types.checkout.PaymentRequest.ShopperInteractionEnum,
+)
+
 export const StoreFiltrationModeEnumSchema = z.nativeEnum(
   Types.checkout.PaymentMethodsRequest.StoreFiltrationModeEnum,
 )
@@ -69,6 +77,7 @@ export const PaymentMethodsRequestSchema = z.object({
 export const PaymentRequestSchema = z.object({
   amount: AmountSchema,
   paymentMethod: PaymentMethodSchema,
+  storePaymentMethod: z.boolean().optional(),
 })
 
 export const PaymentResponseSchema = z.object({

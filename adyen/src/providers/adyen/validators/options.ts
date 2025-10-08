@@ -1,5 +1,10 @@
 import { z } from 'zod'
-import { EnvironmentEnumSchema } from './core'
+import {
+  ChannelEnumSchema,
+  EnvironmentEnumSchema,
+  RecurringProcessingModelEnumSchema,
+  ShopperInteractionEnumSchema,
+} from './core'
 import { getValidator } from './helpers'
 
 export const OptionsSchema = z.object({
@@ -9,6 +14,9 @@ export const OptionsSchema = z.object({
   liveEndpointUrlPrefix: z.string(),
   returnUrlPrefix: z.string(),
   environment: EnvironmentEnumSchema.optional(),
+  channel: ChannelEnumSchema.optional(),
+  shopperInteraction: ShopperInteractionEnumSchema.optional(),
+  recurringProcessingModel: RecurringProcessingModelEnumSchema.optional(),
 })
 
 export type Options = z.infer<typeof OptionsSchema>
