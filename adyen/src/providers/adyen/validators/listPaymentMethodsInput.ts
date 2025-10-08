@@ -1,13 +1,22 @@
 import { z } from 'zod'
-import { PaymentMethodsRequestSchema } from './core'
 import { getValidator } from './helpers'
+import { UnknownRecordSchema } from './primitives'
 
 const DataSchema = z.object({
-  paymentRequest: PaymentMethodsRequestSchema.optional(),
+  id: z.string(),
+})
+
+const AccountHolderSchema = z.object({
+  data: DataSchema,
+})
+
+const ContextSchema = z.object({
+  account_holder: AccountHolderSchema,
 })
 
 const InputSchema = z.object({
-  data: DataSchema.optional(),
+  data: UnknownRecordSchema.optional(),
+  context: ContextSchema,
 })
 
 export type ListPaymentMethodsInput = z.infer<typeof InputSchema>

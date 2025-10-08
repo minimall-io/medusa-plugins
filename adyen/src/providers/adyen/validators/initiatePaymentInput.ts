@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { PaymentMethodsRequestSchema, PaymentRequestSchema } from './core'
 import { getValidator } from './helpers'
+import { UnknownRecordSchema } from './primitives'
 
 const DataSchema = z.object({
   paymentRequest: PaymentMethodsRequestSchema.merge(
@@ -9,8 +10,14 @@ const DataSchema = z.object({
   session_id: z.string().optional(),
 })
 
+const AccountHolderSchema = z.object({
+  data: UnknownRecordSchema,
+  id: z.string().optional(),
+})
+
 const ContextSchema = z.object({
   idempotency_key: z.string().optional(),
+  account_holder: AccountHolderSchema.optional(),
 })
 
 const InputSchema = z.object({
