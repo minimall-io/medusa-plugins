@@ -30,7 +30,7 @@ const useStripePayment = (cart: HttpTypes.StoreCart): IStripePayment => {
   }
 
   const onChange = useCallback((event: StripeElementChangeEvent) => {
-    console.log("Stripe change event:", event)
+    console.log("useStripePayment/onChange/event:", event)
     setError(event?.error?.message || null)
     setReady(event.complete)
   }, [])
@@ -51,7 +51,7 @@ const useStripePayment = (cart: HttpTypes.StoreCart): IStripePayment => {
           )
         }
         setClientSecret(secret)
-        console.log("Stripe updatePayment session:", session)
+        console.log("useStripePayment/onUpdate/session:", session)
       } catch (error: any) {
         setError(error.message)
       }
@@ -60,14 +60,13 @@ const useStripePayment = (cart: HttpTypes.StoreCart): IStripePayment => {
   )
 
   const onPay = useCallback(async () => {
-    if (!ready) return
     try {
       setError(null)
       await placeOrder()
     } catch (error: any) {
       setError(error.message)
     }
-  }, [ready])
+  }, [])
 
   return {
     ready,
