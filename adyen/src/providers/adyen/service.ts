@@ -38,7 +38,6 @@ import {
   MedusaError,
   PaymentActions,
 } from '@medusajs/framework/utils'
-import crypto from 'crypto'
 
 import {
   getMinorUnit,
@@ -51,10 +50,13 @@ import {
   validateAuthorizePaymentInput,
   validateCancelPaymentInput,
   validateCapturePaymentInput,
+  validateCreateAccountHolderInput,
+  validateDeleteAccountHolderInput,
   validateInitiatePaymentInput,
   validateListPaymentMethodsInput,
   validateOptions,
   validateRefundPaymentInput,
+  validateSavePaymentMethodInput,
   validateUpdatePaymentInput,
 } from './validators'
 
@@ -73,7 +75,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     validateOptions(options)
   }
 
-  constructor(container: InjectedDependencies, options: Options) {
+  protected constructor(container: InjectedDependencies, options: Options) {
     super(container, options)
     this.logger_ = container.logger
     this.options_ = options
@@ -100,6 +102,36 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       default:
         console.log(message) // remove after debugging
     }
+  }
+
+  protected async listStoredPaymentMethods(
+    shopperReference: string,
+  ): Promise<Types.checkout.StoredPaymentMethodResource[]> {
+    const { merchantAccount } = this.options_
+    const response =
+      await this.checkoutAPI.RecurringApi.getTokensForStoredPaymentDetails(
+        shopperReference,
+        merchantAccount,
+      )
+    const { storedPaymentMethods } = response
+    return storedPaymentMethods || []
+  }
+
+  protected async deleteStoredPaymentMethods(
+    shopperReference: string,
+    methods: Types.checkout.StoredPaymentMethodResource[],
+  ): Promise<void> {
+    const { merchantAccount } = this.options_
+    const promises = methods.map((method) => {
+      if (!method.id) return
+      return this.checkoutAPI.RecurringApi.deleteTokenForStoredPaymentDetails(
+        method.id!,
+        shopperReference,
+        merchantAccount,
+      )
+    })
+
+    await Promise.all(promises)
   }
 
   public async authorizePayment(
@@ -207,22 +239,36 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     input: CreateAccountHolderInput,
   ): Promise<CreateAccountHolderOutput> {
     this.log('createAccountHolder/input', input)
-    // TODO: Implement createAccountHolder logic
-    return { id: input.context.customer.id }
+    const validInput = validateCreateAccountHolderInput(input)
+    const { id } = validInput.context.customer
+    return { id }
   }
 
   public async deleteAccountHolder(
     input: DeleteAccountHolderInput,
   ): Promise<DeleteAccountHolderOutput> {
     this.log('deleteAccountHolder/input', input)
-    // TODO: Implement createAccountHolder logic
-    return { data: {} }
+    try {
+      const validInput = validateDeleteAccountHolderInput(input)
+      const shopperReference = validInput.context.account_holder.id
+      const storedPaymentMethods =
+        await this.listStoredPaymentMethods(shopperReference)
+      await this.deleteStoredPaymentMethods(
+        shopperReference,
+        storedPaymentMethods,
+      )
+      this.log('deleteAccountHolder/storedPaymentMethods', storedPaymentMethods)
+      return { data: {} }
+    } catch (error) {
+      this.log('deleteAccountHolder/error', error)
+      throw error
+    }
   }
 
   public async deletePayment(
     input: DeletePaymentInput,
   ): Promise<DeletePaymentOutput> {
-    this.log('deletePayment/input', input)
+    this.log('getPaymentStatus/input', input, 'info')
     return { data: {} }
   }
 
@@ -292,22 +338,12 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('listPaymentMethods/input', input)
     try {
       const validInput = validateListPaymentMethodsInput(input)
-      const { merchantAccount } = this.options_
       const shopperReference = validInput.context.account_holder.data.id
-      const paymentMethodsResponse =
-        await this.checkoutAPI.RecurringApi.getTokensForStoredPaymentDetails(
-          shopperReference,
-          merchantAccount,
-        )
-      const { storedPaymentMethods } = paymentMethodsResponse
-      const storedMethods = storedPaymentMethods?.map(getStoredPaymentMethod)
-      const methods = storedMethods || []
-      this.log('listPaymentMethods/request', {
-        shopperReference,
-        merchantAccount,
-      })
-      this.log('listPaymentMethods/output', methods)
-      return [...methods]
+      const storedPaymentMethods =
+        await this.listStoredPaymentMethods(shopperReference)
+      const formattedMethods = storedPaymentMethods.map(getStoredPaymentMethod)
+      this.log('listPaymentMethods/output', formattedMethods)
+      return [...formattedMethods]
     } catch (error) {
       this.log('listPaymentMethods/error', error)
       throw error
@@ -367,8 +403,32 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     input: SavePaymentMethodInput,
   ): Promise<SavePaymentMethodOutput> {
     this.log('savePaymentMethod/input', input)
-    // TODO: Implement savePaymentMethod logic
-    return { data: {}, id: input.context?.customer?.id || crypto.randomUUID() }
+    try {
+      const validInput = validateSavePaymentMethodInput(input)
+      const { merchantAccount, recurringProcessingModel } = this.options_
+      const { storedPaymentMethodRequest } = validInput.data
+      const request: Types.checkout.StoredPaymentMethodRequest = {
+        ...storedPaymentMethodRequest,
+        merchantAccount,
+        recurringProcessingModel,
+      }
+      const storedPaymentMethod =
+        await this.checkoutAPI.RecurringApi.storedPaymentMethods(request)
+      if (!storedPaymentMethod.id)
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          'Stored Method is missing ID!',
+        )
+      const methods = validInput.data.storedPaymentMethods || []
+      const storedPaymentMethods = [...methods, storedPaymentMethod]
+      const data = { ...input.data, storedPaymentMethods }
+      const { id } = storedPaymentMethod
+      this.log('savePaymentMethod/output', { data, id })
+      return { data, id }
+    } catch (error) {
+      this.log('savePaymentMethod/error', error)
+      throw error
+    }
   }
 
   public async updateAccountHolder(
