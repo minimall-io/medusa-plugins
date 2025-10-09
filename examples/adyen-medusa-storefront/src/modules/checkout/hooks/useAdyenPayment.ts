@@ -7,11 +7,10 @@ import {
   PaymentMethodsResponse,
   UIElement,
 } from "@adyen/adyen-web"
-import "@adyen/adyen-web/styles/adyen.css"
 import { initiatePaymentSession, placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { useCallback, useMemo, useState } from "react"
-import { ChannelEnum, IAdyenPayment } from "./interfaces"
+import { AdyenEnvironment, ChannelEnum, IAdyenPayment } from "./interfaces"
 
 interface PaymentRequest extends Partial<PaymentData> {
   channel?: ChannelEnum
@@ -22,6 +21,10 @@ interface PaymentRequest extends Partial<PaymentData> {
   amount?: PaymentAmount
   // shopperIP, ??? Where do we get this data from?
 }
+
+const clientKey = process.env.NEXT_PUBLIC_ADYEN_CLIENT_KEY
+const environment = (process.env.NEXT_PUBLIC_ADYEN_ENVIRONMENT ||
+  "test") as AdyenEnvironment
 
 const channel = ChannelEnum.Web
 
@@ -157,11 +160,44 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
     PaymentMethodsResponse | undefined
   >(undefined)
 
+  const onUpdate = useCallback(
+    async (providerId: string) => {
+      try {
+        setError(null)
+        const paymentRequest = getPaymentRequest(paymentData, cart)
+        const data = { paymentRequest }
+        const options = { provider_id: providerId, data }
+        const response = await initiatePaymentSession(cart, options)
+        const session = response.payment_collection?.payment_sessions?.find(
+          (session) => session.provider_id === providerId
+        )
+        setPaymentMethodsResponse(() => {
+          if (!session) return
+          return session.data.paymentMethodsResponse as PaymentMethodsResponse
+        })
+        console.log("useAdyenPayment/onUpdate/data:", data)
+        console.log("useAdyenPayment/onUpdate/session:", session)
+      } catch (error: any) {
+        setError(error.message)
+      }
+    },
+    [cart, paymentData]
+  )
+
+  const onPay = useCallback(async () => {
+    try {
+      setError(null)
+      await placeOrder()
+    } catch (error: any) {
+      setError(error.message)
+    }
+  }, [])
+
   const { countryCode } = useMemo(() => getCartPaymentRequest(cart), [cart])
 
   const onChange = useCallback((state: OnChangeData, component: UIElement) => {
-    console.log("Adyen change state:", state)
-    console.log("Adyen change component:", component)
+    console.log("useAdyenPayment/onChange/state:", state)
+    console.log("useAdyenPayment/onChange/component:", component)
     const { data, isValid, errors } = state
 
     setReady(isValid)
@@ -181,51 +217,22 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
     []
   )
 
-  const onUpdate = useCallback(
-    async (providerId: string) => {
-      try {
-        setError(null)
-        const paymentRequest = getPaymentRequest(paymentData, cart)
-        const data = { paymentRequest }
-        const options = { provider_id: providerId, data }
-        const response = await initiatePaymentSession(cart, options)
-        const session = response.payment_collection?.payment_sessions?.find(
-          (session) => session.provider_id === providerId
-        )
-        setPaymentMethodsResponse(() => {
-          if (!session) return
-          return session.data.paymentMethodsResponse as PaymentMethodsResponse
-        })
-        console.log("Adyen updatePayment data:", data)
-        console.log("Adyen updatePayment session:", session)
-      } catch (error: any) {
-        setError(error.message)
-      }
-    },
-    [cart, paymentData, ready]
-  )
-
-  const onPay = useCallback(async () => {
-    if (!ready) return
-    try {
-      setError(null)
-      await placeOrder()
-    } catch (error: any) {
-      setError(error.message)
-    }
-  }, [ready])
+  const config = {
+    environment,
+    clientKey,
+    showPayButton: false,
+    countryCode,
+    paymentMethodsResponse,
+    onChange,
+    onError,
+  }
 
   return {
     ready,
     error,
     onUpdate,
     onPay,
-    config: {
-      countryCode,
-      onError,
-      onChange,
-      paymentMethodsResponse,
-    },
+    config,
   }
 }
 

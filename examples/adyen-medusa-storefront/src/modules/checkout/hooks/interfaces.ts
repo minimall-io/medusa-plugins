@@ -1,9 +1,4 @@
-import {
-  AdyenCheckoutError,
-  OnChangeData,
-  PaymentMethodsResponse,
-  UIElement,
-} from "@adyen/adyen-web"
+import { CoreConfiguration } from "@adyen/adyen-web"
 import { HttpTypes } from "@medusajs/types"
 import {
   Stripe,
@@ -27,13 +22,6 @@ export type AdyenEnvironment =
   | "live-apse"
   | "live-in"
 
-export interface IAdyenPaymentConfig {
-  onChange: (state: OnChangeData, component: UIElement) => void
-  onError: (error: AdyenCheckoutError, component?: UIElement) => void
-  paymentMethodsResponse?: PaymentMethodsResponse
-  countryCode?: string
-}
-
 export interface IStripePaymentConfig {
   stripePromise: Promise<Stripe | null> | null
   stripeElementsOptions: StripeElementsOptions
@@ -48,7 +36,7 @@ export interface IPayment<Config> {
   config: Config
 }
 
-export type IAdyenPayment = IPayment<IAdyenPaymentConfig>
+export type IAdyenPayment = IPayment<CoreConfiguration>
 export type IStripePayment = IPayment<IStripePaymentConfig>
 export type IManualPayment = IPayment<null>
 
