@@ -24,8 +24,7 @@ const StripePaymentButton = ({ cart, ready, payment }: Props) => {
   const card = elements?.getElement("card")
   const clientSecret = session?.data.client_secret as string
 
-  const disabled =
-    !ready || !payment?.ready || !stripe || !elements || !card || !clientSecret
+  const disabled = !ready || !stripe || !elements || !card || !clientSecret
 
   const error = payment?.error || errorMessage
 

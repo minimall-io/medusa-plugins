@@ -29,21 +29,20 @@ const PaymentButton = ({ cart }: Props) => {
       </Button>
     )
 
-  const { payment } = paymentProvider
+  const { payment, isAdyen, isStripe, isManual } = paymentProvider
 
   const ready =
-    payment.ready &&
     session !== undefined &&
     cart.email !== undefined &&
     cart.shipping_address !== undefined &&
     cart.billing_address !== undefined &&
     (cart.shipping_methods?.length ?? 0) > 0
 
-  if (ready && paymentProvider.isAdyen)
+  if (ready && isAdyen)
     return (
       <AdyenPaymentButton ready={ready} payment={payment as IAdyenPayment} />
     )
-  if (ready && paymentProvider.isStripe)
+  if (ready && isStripe)
     return (
       <StripePaymentButton
         ready={ready}
@@ -51,7 +50,7 @@ const PaymentButton = ({ cart }: Props) => {
         payment={payment as IStripePayment}
       />
     )
-  if (ready && paymentProvider.isManual)
+  if (ready && isManual)
     return (
       <ManualTestPaymentButton
         ready={ready}

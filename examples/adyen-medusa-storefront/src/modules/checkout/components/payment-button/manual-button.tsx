@@ -13,7 +13,7 @@ type Props = {
 const ManualTestPaymentButton = ({ ready, payment }: Props) => {
   const [submitting, setSubmitting] = useState<boolean>(false)
 
-  const disabled = !ready || !payment.ready
+  const disabled = !ready
   const error = payment.error
 
   const handlePayment = async () => {
