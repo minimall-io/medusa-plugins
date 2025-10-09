@@ -13,8 +13,8 @@ export const OptionsSchema = z.object({
   liveEndpointUrlPrefix: z.string(),
   returnUrlPrefix: z.string(),
   environment: EnvironmentEnumSchema.optional(),
-  shopperInteraction: ShopperInteractionEnumSchema.optional(),
-  recurringProcessingModel: RecurringProcessingModelEnumSchema.optional(),
+  shopperInteraction: ShopperInteractionEnumSchema,
+  recurringProcessingModel: RecurringProcessingModelEnumSchema,
 })
 
 export type Options = z.infer<typeof OptionsSchema>
