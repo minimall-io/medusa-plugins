@@ -40,40 +40,22 @@ export const getMinorUnit = (
   return parseInt(numericAmount.toString().split('.').shift()!, 10)
 }
 
-export const getPaymentSessionStatus = (
-  code?: Types.checkout.PaymentResponse.ResultCodeEnum,
+export const getSessionStatus = (
+  code?: Types.checkout.SessionResultResponse.StatusEnum,
 ): PaymentSessionStatus => {
-  const codes = Types.checkout.PaymentResponse.ResultCodeEnum
+  const codes = Types.checkout.SessionResultResponse.StatusEnum
   switch (code) {
-    // https://docs.adyen.com/online-payments/build-your-integration/payment-result-codes/
-    // Final state result
-    case codes.Success: // Not documented.
-      return 'captured'
-    case codes.Authorised: // Inform the shopper that the payment was successful.
-      return 'authorized'
-    case codes.Cancelled: // Inform the shopper that their payment was cancelled and check if they want to continue with their order.
-      return 'canceled'
-    case codes.Error: // Inform the shopper that there was an error processing their payment.
-    case codes.Refused: // Inform the shopper that their payment was refused and ask them to try the payment again, for example, by using a different payment method or card.
-      return 'error'
-    // Partial authorisation result
-    case codes.PartiallyAuthorised: // Inform the shopper that their payment has been partially authorised.
-      return 'authorized'
-    // Intermediate result
-    case codes.Received: // Inform the shopper that you have received their order, and are waiting for the final payment status.
-    case codes.Pending: // Inform the shopper that you have received their order, and are waiting for the shopper to complete the payment.
+    // https://docs.adyen.com/api-explorer/Checkout/71/get/sessions/(sessionId)
+    case codes.Active:
+    case codes.PaymentPending:
       return 'pending'
-    case codes.PresentToShopper: // Present the voucher to the shopper, and inform the shopper that you are waiting for them to complete the payment.
-      return 'requires_more'
-    // 3D Secure 2 authentication result
-    case codes.ChallengeShopper: // Initiate the challenge flow to present the challenge to the shopper, and submit the result to Adyen.
-    case codes.IdentifyShopper: // Initiate the frictionless flow to get the shopper's device fingerprint, and submit the result to Adyen.
-    case codes.RedirectShopper: // Redirect the shopper to complete the authentication.
-      return 'requires_more'
-    // Authentication-only result
-    case codes.AuthenticationNotRequired: // Proceed to authorise the payment.
-    case codes.AuthenticationFinished: // Collect the 3D Secure 2 authentication data that you need to authorise the payment.
+    case codes.Canceled:
+      return 'canceled'
+    case codes.Completed:
       return 'authorized'
+    case codes.Expired:
+    case codes.Refused:
+      return 'error'
     default:
       return 'error' // Default to error for unhandled cases
   }
