@@ -1,10 +1,8 @@
 import { z } from 'zod'
-import { PaymentResponseSchema } from './core'
 import { getValidator } from './helpers'
 
 const DataSchema = z.object({
   reference: z.string(),
-  paymentResponse: PaymentResponseSchema,
 })
 
 const InputSchema = z.object({

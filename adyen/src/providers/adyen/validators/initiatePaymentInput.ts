@@ -1,12 +1,9 @@
 import { z } from 'zod'
-import { PaymentMethodsRequestSchema, PaymentRequestSchema } from './core'
+import { UnknownRecordSchema } from './core'
 import { getValidator } from './helpers'
-import { UnknownRecordSchema } from './primitives'
 
 const DataSchema = z.object({
-  paymentRequest: PaymentMethodsRequestSchema.merge(
-    PaymentRequestSchema.partial(),
-  ).optional(),
+  sessionRequest: UnknownRecordSchema.optional(),
   session_id: z.string().optional(),
 })
 

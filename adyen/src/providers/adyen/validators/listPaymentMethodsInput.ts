@@ -1,6 +1,6 @@
 import { z } from 'zod'
+import { UnknownRecordSchema } from './core'
 import { getValidator } from './helpers'
-import { UnknownRecordSchema } from './primitives'
 
 const DataSchema = z.object({
   id: z.string(),
