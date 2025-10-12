@@ -5,7 +5,6 @@ import {
   PaymentAmount,
   PaymentData,
   PaymentMethodsResponse,
-  UIElement,
 } from "@adyen/adyen-web"
 import { initiatePaymentSession, placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
@@ -175,8 +174,7 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
           if (!session) return
           return session.data.paymentMethodsResponse as PaymentMethodsResponse
         })
-        console.log("useAdyenPayment/onUpdate/data:", data)
-        console.log("useAdyenPayment/onUpdate/session:", session)
+        console.log("useAdyenPayment/onUpdate/session", session)
       } catch (error: any) {
         setError(error.message)
       }
@@ -187,7 +185,8 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
   const onPay = useCallback(async () => {
     try {
       setError(null)
-      await placeOrder()
+      const response = await placeOrder()
+      console.log("useAdyenPayment/onPay/response", response)
     } catch (error: any) {
       setError(error.message)
     }
@@ -195,11 +194,8 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
 
   const { countryCode } = useMemo(() => getCartPaymentRequest(cart), [cart])
 
-  const onChange = useCallback((state: OnChangeData, component: UIElement) => {
-    console.log("useAdyenPayment/onChange/state:", state)
-    console.log("useAdyenPayment/onChange/component:", component)
+  const onChange = useCallback((state: OnChangeData) => {
     const { data, isValid, errors } = state
-
     setReady(isValid)
     setPaymentData(data)
     setError(() => {
@@ -210,12 +206,9 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
     })
   }, [])
 
-  const onError = useCallback(
-    (error: AdyenCheckoutError, component?: UIElement) => {
-      console.error(error.name, error.message, error.stack, component)
-    },
-    []
-  )
+  const onError = useCallback((error: AdyenCheckoutError) => {
+    setError(error.message)
+  }, [])
 
   const config = {
     environment,
@@ -226,6 +219,8 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
     onChange,
     onError,
   }
+
+  console.log("useAdyenPayment/cart", cart)
 
   return {
     ready,
