@@ -40,6 +40,14 @@ export const getMinorUnit = (
   return parseInt(numericAmount.toString().split('.').shift()!, 10)
 }
 
+export const getAmount = (
+  amount: BigNumberInput,
+  currency: string,
+): Types.checkout.Amount => ({
+  currency: currency.toUpperCase(),
+  value: getMinorUnit(amount, currency),
+})
+
 export const getSessionStatus = (
   code?: Types.checkout.SessionResultResponse.StatusEnum,
 ): PaymentSessionStatus => {
