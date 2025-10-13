@@ -69,7 +69,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     validateOptions(options)
   }
 
-  protected constructor(container: InjectedDependencies, options: Options) {
+  constructor(container: InjectedDependencies, options: Options) {
     super(container, options)
     this.logger_ = container.logger
     this.options_ = options
