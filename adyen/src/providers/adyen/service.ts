@@ -305,8 +305,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('getPaymentStatus/input', input)
     try {
       const validInput = validateGetPaymentStatusInput(input)
-      const sessionId = validInput.data.createCheckoutSessionResponse.id
-      const sessionResult = validInput.data.sessionsResponse.sessionResult
+      const { sessionId, sessionResult } = validInput.data.sessionsResponse
       const response = await this.getSessionResult_(sessionId, sessionResult)
       const status = getSessionStatus(response.status)
       const data = { ...input.data, sessionResultResponse: response }
@@ -334,25 +333,37 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       const validInput = validateInitiatePaymentInput(input)
       const reference = validInput.reference
       const shopperReference = validInput.context?.account_holder?.id
-      const { createCheckoutSessionRequest } = validInput?.data || {}
-      const amount = getAmount(validInput.amount, validInput.currency_code)
-      const request: Partial<Types.checkout.CreateCheckoutSessionRequest> = {
-        ...createCheckoutSessionRequest,
-        shopperReference,
+      const { createCheckoutSessionRequest, sessionsResponse } =
+        validInput?.data || {}
+      if (sessionsResponse) {
+        const data = {
+          ...input.data,
+          reference,
+          session_id: reference,
+          sessionsResponse,
+        }
+        this.log('initiatePayment/output', { data, id: reference })
+        return { data, id: reference }
+      } else {
+        const amount = getAmount(validInput.amount, validInput.currency_code)
+        const request: Partial<Types.checkout.CreateCheckoutSessionRequest> = {
+          ...createCheckoutSessionRequest,
+          shopperReference,
+        }
+        const response = await this.createCheckoutSession_(
+          reference,
+          amount,
+          request,
+        )
+        const data = {
+          reference,
+          session_id: reference,
+          createCheckoutSessionRequest: request,
+          createCheckoutSessionResponse: response,
+        }
+        this.log('initiatePayment/output', { data, id: reference })
+        return { data, id: reference }
       }
-      const response = await this.createCheckoutSession_(
-        reference,
-        amount,
-        request,
-      )
-      const data = {
-        reference,
-        session_id: reference,
-        createCheckoutSessionRequest: request,
-        createCheckoutSessionResponse: response,
-      }
-      this.log('initiatePayment/output', { data, id: reference })
-      return { data, id: reference }
     } catch (error) {
       this.log('initiatePayment/error', error)
       throw error

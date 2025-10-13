@@ -1,10 +1,15 @@
 import { z } from 'zod'
-import { CreateCheckoutSessionRequestSchema, UnknownRecordSchema } from './core'
+import {
+  CreateCheckoutSessionRequestSchema,
+  SessionsResponseSchema,
+  UnknownRecordSchema,
+} from './core'
 import { getValidator } from './helpers'
 
 const DataSchema = z.object({
   session_id: z.string().optional(),
   createCheckoutSessionRequest: CreateCheckoutSessionRequestSchema.optional(),
+  sessionsResponse: SessionsResponseSchema.optional(),
 })
 
 const AccountHolderSchema = z.object({

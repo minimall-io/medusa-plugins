@@ -410,7 +410,7 @@ export const CreateCheckoutSessionRequestSchema = z.object({
   additionalAmount: AmountSchema.optional().nullable(),
   additionalData: StringRecordSchema.optional(),
   allowedPaymentMethods: StringArraySchema.optional(),
-  amount: AmountSchema,
+  // amount: AmountSchema,
   applicationInfo: ApplicationInfo.optional().nullable(),
   authenticationData: AuthenticationDataSchema.optional().nullable(),
   billingAddress: BillingAddressSchema.optional().nullable(),
@@ -432,7 +432,7 @@ export const CreateCheckoutSessionRequestSchema = z.object({
   lineItems: z.array(LineItemSchema).optional(),
   mandate: MandateSchema.optional().nullable(),
   mcc: z.string().optional(),
-  merchantAccount: z.string(),
+  // merchantAccount: z.string(),
   merchantOrderReference: z.string().optional(),
   metadata: StringRecordSchema.optional(),
   mode: ModeEnumSchema.optional(),
@@ -443,8 +443,8 @@ export const CreateCheckoutSessionRequestSchema = z.object({
   recurringProcessingModel: RecurringProcessingModelEnumSchema.optional(),
   redirectFromIssuerMethod: z.string().optional(),
   redirectToIssuerMethod: z.string().optional(),
-  reference: z.string(),
-  returnUrl: z.string(),
+  // reference: z.string(),
+  // returnUrl: z.string(),
   riskData: RiskDataSchema.optional().nullable(),
   shopperEmail: z.string().optional(),
   shopperIP: z.string().optional(),
@@ -490,6 +490,7 @@ export const SessionResultResponseSchema = z.object({
 })
 
 export const SessionsResponseSchema = z.object({
+  sessionId: z.string(),
   sessionData: z.string(),
   sessionResult: z.string(),
   resultCode: PaymentResponseResultCodeEnumSchema,
