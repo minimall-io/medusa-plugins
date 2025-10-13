@@ -1,21 +1,15 @@
 import { z } from 'zod'
-import { PaymentResponseResultCodeEnumSchema } from './core'
+import { SessionsResponseSchema } from './core'
 import { getValidator } from './helpers'
 
-const PaymentDataSchema = z.object({
-  resultCode: PaymentResponseResultCodeEnumSchema,
-  sessionData: z.string(),
-  sessionResult: z.string(),
-})
-
-const SessionResponseSchema = z.object({
+const CreateCheckoutSessionResponseSchema = z.object({
   id: z.string(),
 })
 
 const DataSchema = z.object({
   reference: z.string(),
-  sessionResponse: SessionResponseSchema,
-  paymentData: PaymentDataSchema,
+  createCheckoutSessionResponse: CreateCheckoutSessionResponseSchema,
+  sessionsResponse: SessionsResponseSchema,
 })
 
 const InputSchema = z.object({

@@ -34,7 +34,12 @@ import {
   PaymentActions,
 } from '@medusajs/framework/utils'
 
-import { getMinorUnit, getSessionStatus, getStoredPaymentMethod } from './utils'
+import {
+  getAmount,
+  getMinorUnit,
+  getSessionStatus,
+  getStoredPaymentMethod,
+} from './utils'
 
 import {
   Options,
@@ -110,20 +115,20 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
   protected deleteStoredPaymentMethod_(
     shopperReference: string,
-    method: Types.checkout.StoredPaymentMethodResource,
+    storedPaymentMethod: Types.checkout.StoredPaymentMethodResource,
   ): Promise<void> {
     const { merchantAccount } = this.options_
-    if (!method.id) return Promise.resolve()
-    const idempotencyKey = `deleteStoredPaymentMethod_${shopperReference}_${method.id}`
+    if (!storedPaymentMethod.id) return Promise.resolve()
+    const idempotencyKey = `deleteStoredPaymentMethod_${shopperReference}_${storedPaymentMethod.id}`
     return this.checkoutAPI.RecurringApi.deleteTokenForStoredPaymentDetails(
-      method.id!,
+      storedPaymentMethod.id!,
       shopperReference,
       merchantAccount,
       { idempotencyKey },
     )
   }
 
-  protected async createSession_(
+  protected createCheckoutSession_(
     reference: string,
     amount: Types.checkout.Amount,
     sessionRequest: Partial<Types.checkout.CreateCheckoutSessionRequest>,
@@ -143,7 +148,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       returnUrl,
       merchantAccount,
     }
-    const idempotencyKey = `createSession_${reference}`
+    const idempotencyKey = `createCheckoutSession_${reference}`
     return this.checkoutAPI.PaymentsApi.sessions(request, { idempotencyKey })
   }
 
@@ -175,7 +180,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
   protected capturePayment_(
     reference: string,
-    pspReference: string,
+    paymentPspReference: string,
     amount: Types.checkout.Amount,
   ): Promise<Types.checkout.PaymentCaptureResponse> {
     const { merchantAccount } = this.options_
@@ -184,9 +189,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       amount,
       reference,
     }
-    const idempotencyKey = `capturePayment_${reference}_${pspReference}`
+    const idempotencyKey = `capturePayment_${reference}_${paymentPspReference}`
     return this.checkoutAPI.ModificationsApi.captureAuthorisedPayment(
-      pspReference,
+      paymentPspReference,
       request,
       { idempotencyKey },
     )
@@ -194,7 +199,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
   protected refundPayment_(
     reference: string,
-    pspReference: string,
+    paymentPspReference: string,
     amount: Types.checkout.Amount,
   ): Promise<Types.checkout.PaymentRefundResponse> {
     const { merchantAccount } = this.options_
@@ -203,9 +208,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       reference,
       amount,
     }
-    const idempotencyKey = `refundPayment_${reference}_${pspReference}`
+    const idempotencyKey = `refundPayment_${reference}_${paymentPspReference}`
     return this.checkoutAPI.ModificationsApi.refundCapturedPayment(
-      pspReference,
+      paymentPspReference,
       request,
       { idempotencyKey },
     )
@@ -240,8 +245,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('capturePayment/input', input)
     try {
       const validInput = validateCapturePaymentInput(input)
-      const { reference, sessionResult } = validInput.data
-      const payments = sessionResult.payments || []
+      const { reference, sessionResultResponse } = validInput.data
+      const payments = sessionResultResponse.payments || []
       const promises = payments.map(({ pspReference, amount }) => {
         if (!pspReference || !amount) return null
         return this.capturePayment_(reference, pspReference, amount)
@@ -290,7 +295,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async deletePayment(
     input: DeletePaymentInput,
   ): Promise<DeletePaymentOutput> {
-    this.log('getPaymentStatus/input', input, 'info')
+    this.log('deletePayment/input', input, 'info')
     return { data: {} }
   }
 
@@ -300,11 +305,11 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('getPaymentStatus/input', input)
     try {
       const validInput = validateGetPaymentStatusInput(input)
-      const sessionId = validInput.data.sessionResponse.id
-      const sessionResult = validInput.data.paymentData.sessionResult
+      const sessionId = validInput.data.createCheckoutSessionResponse.id
+      const sessionResult = validInput.data.sessionsResponse.sessionResult
       const response = await this.getSessionResult_(sessionId, sessionResult)
       const status = getSessionStatus(response.status)
-      const data = { ...input.data, sessionResult: response }
+      const data = { ...input.data, sessionResultResponse: response }
       this.log('getPaymentStatus/output', { data, status })
       return { data, status }
     } catch (error) {
@@ -327,26 +332,25 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('initiatePayment/input', input)
     try {
       const validInput = validateInitiatePaymentInput(input)
-      const sessionRequest = validInput?.data?.sessionRequest
-      const shopperReference = validInput.context?.account_holder?.id
       const reference = validInput.reference
-      const currency = validInput.currency_code.toUpperCase()
-      const value = getMinorUnit(validInput.amount, currency)
-      const amount: Types.checkout.Amount = {
-        currency,
-        value,
-      }
+      const shopperReference = validInput.context?.account_holder?.id
+      const { createCheckoutSessionRequest } = validInput?.data || {}
+      const amount = getAmount(validInput.amount, validInput.currency_code)
       const request: Partial<Types.checkout.CreateCheckoutSessionRequest> = {
-        ...sessionRequest,
+        ...createCheckoutSessionRequest,
         shopperReference,
       }
-      const response = await this.createSession_(reference, amount, request)
+      const response = await this.createCheckoutSession_(
+        reference,
+        amount,
+        request,
+      )
       const data = {
-        session: response,
         reference,
         session_id: reference,
+        createCheckoutSessionRequest: request,
+        createCheckoutSessionResponse: response,
       }
-      this.log('initiatePayment/request', request)
       this.log('initiatePayment/output', { data, id: reference })
       return { data, id: reference }
     } catch (error) {
@@ -378,10 +382,14 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('refundPayment/input', input)
     try {
       const validInput = validateRefundPaymentInput(input)
-      const { reference, sessionResult, sessionResponse } = validInput.data
-      const currency = sessionResponse.amount.currency
+      const {
+        reference,
+        sessionResultResponse,
+        createCheckoutSessionResponse,
+      } = validInput.data
+      const currency = createCheckoutSessionResponse.amount.currency
       let balance = getMinorUnit(validInput.amount, currency)
-      const payments = sessionResult.payments || []
+      const payments = sessionResultResponse.payments || []
       const promises = payments.map(({ pspReference, amount }) => {
         if (balance === 0) return null
         if (!pspReference || !amount) return null
@@ -407,8 +415,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   }
 
   /**
-   * As of this writing, this method isn't defined in the
-   * packages/modules/payment/src/services/payment-provider.ts.
+   * We don't use this method.
    */
   public async retrievePayment(
     input: RetrievePaymentInput,
@@ -417,7 +424,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   }
 
   /**
-   * We don't use this method at the moment.
+   * We don't use this method.
    */
   public async updatePayment(
     input: UpdatePaymentInput,

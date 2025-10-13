@@ -481,7 +481,7 @@ export const PaymentSchema = z.object({
   resultCode: PaymentResultCodeEnumSchema.optional(),
 })
 
-export const SessionResultResponse = z.object({
+export const SessionResultResponseSchema = z.object({
   additionalData: StringRecordSchema.optional(),
   id: z.string().optional(),
   payments: z.array(PaymentSchema).optional(),
@@ -489,29 +489,11 @@ export const SessionResultResponse = z.object({
   status: StatusEnumSchema.optional(),
 })
 
-export const BaseSessionsResponseSchema = z.object({
-  resultCode: PaymentResponseResultCodeEnumSchema,
-})
-
-export const SessionsResponseSchema = BaseSessionsResponseSchema.extend({
+export const SessionsResponseSchema = z.object({
   sessionData: z.string(),
   sessionResult: z.string(),
+  resultCode: PaymentResponseResultCodeEnumSchema,
 })
-
-export const DontationSessionsResponseSchema =
-  BaseSessionsResponseSchema.extend({
-    donationToken: z.string().optional(),
-  })
-
-export const PaymentCompletedDataSchema = z.union([
-  SessionsResponseSchema,
-  DontationSessionsResponseSchema,
-])
-
-export const PaymentFailedDataSchema = z.union([
-  SessionsResponseSchema,
-  BaseSessionsResponseSchema,
-])
 
 export const PaymentMethodToStoreSchema = z.object({
   brand: z.string().optional(),

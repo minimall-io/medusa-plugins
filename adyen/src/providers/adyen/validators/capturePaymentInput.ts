@@ -1,10 +1,10 @@
 import { z } from 'zod'
-import { SessionResultResponse, UnknownArraySchema } from './core'
+import { SessionResultResponseSchema, UnknownArraySchema } from './core'
 import { getValidator } from './helpers'
 
 const DataSchema = z.object({
   reference: z.string(),
-  sessionResult: SessionResultResponse,
+  sessionResultResponse: SessionResultResponseSchema,
   paymentCaptureResponses: UnknownArraySchema.optional(),
 })
 
