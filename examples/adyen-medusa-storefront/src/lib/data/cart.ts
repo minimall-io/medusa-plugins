@@ -10,6 +10,7 @@ import {
   getCacheOptions,
   getCacheTag,
   getCartId,
+  removeCartId,
   setCartId,
 } from "./cookies"
 import { getRegion } from "./regions"
@@ -410,21 +411,19 @@ export async function placeOrder(cartId?: string) {
     medusaError(error)
   }
 
-  // if (response.type === "order") {
-  //   const { order } = response
+  if (response.type === "order") {
+    const { order } = response
 
-  //   const countryCode = order.shipping_address?.country_code?.toLowerCase()
+    const countryCode = order.shipping_address?.country_code?.toLowerCase()
 
-  //   const orderCacheTag = await getCacheTag("orders")
-  //   revalidateTag(orderCacheTag)
+    const orderCacheTag = await getCacheTag("orders")
+    revalidateTag(orderCacheTag)
 
-  //   removeCartId()
-  //   redirect(`/${countryCode}/order/${order.id}/confirmed`)
-  // }
+    removeCartId()
+    redirect(`/${countryCode}/order/${order.id}/confirmed`)
+  }
 
-  // return response.cart
-
-  return response
+  return response.cart
 }
 
 /**

@@ -50,7 +50,6 @@ const useStripePayment = (cart: HttpTypes.StoreCart): IStripePayment => {
           )
         }
         setClientSecret(secret)
-        console.log("useStripePayment/onUpdate/session", session)
       } catch (error: any) {
         setError(error.message)
       }

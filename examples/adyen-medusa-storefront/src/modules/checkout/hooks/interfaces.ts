@@ -8,12 +8,6 @@ import {
 
 export type Providers = HttpTypes.StorePaymentProvider[]
 
-export enum ChannelEnum {
-  IOs = "iOS",
-  Android = "Android",
-  Web = "Web",
-}
-
 export type AdyenEnvironment =
   | "test"
   | "live"
@@ -36,7 +30,7 @@ export interface IPayment<Config> {
   config: Config
 }
 
-export type IAdyenPayment = IPayment<CoreConfiguration>
+export type IAdyenPayment = IPayment<CoreConfiguration | null>
 export type IStripePayment = IPayment<IStripePaymentConfig>
 export type IManualPayment = IPayment<null>
 

@@ -34,11 +34,10 @@ const AdyenProviderOption = ({ payment }: Props) => {
   const [checkout, setCheckout] = useState<Core | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const { config } = payment
-  const { countryCode, paymentMethodsResponse, clientKey } = config
-
-  console.log("AdyenProviderOption/config:", config)
 
   useEffect(() => {
+    if (!config) return
+
     const initateCheckout = async () => {
       try {
         const checkout = await AdyenCheckout(config)
@@ -48,8 +47,9 @@ const AdyenProviderOption = ({ payment }: Props) => {
         console.error("Error initializing Adyen checkout configuration:", error)
       }
     }
-    if (clientKey && countryCode) initateCheckout()
-  }, [countryCode, paymentMethodsResponse])
+
+    if (config) initateCheckout()
+  }, [config])
 
   useEffect(() => {
     if (!checkout || !containerRef.current) return
