@@ -3,6 +3,7 @@ import {
   EnvironmentEnumSchema,
   RecurringProcessingModelEnumSchema,
   ShopperInteractionEnumSchema,
+  StorePaymentMethodModeEnumSchema,
 } from './core'
 import { getValidator } from './helpers'
 
@@ -15,6 +16,7 @@ export const OptionsSchema = z.object({
   environment: EnvironmentEnumSchema.optional(),
   shopperInteraction: ShopperInteractionEnumSchema,
   recurringProcessingModel: RecurringProcessingModelEnumSchema,
+  storePaymentMethodMode: StorePaymentMethodModeEnumSchema,
 })
 
 export type Options = z.infer<typeof OptionsSchema>

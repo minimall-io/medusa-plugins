@@ -1,4 +1,4 @@
-import { CheckoutAPI, Client, Types } from '@adyen/api-library'
+import { CheckoutAPI, Client, Types, hmacValidator } from '@adyen/api-library'
 import { EnvironmentEnum } from '@adyen/api-library/lib/src/config'
 import {
   AuthorizePaymentInput,
@@ -51,6 +51,7 @@ import {
   validateInitiatePaymentInput,
   validateListPaymentMethodsInput,
   validateOptions,
+  validateProviderWebhookPayload,
   validateRefundPaymentInput,
 } from './validators'
 
@@ -62,8 +63,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   static readonly identifier: string = 'adyen'
   protected readonly options_: Options
   protected logger_: Logger
-  protected client: Client
-  protected checkoutAPI: CheckoutAPI
+  protected checkout: CheckoutAPI
+  protected hmac: hmacValidator
 
   static validateOptions(options: Options): void {
     validateOptions(options)
@@ -76,12 +77,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
     const { apiKey, liveEndpointUrlPrefix, environment } = options
 
-    this.client = new Client({
+    const client = new Client({
       apiKey,
       environment: environment || EnvironmentEnum.TEST,
       liveEndpointUrlPrefix,
     })
-    this.checkoutAPI = new CheckoutAPI(this.client)
+    this.checkout = new CheckoutAPI(client)
+    this.hmac = new hmacValidator()
   }
 
   protected log(title: string, data: any, level: keyof Logger = 'debug'): void {
@@ -98,122 +100,27 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     }
   }
 
+  protected validateHMAC(
+    notification: Types.notification.NotificationRequestItem,
+  ): boolean {
+    const { hmacKey } = this.options_
+    console.log('validateHMAC/hmacKey', hmacKey)
+    return this.hmac.validateHMAC(notification, hmacKey)
+  }
+
   protected async listStoredPaymentMethods_(
     shopperReference: string,
   ): Promise<Types.checkout.StoredPaymentMethodResource[]> {
     const { merchantAccount } = this.options_
     const idempotencyKey = `listStoredPaymentMethods_${shopperReference}`
     const response =
-      await this.checkoutAPI.RecurringApi.getTokensForStoredPaymentDetails(
+      await this.checkout.RecurringApi.getTokensForStoredPaymentDetails(
         shopperReference,
         merchantAccount,
         { idempotencyKey },
       )
     const { storedPaymentMethods } = response
     return storedPaymentMethods || []
-  }
-
-  protected deleteStoredPaymentMethod_(
-    shopperReference: string,
-    storedPaymentMethod: Types.checkout.StoredPaymentMethodResource,
-  ): Promise<void> {
-    const { merchantAccount } = this.options_
-    if (!storedPaymentMethod.id) return Promise.resolve()
-    const idempotencyKey = `deleteStoredPaymentMethod_${shopperReference}_${storedPaymentMethod.id}`
-    return this.checkoutAPI.RecurringApi.deleteTokenForStoredPaymentDetails(
-      storedPaymentMethod.id!,
-      shopperReference,
-      merchantAccount,
-      { idempotencyKey },
-    )
-  }
-
-  protected createCheckoutSession_(
-    reference: string,
-    amount: Types.checkout.Amount,
-    sessionRequest: Partial<Types.checkout.CreateCheckoutSessionRequest>,
-  ): Promise<Types.checkout.CreateCheckoutSessionResponse> {
-    const {
-      recurringProcessingModel,
-      shopperInteraction,
-      returnUrlPrefix: returnUrl,
-      merchantAccount,
-    } = this.options_
-    const request: Types.checkout.CreateCheckoutSessionRequest = {
-      ...sessionRequest,
-      amount,
-      reference,
-      recurringProcessingModel,
-      shopperInteraction,
-      returnUrl,
-      merchantAccount,
-    }
-    const idempotencyKey = `createCheckoutSession_${reference}`
-    return this.checkoutAPI.PaymentsApi.sessions(request, { idempotencyKey })
-  }
-
-  protected getSessionResult_(
-    sessionId: string,
-    sessionResult: string,
-  ): Promise<Types.checkout.SessionResultResponse> {
-    const idempotencyKey = `getSessionResult_${sessionId}`
-    return this.checkoutAPI.PaymentsApi.getResultOfPaymentSession(
-      sessionId,
-      sessionResult,
-      { idempotencyKey },
-    )
-  }
-
-  protected cancelPayment_(
-    paymentReference: string,
-  ): Promise<Types.checkout.StandalonePaymentCancelResponse> {
-    const { merchantAccount } = this.options_
-    const request: Types.checkout.StandalonePaymentCancelRequest = {
-      merchantAccount,
-      paymentReference,
-    }
-    const idempotencyKey = `cancelPayment_${paymentReference}`
-    return this.checkoutAPI.ModificationsApi.cancelAuthorisedPayment(request, {
-      idempotencyKey,
-    })
-  }
-
-  protected capturePayment_(
-    reference: string,
-    paymentPspReference: string,
-    amount: Types.checkout.Amount,
-  ): Promise<Types.checkout.PaymentCaptureResponse> {
-    const { merchantAccount } = this.options_
-    const request: Types.checkout.PaymentCaptureRequest = {
-      merchantAccount,
-      amount,
-      reference,
-    }
-    const idempotencyKey = `capturePayment_${reference}_${paymentPspReference}`
-    return this.checkoutAPI.ModificationsApi.captureAuthorisedPayment(
-      paymentPspReference,
-      request,
-      { idempotencyKey },
-    )
-  }
-
-  protected refundPayment_(
-    reference: string,
-    paymentPspReference: string,
-    amount: Types.checkout.Amount,
-  ): Promise<Types.checkout.PaymentRefundResponse> {
-    const { merchantAccount } = this.options_
-    const request: Types.checkout.PaymentRefundRequest = {
-      merchantAccount,
-      reference,
-      amount,
-    }
-    const idempotencyKey = `refundPayment_${reference}_${paymentPspReference}`
-    return this.checkoutAPI.ModificationsApi.refundCapturedPayment(
-      paymentPspReference,
-      request,
-      { idempotencyKey },
-    )
   }
 
   public async authorizePayment(
@@ -227,9 +134,18 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<CancelPaymentOutput> {
     this.log('cancelPayment/input', input)
     try {
+      const { merchantAccount } = this.options_
       const validInput = validateCancelPaymentInput(input)
-      const { reference } = validInput.data
-      const response = await this.cancelPayment_(reference)
+      const { reference: paymentReference } = validInput.data
+      const request: Types.checkout.StandalonePaymentCancelRequest = {
+        merchantAccount,
+        paymentReference,
+      }
+      const idempotencyKey = paymentReference
+      const response =
+        await this.checkout.ModificationsApi.cancelAuthorisedPayment(request, {
+          idempotencyKey,
+        })
       const data = { ...input.data, paymentCancelResponse: response }
       this.log('cancelPayment/output', { data })
       return { data }
@@ -244,13 +160,26 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<CapturePaymentOutput> {
     this.log('capturePayment/input', input)
     try {
+      const { merchantAccount } = this.options_
       const validInput = validateCapturePaymentInput(input)
       const { reference, sessionResultResponse } = validInput.data
       const payments = sessionResultResponse.payments || []
       const promises = payments.map(({ pspReference, amount }) => {
         if (!pspReference || !amount) return null
-        return this.capturePayment_(reference, pspReference, amount)
+
+        const request: Types.checkout.PaymentCaptureRequest = {
+          merchantAccount,
+          amount,
+          reference,
+        }
+        const idempotencyKey = pspReference
+        return this.checkout.ModificationsApi.captureAuthorisedPayment(
+          pspReference,
+          request,
+          { idempotencyKey },
+        )
       })
+
       const responses = await Promise.all(promises)
       const captures = validInput.data.paymentCaptureResponses || []
       const paymentCaptureResponses = [...captures, ...responses]
@@ -277,12 +206,20 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<DeleteAccountHolderOutput> {
     this.log('deleteAccountHolder/input', input)
     try {
+      const { merchantAccount } = this.options_
       const validInput = validateDeleteAccountHolderInput(input)
       const shopperReference = validInput.context.account_holder.id
       const methods = await this.listStoredPaymentMethods_(shopperReference)
-      const promises = methods.map((method) =>
-        this.deleteStoredPaymentMethod_(shopperReference, method),
-      )
+      const promises = methods.map((method) => {
+        if (!method.id) return Promise.resolve()
+        const idempotencyKey = `${shopperReference}_${method.id}`
+        return this.checkout.RecurringApi.deleteTokenForStoredPaymentDetails(
+          method.id!,
+          shopperReference,
+          merchantAccount,
+          { idempotencyKey },
+        )
+      })
       await Promise.all(promises)
       this.log('deleteAccountHolder/storedPaymentMethods', methods)
       return { data: {} }
@@ -306,7 +243,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     try {
       const validInput = validateGetPaymentStatusInput(input)
       const { sessionId, sessionResult } = validInput.data.sessionsResponse
-      const response = await this.getSessionResult_(sessionId, sessionResult)
+      const idempotencyKey = sessionId
+      const response =
+        await this.checkout.PaymentsApi.getResultOfPaymentSession(
+          sessionId,
+          sessionResult,
+          { idempotencyKey },
+        )
       const status = getSessionStatus(response.status)
       const data = { ...input.data, sessionResultResponse: response }
       this.log('getPaymentStatus/output', { data, status })
@@ -321,8 +264,35 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     input: ProviderWebhookPayload['payload'],
   ): Promise<WebhookActionResult> {
     this.log('getWebhookActionAndData/input', input)
-    // TODO: Implement getWebhookActionAndData logic
-    return { action: PaymentActions.NOT_SUPPORTED }
+    try {
+      const providerIdentifier = AdyenProviderService.identifier
+      const validInput = validateProviderWebhookPayload(input)
+      const { notificationItems } = validInput.data
+      const validNotifications: Types.notification.NotificationRequestItem[] =
+        []
+      notificationItems.forEach((notificationItem) => {
+        const notification = notificationItem.NotificationRequestItem
+        if (this.validateHMAC(notification)) {
+          validNotifications.push(notification)
+        } else {
+          this.log('getWebhookActionAndData/invalidNotification', notification)
+        }
+      })
+      const data = {
+        providerIdentifier,
+        validNotifications,
+        session_id: '',
+        amount: 0,
+      }
+      this.log('getWebhookActionAndData/output', {
+        action: PaymentActions.NOT_SUPPORTED,
+        data,
+      })
+      return { action: PaymentActions.NOT_SUPPORTED, data }
+    } catch (error) {
+      this.log('getWebhookActionAndData/error', error)
+      throw error
+    }
   }
 
   public async initiatePayment(
@@ -330,6 +300,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<InitiatePaymentOutput> {
     this.log('initiatePayment/input', input)
     try {
+      const {
+        storePaymentMethodMode,
+        recurringProcessingModel,
+        shopperInteraction,
+        returnUrlPrefix: returnUrl,
+        merchantAccount,
+      } = this.options_
       const validInput = validateInitiatePaymentInput(input)
       const reference = validInput.reference
       const shopperReference = validInput.context?.account_holder?.id
@@ -346,15 +323,21 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         return { data, id: reference }
       } else {
         const amount = getAmount(validInput.amount, validInput.currency_code)
-        const request: Partial<Types.checkout.CreateCheckoutSessionRequest> = {
+        const request: Types.checkout.CreateCheckoutSessionRequest = {
           ...createCheckoutSessionRequest,
           shopperReference,
-        }
-        const response = await this.createCheckoutSession_(
-          reference,
           amount,
-          request,
-        )
+          reference,
+          storePaymentMethodMode,
+          recurringProcessingModel,
+          shopperInteraction,
+          returnUrl,
+          merchantAccount,
+        }
+        const idempotencyKey = reference
+        const response = await this.checkout.PaymentsApi.sessions(request, {
+          idempotencyKey,
+        })
         const data = {
           reference,
           session_id: reference,
@@ -392,6 +375,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<RefundPaymentOutput> {
     this.log('refundPayment/input', input)
     try {
+      const { merchantAccount } = this.options_
       const validInput = validateRefundPaymentInput(input)
       const {
         reference,
@@ -411,7 +395,17 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
           currency,
           value,
         }
-        return this.refundPayment_(reference, pspReference, newAmount)
+        const request: Types.checkout.PaymentRefundRequest = {
+          merchantAccount,
+          reference,
+          amount: newAmount,
+        }
+        const idempotencyKey = pspReference
+        return this.checkout.ModificationsApi.refundCapturedPayment(
+          pspReference,
+          request,
+          { idempotencyKey },
+        )
       })
       const responses = await Promise.all(promises)
       const refunds = validInput.data.paymentRefundResponses || []

@@ -14,6 +14,11 @@ export const UnknownArraySchema = z.array(z.unknown())
 
 export const StringRecordSchema = z.record(z.string(), z.string())
 
+export const OptionalStringRecordSchema = z.record(
+  z.string(),
+  z.string().optional(),
+)
+
 export const AnyRecordSchema = z.record(z.string(), z.any())
 
 export const UnknownRecordSchema = z.record(z.string(), z.unknown())
@@ -150,6 +155,18 @@ export const WalletPurposeEnumSchema = z.nativeEnum(
 )
 
 export const SplitTypeEnumSchema = z.nativeEnum(Types.checkout.Split.TypeEnum)
+
+export const EventCodeEnumSchema = z.nativeEnum(
+  Types.notification.NotificationRequestItem.EventCodeEnum,
+)
+
+export const OperationsEnumSchema = z.nativeEnum(
+  Types.notification.NotificationRequestItem.OperationsEnum,
+)
+
+export const SuccessEnumSchema = z.nativeEnum(
+  Types.notification.NotificationRequestItem.SuccessEnum,
+)
 
 export const AmountSchema = z.object({
   currency: z.string().length(3).toUpperCase(),
@@ -509,4 +526,8 @@ export const PaymentMethodToStoreSchema = z.object({
   holderName: z.string().optional(),
   number: z.string().optional(),
   type: z.string().optional(),
+})
+
+export const ContextSchema = z.object({
+  idempotency_key: z.string(),
 })
