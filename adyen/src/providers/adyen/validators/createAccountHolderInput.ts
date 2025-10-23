@@ -1,12 +1,9 @@
 import { z } from 'zod'
+import { PaymentCustomerDTOSchema, PaymentProviderContextSchema } from './core'
 import { getValidator } from './helpers'
 
-const CustomerSchema = z.object({
-  id: z.string(),
-})
-
-const ContextSchema = z.object({
-  customer: CustomerSchema,
+const ContextSchema = PaymentProviderContextSchema.partial().extend({
+  customer: PaymentCustomerDTOSchema.pick({ id: true }),
 })
 
 const InputSchema = z.object({

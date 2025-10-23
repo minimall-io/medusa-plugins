@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { PaymentProviderContextSchema } from './core'
 import { getValidator } from './helpers'
 
 const DataSchema = z.object({
@@ -7,6 +8,7 @@ const DataSchema = z.object({
 
 const InputSchema = z.object({
   data: DataSchema,
+  context: PaymentProviderContextSchema.partial().optional(),
 })
 
 export type CancelPaymentInput = z.infer<typeof InputSchema>

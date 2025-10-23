@@ -1,8 +1,9 @@
 import { z } from 'zod'
 import {
+  AccountHolderDTOSchema,
   CreateCheckoutSessionRequestSchema,
+  PaymentProviderContextSchema,
   SessionsResponseSchema,
-  UnknownRecordSchema,
 } from './core'
 import { getValidator } from './helpers'
 
@@ -12,13 +13,12 @@ const DataSchema = z.object({
   sessionsResponse: SessionsResponseSchema.optional(),
 })
 
-const AccountHolderSchema = z.object({
-  data: UnknownRecordSchema,
-  id: z.string().optional(),
+const AccountHolderSchema = AccountHolderDTOSchema.partial({ id: true }).pick({
+  data: true,
+  id: true,
 })
 
-const ContextSchema = z.object({
-  idempotency_key: z.string().optional(),
+const ContextSchema = PaymentProviderContextSchema.partial().extend({
   account_holder: AccountHolderSchema.optional(),
 })
 

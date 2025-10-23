@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { SessionsResponseSchema } from './core'
+import { PaymentProviderContextSchema, SessionsResponseSchema } from './core'
 import { getValidator } from './helpers'
 
 const DataSchema = z.object({
@@ -9,6 +9,7 @@ const DataSchema = z.object({
 
 const InputSchema = z.object({
   data: DataSchema,
+  context: PaymentProviderContextSchema.partial().optional(),
 })
 
 export type GetPaymentStatusInput = z.infer<typeof InputSchema>

@@ -1,14 +1,11 @@
 import { z } from 'zod'
 import {
-  AmountSchema,
+  CreateCheckoutSessionResponseSchema,
+  PaymentProviderContextSchema,
   SessionResultResponseSchema,
   UnknownArraySchema,
 } from './core'
 import { getValidator } from './helpers'
-
-const CreateCheckoutSessionResponseSchema = z.object({
-  amount: AmountSchema,
-})
 
 const DataSchema = z.object({
   reference: z.string(),
@@ -19,6 +16,7 @@ const DataSchema = z.object({
 
 const InputSchema = z.object({
   data: DataSchema,
+  context: PaymentProviderContextSchema.partial().optional(),
   amount: z.any(),
 })
 
