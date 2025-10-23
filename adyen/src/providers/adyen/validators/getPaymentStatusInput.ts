@@ -1,10 +1,10 @@
 import { z } from 'zod'
-import { PaymentProviderContextSchema, SessionsResponseSchema } from './core'
+import { PaymentProviderContextSchema, PaymentProviderDataSchema } from './core'
 import { getValidator } from './helpers'
 
-const DataSchema = z.object({
-  reference: z.string(),
-  sessionsResponse: SessionsResponseSchema,
+const DataSchema = PaymentProviderDataSchema.pick({
+  reference: true,
+  sessionsResponse: true,
 })
 
 const InputSchema = z.object({

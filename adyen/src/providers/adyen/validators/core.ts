@@ -574,3 +574,15 @@ export const PaymentProviderContextSchema = z.object({
   customer: PaymentCustomerDTOSchema,
   account_holder: AccountHolderDTOSchema,
 })
+
+export const PaymentProviderDataSchema = z.object({
+  session_id: z.string(),
+  reference: z.string(),
+  createCheckoutSessionRequest: CreateCheckoutSessionRequestSchema,
+  createCheckoutSessionResponse: CreateCheckoutSessionResponseSchema,
+  sessionsResponse: SessionsResponseSchema,
+  sessionResultResponse: SessionResultResponseSchema,
+  paymentCaptureResponses: UnknownArraySchema,
+  paymentRefundResponses: UnknownArraySchema,
+  paymentCancelResponse: UnknownRecordSchema,
+})
