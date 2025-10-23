@@ -162,14 +162,34 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     try {
       const { merchantAccount } = this.options_
       const validInput = validateCapturePaymentInput(input)
-      const { reference, sessionResultResponse } = validInput.data
+      const {
+        reference,
+        sessionResultResponse,
+        createCheckoutSessionResponse,
+      } = validInput.data
+      const currency = createCheckoutSessionResponse.amount.currency
       const payments = sessionResultResponse.payments || []
+      const paymentsAmount = payments.reduce((total, { amount }) => {
+        if (!amount) return total
+        if (amount.currency !== currency) return total
+        return total + amount.value
+      }, 0)
+      const captureAmount = validInput.amount || paymentsAmount
+      let balance = getMinorUnit(captureAmount, currency)
       const promises = payments.map(({ pspReference, amount }) => {
+        if (balance === 0) return null
         if (!pspReference || !amount) return null
+        if (amount.currency !== currency) return null
+        const value = amount.value < balance ? amount.value : balance
+        balance -= value
+        const newAmount: Types.checkout.Amount = {
+          currency,
+          value,
+        }
 
         const request: Types.checkout.PaymentCaptureRequest = {
           merchantAccount,
-          amount,
+          amount: newAmount,
           reference,
         }
         const idempotencyKey = pspReference
@@ -359,7 +379,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('listPaymentMethods/input', input)
     try {
       const validInput = validateListPaymentMethodsInput(input)
-      const shopperReference = validInput.context.account_holder.data.id
+      const shopperReference = validInput.context.account_holder.data
+        .id as string
       const methods = await this.listStoredPaymentMethods_(shopperReference)
       const formattedMethods = methods.map(getStoredPaymentMethod)
       this.log('listPaymentMethods/output', formattedMethods)
