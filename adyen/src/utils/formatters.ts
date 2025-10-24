@@ -48,6 +48,15 @@ export const getAmount = (
   value: getMinorUnit(amount, currency),
 })
 
+export const getAmountFromMinorUnit = (
+  amount: BigNumberInput,
+  currency: string,
+): number => {
+  const multiplier = getCurrencyMultiplier(currency)
+  const standardAmount = new BigNumber(MathBN.div(amount, multiplier))
+  return standardAmount.numeric
+}
+
 export const getSessionStatus = (
   code?: Types.checkout.SessionResultResponse.StatusEnum,
 ): PaymentSessionStatus => {

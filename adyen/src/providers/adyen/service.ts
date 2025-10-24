@@ -39,7 +39,7 @@ import {
   getMinorUnit,
   getSessionStatus,
   getStoredPaymentMethod,
-} from './utils'
+} from '../../utils'
 
 import {
   Options,
@@ -51,6 +51,9 @@ import {
   validateInitiatePaymentInput,
   validateListPaymentMethodsInput,
   validateOptions,
+  validatePaymentCancelResponse,
+  validatePaymentCaptureResponses,
+  validatePaymentRefundResponses,
   validateProviderWebhookPayload,
   validateRefundPaymentInput,
 } from './validators'
@@ -136,17 +139,24 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     try {
       const { merchantAccount } = this.options_
       const validInput = validateCancelPaymentInput(input)
-      const { reference: paymentReference } = validInput.data
+      const { reference } = validInput.data
+      const cancelId = validInput.context?.idempotency_key
       const request: Types.checkout.StandalonePaymentCancelRequest = {
         merchantAccount,
-        paymentReference,
+        paymentReference: reference,
+        reference,
       }
-      const idempotencyKey = paymentReference
+      const idempotencyKey = reference
       const response =
         await this.checkout.ModificationsApi.cancelAuthorisedPayment(request, {
           idempotencyKey,
         })
-      const data = { ...input.data, paymentCancelResponse: response }
+
+      const validResponse = { ...response, cancelId }
+      const data = {
+        ...input.data,
+        paymentCancelResponse: validatePaymentCancelResponse(validResponse),
+      }
       this.log('cancelPayment/output', { data })
       return { data }
     } catch (error) {
@@ -166,7 +176,26 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         reference,
         sessionResultResponse,
         createCheckoutSessionResponse,
+        paymentCaptureRequests,
       } = validInput.data
+      const captureId = validInput.context?.idempotency_key
+      if (paymentCaptureRequests) {
+        const captures = validInput.data.paymentCaptureResponses || {}
+        const newCaptures = Object.entries(paymentCaptureRequests).reduce(
+          (captures, [pspReference, request]) =>
+            (captures[pspReference] = { ...request, captureId }),
+          {},
+        )
+        const paymentCaptureResponses = {
+          ...captures,
+          ...validatePaymentCaptureResponses(newCaptures),
+        }
+        const data = { ...input.data, paymentCaptureResponses }
+        delete data['paymentCaptureRequests']
+        this.log('capturePayment/output', { data })
+        return { data }
+      }
+
       const currency = createCheckoutSessionResponse.amount.currency
       const payments = sessionResultResponse.payments || []
       const paymentsAmount = payments.reduce((total, { amount }) => {
@@ -176,6 +205,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       }, 0)
       const captureAmount = validInput.amount || paymentsAmount
       let balance = getMinorUnit(captureAmount, currency)
+
       const promises = payments.map(({ pspReference, amount }) => {
         if (balance === 0) return null
         if (!pspReference || !amount) return null
@@ -201,8 +231,21 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       })
 
       const responses = await Promise.all(promises)
-      const captures = validInput.data.paymentCaptureResponses || []
-      const paymentCaptureResponses = [...captures, ...responses]
+      const validResponses = responses.filter(
+        (response) => response !== null,
+      ) as Types.checkout.PaymentCaptureResponse[]
+
+      const newCaptures = validResponses.reduce(
+        (captures, response) =>
+          (captures[response.pspReference] = { ...response, captureId }),
+        {},
+      )
+
+      const captures = validInput.data.paymentCaptureResponses || {}
+      const paymentCaptureResponses = {
+        ...captures,
+        ...validatePaymentCaptureResponses(newCaptures),
+      }
       const data = { ...input.data, paymentCaptureResponses }
       this.log('capturePayment/output', { data })
       return { data }
@@ -291,7 +334,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       const validNotifications: Types.notification.NotificationRequestItem[] =
         []
       notificationItems.forEach((notificationItem) => {
-        const notification = notificationItem.NotificationRequestItem
+        const notification =
+          notificationItem.NotificationRequestItem as Types.notification.NotificationRequestItem
         if (this.validateHMAC(notification)) {
           validNotifications.push(notification)
         } else {
@@ -403,6 +447,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         sessionResultResponse,
         createCheckoutSessionResponse,
       } = validInput.data
+      const refundId = validInput.context?.idempotency_key
       const currency = createCheckoutSessionResponse.amount.currency
       let balance = getMinorUnit(validInput.amount, currency)
       const payments = sessionResultResponse.payments || []
@@ -429,8 +474,21 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         )
       })
       const responses = await Promise.all(promises)
+      const validResponses = responses.filter(
+        (response) => response !== null,
+      ) as Types.checkout.PaymentRefundResponse[]
+
+      const newRefunds = validResponses.reduce(
+        (captures, response) =>
+          (captures[response.pspReference] = { ...response, refundId }),
+        {},
+      )
+
       const refunds = validInput.data.paymentRefundResponses || []
-      const paymentRefundResponses = [...refunds, ...responses]
+      const paymentRefundResponses = {
+        ...refunds,
+        ...validatePaymentRefundResponses(newRefunds),
+      }
       const data = { ...input.data, paymentRefundResponses }
       this.log('refundPayment/output', { data })
       return { data }
