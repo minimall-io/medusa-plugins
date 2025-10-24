@@ -7,10 +7,14 @@ const DataSchema = PaymentProviderDataSchema.pick({
   sessionResultResponse: true,
   createCheckoutSessionResponse: true,
   paymentCaptureResponses: true,
+  paymentCaptureRequests: true,
 })
 
 const InputSchema = z.object({
-  data: DataSchema.partial({ paymentCaptureResponses: true }),
+  data: DataSchema.partial({
+    paymentCaptureResponses: true,
+    paymentCaptureRequests: true,
+  }),
   context: PaymentProviderContextSchema.partial().optional(),
   amount: z.any().optional(),
 })

@@ -14,11 +14,6 @@ export const UnknownArraySchema = z.array(z.unknown())
 
 export const StringRecordSchema = z.record(z.string(), z.string())
 
-export const OptionalStringRecordSchema = z.record(
-  z.string(),
-  z.string().optional(),
-)
-
 export const AnyRecordSchema = z.record(z.string(), z.any())
 
 export const UnknownRecordSchema = z.record(z.string(), z.unknown())
@@ -155,18 +150,6 @@ export const WalletPurposeEnumSchema = z.nativeEnum(
 )
 
 export const SplitTypeEnumSchema = z.nativeEnum(Types.checkout.Split.TypeEnum)
-
-export const EventCodeEnumSchema = z.nativeEnum(
-  Types.notification.NotificationRequestItem.EventCodeEnum,
-)
-
-export const OperationsEnumSchema = z.nativeEnum(
-  Types.notification.NotificationRequestItem.OperationsEnum,
-)
-
-export const SuccessEnumSchema = z.nativeEnum(
-  Types.notification.NotificationRequestItem.SuccessEnum,
-)
 
 export const AmountSchema = z.object({
   currency: z.string().length(3).toUpperCase(),
@@ -575,6 +558,57 @@ export const PaymentProviderContextSchema = z.object({
   account_holder: AccountHolderDTOSchema,
 })
 
+export const PaymentModificationSchema = z.object({
+  pspReference: z.string(),
+  reference: z.string(),
+  status: z.string(),
+})
+
+export const PaymentCaptureResponseSchema = PaymentModificationSchema.extend({
+  amount: AmountSchema,
+  captureId: z.string(),
+})
+
+export const PaymentCaptureRequestSchema = PaymentModificationSchema.extend({
+  amount: AmountSchema,
+})
+
+export const PaymentRefundResponseSchema = PaymentModificationSchema.extend({
+  amount: AmountSchema,
+  refundId: z.string(),
+})
+
+export const PaymentRefundRequestSchema = PaymentModificationSchema.extend({
+  amount: AmountSchema,
+})
+
+export const PaymentCancelResponseSchema = PaymentModificationSchema.extend({
+  paymentReference: z.string(),
+  cancelId: z.string(),
+})
+
+export const PaymentCancelRequestSchema = PaymentModificationSchema.extend({
+  paymentReference: z.string(),
+})
+
+export const PaymentCaptureResponsesSchema = z.record(
+  z.string(),
+  PaymentCaptureResponseSchema,
+)
+export const PaymentCaptureRequestsSchema = z.record(
+  z.string(),
+  PaymentCaptureRequestSchema,
+)
+
+export const PaymentRefundResponsesSchema = z.record(
+  z.string(),
+  PaymentRefundResponseSchema,
+)
+export const PaymentRefundRequestsSchema = z.record(
+  z.string(),
+  PaymentRefundRequestSchema,
+)
+
 export const PaymentProviderDataSchema = z.object({
   session_id: z.string(),
   reference: z.string(),
@@ -582,7 +616,10 @@ export const PaymentProviderDataSchema = z.object({
   createCheckoutSessionResponse: CreateCheckoutSessionResponseSchema,
   sessionsResponse: SessionsResponseSchema,
   sessionResultResponse: SessionResultResponseSchema,
-  paymentCaptureResponses: UnknownArraySchema,
-  paymentRefundResponses: UnknownArraySchema,
-  paymentCancelResponse: UnknownRecordSchema,
+  paymentCaptureResponses: PaymentCaptureResponsesSchema,
+  paymentCaptureRequests: PaymentCaptureRequestsSchema,
+  paymentRefundResponses: PaymentRefundResponsesSchema,
+  paymentRefundRequests: PaymentRefundRequestsSchema,
+  paymentCancelResponse: PaymentCancelResponseSchema,
+  paymentCancelRequest: PaymentCancelRequestSchema,
 })
