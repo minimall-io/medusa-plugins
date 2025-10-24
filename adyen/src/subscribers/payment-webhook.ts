@@ -11,6 +11,8 @@ import {
 } from '@medusajs/framework/utils'
 import { SubscriberArgs, SubscriberConfig } from '@medusajs/medusa/types'
 
+import { processNotificationWorkflow } from '../workflows'
+
 type SerializedBuffer = {
   data: ArrayBuffer
   type: 'Buffer'
@@ -61,6 +63,12 @@ export default async function paymentWebhookhandler({
   console.log('paymentWebhookhandler/validNotifications', validNotifications)
 
   // await processPaymentWorkflow(container).run({ input: processedEvent })
+
+  validNotifications.forEach((notification) => {
+    processNotificationWorkflow(container).run({
+      input: notification,
+    })
+  })
 }
 
 export const config: SubscriberConfig = {

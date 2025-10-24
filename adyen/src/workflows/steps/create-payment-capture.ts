@@ -1,4 +1,5 @@
-import { CaptureDTO, ModulesSdkTypes } from '@medusajs/framework/types'
+import { CreateCaptureDTO, PaymentDTO } from '@medusajs/framework/types'
+import { Modules } from '@medusajs/framework/utils'
 import {
   StepExecutionContext,
   StepResponse,
@@ -7,26 +8,39 @@ import {
 
 export const createPaymentCaptureStepId = 'create-payment-capture-step'
 
+type Payments = Record<string, PaymentDTO>
+
+const getCaptureIds = (payment: PaymentDTO): string[] =>
+  payment.captures?.map((capture) => capture.id) || []
+
 const createPaymentCaptureStepInvoke = async (
-  capture: CaptureDTO,
+  capture: CreateCaptureDTO,
   { container }: StepExecutionContext,
-): Promise<StepResponse<CaptureDTO, CaptureDTO>> => {
-  const captureService = container.resolve(
-    'captureService',
-  ) as ModulesSdkTypes.IMedusaInternalService<any>
-  const newCapture = await captureService.create(capture)
-  return new StepResponse<CaptureDTO, CaptureDTO>(newCapture, newCapture)
+): Promise<StepResponse<PaymentDTO, Record<string, PaymentDTO>>> => {
+  const paymentService = container.resolve(Modules.PAYMENT)
+  const originalPayment = await paymentService.retrievePayment(
+    capture.payment_id,
+  )
+  const updatedPayment = await paymentService.capturePayment(capture)
+  return new StepResponse<PaymentDTO, Payments>(updatedPayment, {
+    originalPayment,
+    updatedPayment,
+  })
 }
 
 const createPaymentCaptureStepCompensate = async (
-  createdCapture: CaptureDTO,
+  payments: Record<string, PaymentDTO>,
   { container }: StepExecutionContext,
-): Promise<StepResponse<CaptureDTO>> => {
-  const captureService = container.resolve(
-    'captureService',
-  ) as ModulesSdkTypes.IMedusaInternalService<any>
-  await captureService.delete(createdCapture.id)
-  return new StepResponse<CaptureDTO>(createdCapture)
+): Promise<StepResponse<Payments>> => {
+  const { originalPayment, updatedPayment } = payments
+  const originalCapturesSet = new Set(getCaptureIds(originalPayment))
+  const updatedCaptureIds = getCaptureIds(updatedPayment)
+  const capturesToDelete = updatedCaptureIds.filter(
+    (captureId) => !originalCapturesSet.has(captureId),
+  )
+  const paymentService = container.resolve(Modules.PAYMENT)
+  await paymentService.deleteCaptures(capturesToDelete)
+  return new StepResponse<Payments>(payments)
 }
 
 const createPaymentCaptureStep = createStep(
