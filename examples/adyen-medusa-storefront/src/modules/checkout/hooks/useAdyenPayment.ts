@@ -4,7 +4,11 @@ import {
   PaymentCompletedData,
   PaymentFailedData,
 } from "@adyen/adyen-web"
-import { initiatePaymentSession, placeOrder } from "@lib/data/cart"
+import {
+  initiatePaymentSession,
+  placeOrder,
+  updatePaymentSession,
+} from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { useCallback, useMemo, useState } from "react"
 import { getAdyenRequest, getAdyenRequestFromCart } from "../utils"
@@ -77,13 +81,11 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
       try {
         setError(null)
         console.log("useAdyenPayment/onPaymentCompleted/try/start")
-        const providerId = session.provider_id
         const checkoutSession = session.data
           .createCheckoutSessionResponse as Session
         const sessionsResponse = { ...input, sessionId: checkoutSession.id }
-        const data = { sessionsResponse }
-        const options = { provider_id: providerId, data }
-        await initiatePaymentSession(cart, options)
+        const data = { ...session.data, sessionsResponse }
+        await updatePaymentSession(session.id, data)
         await placeOrder()
         console.log("useAdyenPayment/onPaymentCompleted/try/end")
       } catch (error: any) {

@@ -253,6 +253,28 @@ export async function initiatePaymentSession(
     .catch(medusaError)
 }
 
+export async function updatePaymentSession(
+  paymentSessionId: string,
+  data: Record<string, unknown>
+) {
+  const headers = {
+    ...(await getAuthHeaders()),
+  }
+
+  const response = await sdk.client.fetch<HttpTypes.StorePaymentSession>(
+    `/store/adyen/payment-sessions/${paymentSessionId}`,
+    {
+      method: "POST",
+      body: { data },
+      headers,
+      cache: "force-cache",
+    }
+  )
+  const cartCacheTag = await getCacheTag("carts")
+  revalidateTag(cartCacheTag)
+  return response
+}
+
 export async function applyPromotions(codes: string[]) {
   const cartId = await getCartId()
 

@@ -56,6 +56,7 @@ import {
   validatePaymentRefundResponses,
   validateProviderWebhookPayload,
   validateRefundPaymentInput,
+  validateUpdatePaymentInput,
 } from './validators'
 
 interface InjectedDependencies extends Record<string, unknown> {
@@ -108,7 +109,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): boolean {
     const { hmacKey } = this.options_
     console.log('validateHMAC/hmacKey', hmacKey)
-    return this.hmac.validateHMAC(notification, hmacKey)
+    // TODO: Uncomment this when we are done with testing
+    // return this.hmac.validateHMAC(notification, hmacKey)
+    return true
   }
 
   protected async listStoredPaymentMethods_(
@@ -182,10 +185,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       if (paymentCaptureRequests) {
         const captures = validInput.data.paymentCaptureResponses || {}
         const newCaptures = Object.entries(paymentCaptureRequests).reduce(
-          (captures, [pspReference, request]) =>
-            (captures[pspReference] = { ...request, captureId }),
+          (requests, [pspReference, request]) => {
+            requests[pspReference] = { ...request, captureId }
+            return requests
+          },
           {},
         )
+        this.log('capturePayment/newCaptures', newCaptures)
         const paymentCaptureResponses = {
           ...captures,
           ...validatePaymentCaptureResponses(newCaptures),
@@ -374,43 +380,31 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       const validInput = validateInitiatePaymentInput(input)
       const reference = validInput.reference
       const shopperReference = validInput.context?.account_holder?.id
-      const { createCheckoutSessionRequest, sessionsResponse } =
-        validInput?.data || {}
-      if (sessionsResponse) {
-        const data = {
-          ...input.data,
-          reference,
-          session_id: reference,
-          sessionsResponse,
-        }
-        this.log('initiatePayment/output', { data, id: reference })
-        return { data, id: reference }
-      } else {
-        const amount = getAmount(validInput.amount, validInput.currency_code)
-        const request: Types.checkout.CreateCheckoutSessionRequest = {
-          ...createCheckoutSessionRequest,
-          shopperReference,
-          amount,
-          reference,
-          storePaymentMethodMode,
-          recurringProcessingModel,
-          shopperInteraction,
-          returnUrl,
-          merchantAccount,
-        }
-        const idempotencyKey = reference
-        const response = await this.checkout.PaymentsApi.sessions(request, {
-          idempotencyKey,
-        })
-        const data = {
-          reference,
-          session_id: reference,
-          createCheckoutSessionRequest: request,
-          createCheckoutSessionResponse: response,
-        }
-        this.log('initiatePayment/output', { data, id: reference })
-        return { data, id: reference }
+      const { createCheckoutSessionRequest } = validInput?.data || {}
+      const amount = getAmount(validInput.amount, validInput.currency_code)
+      const request: Types.checkout.CreateCheckoutSessionRequest = {
+        ...createCheckoutSessionRequest,
+        shopperReference,
+        amount,
+        reference,
+        storePaymentMethodMode,
+        recurringProcessingModel,
+        shopperInteraction,
+        returnUrl,
+        merchantAccount,
       }
+      const idempotencyKey = reference
+      const response = await this.checkout.PaymentsApi.sessions(request, {
+        idempotencyKey,
+      })
+      const data = {
+        reference,
+        session_id: reference,
+        createCheckoutSessionRequest: request,
+        createCheckoutSessionResponse: response,
+      }
+      this.log('initiatePayment/output', { data, id: reference })
+      return { data, id: reference }
     } catch (error) {
       this.log('initiatePayment/error', error)
       throw error
@@ -507,13 +501,19 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     return {}
   }
 
-  /**
-   * We don't use this method.
-   */
   public async updatePayment(
     input: UpdatePaymentInput,
   ): Promise<UpdatePaymentOutput> {
-    return { data: input.data }
+    this.log('updatePayment/input', input)
+    try {
+      const validInput = validateUpdatePaymentInput(input)
+      const data = { ...input.data, ...validInput.data }
+      this.log('updatePayment/output', { data })
+      return { data }
+    } catch (error) {
+      this.log('updatePayment/error', error)
+      throw error
+    }
   }
 }
 

@@ -7,9 +7,9 @@ import {
 import { getValidator } from './helpers'
 
 const DataSchema = PaymentProviderDataSchema.pick({
+  reference: true,
   session_id: true,
   createCheckoutSessionRequest: true,
-  sessionsResponse: true,
 })
 
 const AccountHolderSchema = AccountHolderDTOSchema.pick({
@@ -43,9 +43,10 @@ export const validateInitiatePaymentInput = (
   const validateString = getValidator<string>(z.string())
 
   const validInput = validateInput(input)
-  const reference = validateString(
-    validInput.data?.session_id || validInput.context?.idempotency_key,
-  )
+
+  const rawReference =
+    validInput.data?.session_id || validInput.context?.idempotency_key
+  const reference = validateString(rawReference)
   return {
     ...validInput,
     reference,
