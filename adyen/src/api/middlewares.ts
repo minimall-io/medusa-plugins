@@ -8,17 +8,14 @@ import { UpdatePaymentSessionSchema } from './store/adyen/payment-sessions/[paym
 const middlewares = defineMiddlewares({
   routes: [
     {
-      matcher: '/store/payment-methods/:account_holder_id',
+      matcher: '/store/adyen/payment-methods/:account_holder_id',
       methods: ['GET'],
       middlewares: [authenticate('customer', ['bearer', 'session'])],
     },
     {
       matcher: '/store/adyen/payment-sessions/:payment_session_id',
       methods: ['POST'],
-      middlewares: [
-        authenticate('customer', ['bearer', 'session']),
-        validateAndTransformBody(UpdatePaymentSessionSchema),
-      ],
+      middlewares: [validateAndTransformBody(UpdatePaymentSessionSchema)],
     },
   ],
 })
