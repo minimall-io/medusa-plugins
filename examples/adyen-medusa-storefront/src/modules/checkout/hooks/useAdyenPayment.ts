@@ -35,16 +35,12 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
     HttpTypes.StorePaymentSession | undefined
   >()
 
-  const checkoutSession = session?.data.createCheckoutSessionResponse as
-    | Session
-    | undefined
-
   const onUpdate = useCallback(
     async (providerId: string) => {
       try {
         setError(null)
-        const createCheckoutSessionRequest = getAdyenRequest(cart)
-        const data = { createCheckoutSessionRequest }
+        const checkoutSession = getAdyenRequest(cart)
+        const data = { checkoutSession }
         const options = { provider_id: providerId, data }
         const response = await initiatePaymentSession(cart, options)
         const session = response.payment_collection?.payment_sessions?.find(
@@ -81,8 +77,7 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
       try {
         setError(null)
         console.log("useAdyenPayment/onPaymentCompleted/try/start")
-        const checkoutSession = session.data
-          .createCheckoutSessionResponse as Session
+        const checkoutSession = session.data.checkoutSession as Session
         const sessionsResponse = { ...input, sessionId: checkoutSession.id }
         const data = { ...session.data, sessionsResponse }
         await updatePaymentSession(session.id, data)
@@ -102,7 +97,8 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
   const config = useMemo(() => {
     const parsedCart = getAdyenRequestFromCart(cart)
     const { countryCode } = parsedCart
-    if (!baseConfig.clientKey || !checkoutSession || !countryCode) return null
+    if (!baseConfig.clientKey || !session || !countryCode) return null
+    const checkoutSession = session.data.checkoutSession as Session
     const { amount } = checkoutSession
     return {
       ...baseConfig,
