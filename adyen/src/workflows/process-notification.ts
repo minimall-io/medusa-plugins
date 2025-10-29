@@ -5,10 +5,7 @@ import {
   when,
 } from '@medusajs/framework/workflows-sdk'
 
-import {
-  addNotificationToPaymentDataStep,
-  processCaptureSuccessStep,
-} from './steps'
+import { processCaptureSuccessStep } from './steps'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 const EventCodeEnum = Types.notification.NotificationRequestItem.EventCodeEnum
@@ -31,10 +28,11 @@ const isCatureNotSuccess = ({
 const processNotificationWorkflowFunction = (
   input: NotificationRequestItem,
 ): WorkflowResponse<unknown, any[]> => {
-  addNotificationToPaymentDataStep(input)
+  // addNotificationToPaymentDataStep(input)
 
   when('is-capture-success', input, isCaptureSuccess).then(() => {
     processCaptureSuccessStep(input)
+    // errorTestStep()
   })
 
   return new WorkflowResponse(undefined)
