@@ -10,7 +10,7 @@ import { getValidator } from './helpers'
 
 const DataSchema = z.object({
   reference: z.string(),
-  checkoutSession: CheckoutSessionSchema,
+  checkoutSession: CheckoutSessionSchema.pick({ amount: true }),
   authorization: AuthorizationSchema,
   captures: PaymentModificationsSchema.optional(),
   request: PaymentModificationSchema.omit({ id: true }).optional(),

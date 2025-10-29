@@ -91,7 +91,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const defaultLoggingLevel =
       environment === EnvironmentEnum.TEST ? 'debug' : null
     const loggingLevel = level || defaultLoggingLevel
-
     const message = `${title}: ${JSON.stringify(data, null, 2)}`
     switch (loggingLevel) {
       case 'error':
@@ -327,7 +326,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
           { idempotencyKey },
         )
       const status = getSessionStatus(response.status)
-      const data = { ...input.data, authrization: response }
+      const data = { ...input.data, authorization: response }
       this.log('getPaymentStatus/output', { data, status })
       return { data, status }
     } catch (error) {
