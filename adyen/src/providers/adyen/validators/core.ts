@@ -405,12 +405,12 @@ export const CheckoutSessionThreeDS2RequestDataSchema = z.object({
   workPhone: PhoneSchema.optional().nullable(),
 })
 
-export const CreateCheckoutSessionRequestSchema = z.object({
+export const CheckoutSessionSchema = z.object({
   accountInfo: AccountInfoSchema.optional().nullable(),
   additionalAmount: AmountSchema.optional().nullable(),
   additionalData: StringRecordSchema.optional(),
   allowedPaymentMethods: StringArraySchema.optional(),
-  // amount: AmountSchema,
+  amount: AmountSchema,
   applicationInfo: ApplicationInfo.optional().nullable(),
   authenticationData: AuthenticationDataSchema.optional().nullable(),
   billingAddress: BillingAddressSchema.optional().nullable(),
@@ -419,20 +419,21 @@ export const CreateCheckoutSessionRequestSchema = z.object({
   channel: ChannelEnumSchema.optional(),
   company: CompanySchema.optional().nullable(),
   countryCode: z.string().optional(),
-  dateOfBirth: z.string().optional(),
+  dateOfBirth: z.date().optional(),
   deliverAt: z.date().optional(),
   deliveryAddress: DeliveryAddressSchema.optional().nullable(),
   enableOneClick: z.boolean().optional(),
   enablePayOut: z.boolean().optional(),
   enableRecurring: z.boolean().optional(),
-  expiresAt: z.date().optional(),
+  expiresAt: z.date(),
   fundOrigin: FundOriginSchema.optional().nullable(),
   fundRecipient: FundRecipientSchema.optional().nullable(),
+  id: z.string(),
   installmentOptions: InstallmentOptionsSchema.optional(),
   lineItems: z.array(LineItemSchema).optional(),
   mandate: MandateSchema.optional().nullable(),
   mcc: z.string().optional(),
-  // merchantAccount: z.string(),
+  merchantAccount: z.string(),
   merchantOrderReference: z.string().optional(),
   metadata: StringRecordSchema.optional(),
   mode: ModeEnumSchema.optional(),
@@ -443,9 +444,10 @@ export const CreateCheckoutSessionRequestSchema = z.object({
   recurringProcessingModel: RecurringProcessingModelEnumSchema.optional(),
   redirectFromIssuerMethod: z.string().optional(),
   redirectToIssuerMethod: z.string().optional(),
-  // reference: z.string(),
-  // returnUrl: z.string(),
+  reference: z.string(),
+  returnUrl: z.string(),
   riskData: RiskDataSchema.optional().nullable(),
+  sessionData: z.string().optional(),
   shopperEmail: z.string().optional(),
   shopperIP: z.string().optional(),
   shopperInteraction: ShopperInteractionEnumSchema.optional(),
@@ -467,10 +469,7 @@ export const CreateCheckoutSessionRequestSchema = z.object({
   threeDS2RequestData:
     CheckoutSessionThreeDS2RequestDataSchema.optional().nullable(),
   trustedShopper: z.boolean().optional(),
-})
-
-export const CreateCheckoutSessionResponseSchema = z.object({
-  amount: AmountSchema,
+  url: z.string().optional(),
 })
 
 export const ResponsePaymentMethodSchema = z.object({
@@ -485,7 +484,7 @@ export const PaymentSchema = z.object({
   resultCode: PaymentResultCodeEnumSchema.optional(),
 })
 
-export const SessionResultResponseSchema = z.object({
+export const AuthorizationSchema = z.object({
   additionalData: StringRecordSchema.optional(),
   id: z.string().optional(),
   payments: z.array(PaymentSchema).optional(),
@@ -562,64 +561,11 @@ export const PaymentModificationSchema = z.object({
   pspReference: z.string(),
   reference: z.string(),
   status: z.string(),
-})
-
-export const PaymentCaptureResponseSchema = PaymentModificationSchema.extend({
   amount: AmountSchema,
-  captureId: z.string(),
+  id: z.string(),
 })
 
-export const PaymentCaptureRequestSchema = PaymentModificationSchema.extend({
-  amount: AmountSchema,
-})
-
-export const PaymentRefundResponseSchema = PaymentModificationSchema.extend({
-  amount: AmountSchema,
-  refundId: z.string(),
-})
-
-export const PaymentRefundRequestSchema = PaymentModificationSchema.extend({
-  amount: AmountSchema,
-})
-
-export const PaymentCancelResponseSchema = PaymentModificationSchema.extend({
-  paymentReference: z.string(),
-  cancelId: z.string(),
-})
-
-export const PaymentCancelRequestSchema = PaymentModificationSchema.extend({
-  paymentReference: z.string(),
-})
-
-export const PaymentCaptureResponsesSchema = z.record(
+export const PaymentModificationsSchema = z.record(
   z.string(),
-  PaymentCaptureResponseSchema,
+  PaymentModificationSchema,
 )
-export const PaymentCaptureRequestsSchema = z.record(
-  z.string(),
-  PaymentCaptureRequestSchema,
-)
-
-export const PaymentRefundResponsesSchema = z.record(
-  z.string(),
-  PaymentRefundResponseSchema,
-)
-export const PaymentRefundRequestsSchema = z.record(
-  z.string(),
-  PaymentRefundRequestSchema,
-)
-
-export const PaymentProviderDataSchema = z.object({
-  session_id: z.string(),
-  reference: z.string(),
-  createCheckoutSessionRequest: CreateCheckoutSessionRequestSchema,
-  createCheckoutSessionResponse: CreateCheckoutSessionResponseSchema,
-  sessionsResponse: SessionsResponseSchema,
-  sessionResultResponse: SessionResultResponseSchema,
-  paymentCaptureResponses: PaymentCaptureResponsesSchema,
-  paymentCaptureRequests: PaymentCaptureRequestsSchema,
-  paymentRefundResponses: PaymentRefundResponsesSchema,
-  paymentRefundRequests: PaymentRefundRequestsSchema,
-  paymentCancelResponse: PaymentCancelResponseSchema,
-  paymentCancelRequest: PaymentCancelRequestSchema,
-})

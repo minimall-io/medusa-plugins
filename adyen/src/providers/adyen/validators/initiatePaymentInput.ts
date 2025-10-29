@@ -1,15 +1,30 @@
 import { z } from 'zod'
 import {
   AccountHolderDTOSchema,
+  CheckoutSessionSchema,
   PaymentProviderContextSchema,
-  PaymentProviderDataSchema,
 } from './core'
 import { getValidator } from './helpers'
 
-const DataSchema = PaymentProviderDataSchema.pick({
-  reference: true,
-  session_id: true,
-  createCheckoutSessionRequest: true,
+const PartialCheckoutSessionSchema = CheckoutSessionSchema.omit({
+  dateOfBirth: true,
+})
+  .partial({
+    amount: true,
+    expiresAt: true,
+    id: true,
+    merchantAccount: true,
+    reference: true,
+    returnUrl: true,
+  })
+  .extend({
+    dateOfBirth: z.string().optional(),
+  })
+
+const DataSchema = z.object({
+  reference: z.string(),
+  session_id: z.string(),
+  checkoutSession: PartialCheckoutSessionSchema,
 })
 
 const AccountHolderSchema = AccountHolderDTOSchema.pick({

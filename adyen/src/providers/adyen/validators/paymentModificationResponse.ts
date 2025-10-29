@@ -1,26 +1,25 @@
 import { z } from 'zod'
-import {
-  PaymentCancelResponseSchema,
-  PaymentCaptureResponsesSchema,
-  PaymentRefundResponsesSchema,
-} from './core'
+import { PaymentModificationSchema, PaymentModificationsSchema } from './core'
 import { getValidator } from './helpers'
 
-export type PaymentCancelResponse = z.infer<typeof PaymentCancelResponseSchema>
+const CancellationSchema = PaymentModificationSchema.pick({
+  pspReference: true,
+  reference: true,
+  status: true,
+  id: true,
+})
 
-export type PaymentCaptureResponses = z.infer<
-  typeof PaymentCaptureResponsesSchema
->
+export type Cancellation = z.infer<typeof CancellationSchema>
 
-export type PaymentRefundResponses = z.infer<
-  typeof PaymentRefundResponsesSchema
->
+export const validateCancellation =
+  getValidator<Cancellation>(CancellationSchema)
 
-export const validatePaymentCancelResponse =
-  getValidator<PaymentCancelResponse>(PaymentCancelResponseSchema)
+export type Captures = z.infer<typeof PaymentModificationsSchema>
 
-export const validatePaymentCaptureResponses =
-  getValidator<PaymentCaptureResponses>(PaymentCaptureResponsesSchema)
+export const validateCaptures = getValidator<Captures>(
+  PaymentModificationsSchema,
+)
 
-export const validatePaymentRefundResponses =
-  getValidator<PaymentRefundResponses>(PaymentRefundResponsesSchema)
+export type Refunds = z.infer<typeof PaymentModificationsSchema>
+
+export const validateRefunds = getValidator<Refunds>(PaymentModificationsSchema)

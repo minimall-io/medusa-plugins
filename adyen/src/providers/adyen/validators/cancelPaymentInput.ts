@@ -1,8 +1,10 @@
 import { z } from 'zod'
-import { PaymentProviderContextSchema, PaymentProviderDataSchema } from './core'
+import { PaymentProviderContextSchema } from './core'
 import { getValidator } from './helpers'
 
-const DataSchema = PaymentProviderDataSchema.pick({ reference: true })
+const DataSchema = z.object({
+  reference: z.string(),
+})
 
 const InputSchema = z.object({
   data: DataSchema,

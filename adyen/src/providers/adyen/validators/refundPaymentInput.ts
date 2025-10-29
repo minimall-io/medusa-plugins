@@ -1,20 +1,23 @@
 import { z } from 'zod'
-import { PaymentProviderContextSchema, PaymentProviderDataSchema } from './core'
+import {
+  AuthorizationSchema,
+  CheckoutSessionSchema,
+  PaymentModificationSchema,
+  PaymentModificationsSchema,
+  PaymentProviderContextSchema,
+} from './core'
 import { getValidator } from './helpers'
 
-const DataSchema = PaymentProviderDataSchema.pick({
-  reference: true,
-  createCheckoutSessionResponse: true,
-  sessionResultResponse: true,
-  paymentRefundResponses: true,
-  paymentRefundRequests: true,
+const DataSchema = z.object({
+  reference: z.string(),
+  checkoutSession: CheckoutSessionSchema,
+  authorization: AuthorizationSchema,
+  refunds: PaymentModificationsSchema.optional(),
+  request: PaymentModificationSchema.omit({ id: true }).optional(),
 })
 
 const InputSchema = z.object({
-  data: DataSchema.partial({
-    paymentRefundResponses: true,
-    paymentRefundRequests: true,
-  }),
+  data: DataSchema,
   context: PaymentProviderContextSchema.partial().optional(),
   amount: z.any(),
 })
