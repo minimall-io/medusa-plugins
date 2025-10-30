@@ -1,5 +1,4 @@
-import { Types } from '@adyen/api-library'
-import { BigNumberInput, PaymentSessionStatus } from '@medusajs/framework/types'
+import { BigNumberInput } from '@medusajs/framework/types'
 import { BigNumber, MathBN } from '@medusajs/framework/utils'
 import { CURRENCY_MULTIPLIERS } from './constants'
 
@@ -40,15 +39,7 @@ export const getMinorUnit = (
   return parseInt(numericAmount.toString().split('.').shift()!, 10)
 }
 
-export const getAmount = (
-  amount: BigNumberInput,
-  currency: string,
-): Types.checkout.Amount => ({
-  currency: currency.toUpperCase(),
-  value: getMinorUnit(amount, currency),
-})
-
-export const getAmountFromMinorUnit = (
+export const getWholeUnit = (
   amount: BigNumberInput,
   currency: string,
 ): number => {
@@ -56,32 +47,3 @@ export const getAmountFromMinorUnit = (
   const standardAmount = new BigNumber(MathBN.div(amount, multiplier))
   return standardAmount.numeric
 }
-
-export const getSessionStatus = (
-  code?: Types.checkout.SessionResultResponse.StatusEnum,
-): PaymentSessionStatus => {
-  const codes = Types.checkout.SessionResultResponse.StatusEnum
-  switch (code) {
-    // https://docs.adyen.com/api-explorer/Checkout/71/get/sessions/(sessionId)
-    case codes.Active:
-    case codes.PaymentPending:
-      return 'pending'
-    case codes.Canceled:
-      return 'canceled'
-    case codes.Completed:
-      return 'authorized'
-    case codes.Expired:
-    case codes.Refused:
-      return 'error'
-    default:
-      return 'error' // Default to error for unhandled cases
-  }
-}
-
-export const getStoredPaymentMethod = (
-  method: Types.checkout.StoredPaymentMethod,
-  index: number,
-) => ({
-  id: method.id || index.toString(),
-  data: method as Record<string, unknown>,
-})

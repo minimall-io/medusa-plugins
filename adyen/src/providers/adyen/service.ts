@@ -3,6 +3,7 @@ import { EnvironmentEnum } from '@adyen/api-library/lib/src/config'
 import {
   AuthorizePaymentInput,
   AuthorizePaymentOutput,
+  BigNumberInput,
   CancelPaymentInput,
   CancelPaymentOutput,
   CapturePaymentInput,
@@ -20,6 +21,7 @@ import {
   ListPaymentMethodsInput,
   ListPaymentMethodsOutput,
   Logger,
+  PaymentSessionStatus,
   ProviderWebhookPayload,
   RefundPaymentInput,
   RefundPaymentOutput,
@@ -34,7 +36,7 @@ import {
   PaymentActions,
 } from '@medusajs/framework/utils'
 
-import { getAmount, getMinorUnit, getSessionStatus } from '../../utils'
+import { getMinorUnit } from '../../utils'
 
 import {
   Options,
@@ -110,7 +112,38 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     }
   }
 
-  protected validateHMAC_(
+  protected getAmount(
+    amount: BigNumberInput,
+    currency: string,
+  ): Types.checkout.Amount {
+    return {
+      currency: currency.toUpperCase(),
+      value: getMinorUnit(amount, currency),
+    }
+  }
+
+  protected getSessionStatus(
+    code?: Types.checkout.SessionResultResponse.StatusEnum,
+  ): PaymentSessionStatus {
+    const codes = Types.checkout.SessionResultResponse.StatusEnum
+    switch (code) {
+      // https://docs.adyen.com/api-explorer/Checkout/71/get/sessions/(sessionId)
+      case codes.Active:
+      case codes.PaymentPending:
+        return 'pending'
+      case codes.Canceled:
+        return 'canceled'
+      case codes.Completed:
+        return 'authorized'
+      case codes.Expired:
+      case codes.Refused:
+        return 'error'
+      default:
+        return 'error' // Default to error for unhandled cases
+    }
+  }
+
+  protected validateHMAC(
     notification: Types.notification.NotificationRequestItem,
   ): boolean {
     const { hmacKey } = this.options_
@@ -119,7 +152,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     return true
   }
 
-  protected async listStoredPaymentMethods_(
+  protected async listStoredPaymentMethods(
     shopperReference: string,
   ): Promise<Types.checkout.StoredPaymentMethodResource[]> {
     const { merchantAccount } = this.options_
@@ -186,13 +219,10 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         validInput.data
       const id = validInput.context?.idempotency_key
       if (request) {
-        const existingCaptures = validInput.data.captures || {}
-        const newCaptures = { [request.pspReference]: { ...request, id } }
+        const existingCaptures = validInput.data.captures || []
+        const newCaptures = [{ ...request, id }]
         this.log('capturePayment/newCapture', newCaptures)
-        const captures = {
-          ...existingCaptures,
-          ...validateCaptures(newCaptures),
-        }
+        const captures = [...existingCaptures, ...validateCaptures(newCaptures)]
         const data = {
           ...input.data,
           captures,
@@ -241,17 +271,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         (response) => response !== null,
       ) as Types.checkout.PaymentCaptureResponse[]
 
-      const newCaptures = validResponses.reduce(
-        (captures, response) =>
-          (captures[response.pspReference] = { ...response, id }),
-        {},
-      )
+      const newCaptures = validResponses.map((response) => ({
+        ...response,
+        id,
+      }))
 
-      const existingCaptures = validInput.data.captures || {}
-      const captures = {
-        ...existingCaptures,
-        ...validateCaptures(newCaptures),
-      }
+      const existingCaptures = validInput.data.captures || []
+      const captures = [...existingCaptures, ...validateCaptures(newCaptures)]
       const data = { ...input.data, captures }
       this.log('capturePayment/output', { data })
       return { data }
@@ -284,7 +310,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       const { merchantAccount } = this.options_
       const validInput = validateDeleteAccountHolderInput(input)
       const shopperReference = validInput.context.account_holder.id
-      const methods = await this.listStoredPaymentMethods_(shopperReference)
+      const methods = await this.listStoredPaymentMethods(shopperReference)
       const promises = methods.map((method) => {
         if (!method.id) return
         const idempotencyKey = `${shopperReference}_${method.id}`
@@ -325,7 +351,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
           sessionResult,
           { idempotencyKey },
         )
-      const status = getSessionStatus(response.status)
+      const status = this.getSessionStatus(response.status)
       const data = { ...input.data, authorization: response }
       this.log('getPaymentStatus/output', { data, status })
       return { data, status }
@@ -348,7 +374,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       notificationItems.forEach((notificationItem) => {
         const notification =
           notificationItem.NotificationRequestItem as Types.notification.NotificationRequestItem
-        if (this.validateHMAC_(notification)) {
+        if (this.validateHMAC(notification)) {
           validNotifications.push(notification)
         } else {
           this.log('getWebhookActionAndData/invalidNotification', notification)
@@ -387,7 +413,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       const reference = validInput.reference
       const shopperReference = validInput.context?.account_holder?.id
       const { checkoutSession } = validInput?.data || {}
-      const amount = getAmount(validInput.amount, validInput.currency_code)
+      const amount = this.getAmount(validInput.amount, validInput.currency_code)
       const request: Types.checkout.CreateCheckoutSessionRequest = {
         ...checkoutSession,
         shopperReference,
@@ -424,7 +450,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       const validInput = validateListPaymentMethodsInput(input)
       const shopperReference = validInput.context.account_holder.data
         .id as string
-      const methods = await this.listStoredPaymentMethods_(shopperReference)
+      const methods = await this.listStoredPaymentMethods(shopperReference)
       const formattedMethods = methods.map((method, index) => ({
         id: method.id || index.toString(),
         data: method as Record<string, unknown>,
@@ -445,7 +471,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       const { merchantAccount } = this.options_
       const validInput = validateRefundPaymentInput(input)
       const { reference, authorization, checkoutSession } = validInput.data
-      const refundId = validInput.context?.idempotency_key
+      const id = validInput.context?.idempotency_key
       const currency = checkoutSession.amount.currency
       let balance = getMinorUnit(validInput.amount, currency)
       const payments = authorization.payments || []
@@ -476,17 +502,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         (response) => response !== null,
       ) as Types.checkout.PaymentRefundResponse[]
 
-      const newRefunds = validResponses.reduce(
-        (captures, response) =>
-          (captures[response.pspReference] = { ...response, refundId }),
-        {},
-      )
+      const newRefunds = validResponses.map((response) => ({
+        ...response,
+        id,
+      }))
 
       const existingRefunds = validInput.data.refunds || []
-      const refunds = {
-        ...existingRefunds,
-        ...validateRefunds(newRefunds),
-      }
+      const refunds = [...existingRefunds, ...validateRefunds(newRefunds)]
       const data = { ...input.data, refunds }
       this.log('refundPayment/output', { data })
       return { data }

@@ -565,7 +565,4 @@ export const PaymentModificationSchema = z.object({
   id: z.string(),
 })
 
-export const PaymentModificationsSchema = z.record(
-  z.string(),
-  PaymentModificationSchema,
-)
+export const PaymentModificationsSchema = z.array(PaymentModificationSchema)
