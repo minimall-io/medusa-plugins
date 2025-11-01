@@ -1,7 +1,6 @@
 import { Types } from '@adyen/api-library'
 import { PaymentDTO } from '@medusajs/framework/types'
 import { ContainerRegistrationKeys, Modules } from '@medusajs/framework/utils'
-import {} from 'lodash'
 
 import {
   StepExecutionContext,
