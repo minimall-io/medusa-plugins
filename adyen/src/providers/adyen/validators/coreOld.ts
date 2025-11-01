@@ -41,7 +41,7 @@ export const ModeEnumSchema = z.nativeEnum(
 )
 
 export const RecurringProcessingModelEnumSchema = z.nativeEnum(
-  Types.checkout.CreateCheckoutSessionRequest.RecurringProcessingModelEnum,
+  Types.checkout.StoredPaymentMethodRequest.RecurringProcessingModelEnum,
 )
 
 export const ShopperInteractionEnumSchema = z.nativeEnum(
@@ -133,9 +133,7 @@ export const BehaviorEnumSchema = z.nativeEnum(
   Types.checkout.PlatformChargebackLogic.BehaviorEnum,
 )
 
-export const PlansEnumSchema = z.nativeEnum(
-  Types.checkout.CheckoutSessionInstallmentOption.PlansEnum,
-)
+export const PlanEnumSchema = z.nativeEnum(Types.checkout.Installments.PlanEnum)
 
 export const FundingSourceEnumSchema = z.nativeEnum(
   Types.checkout.CardDetails.FundingSourceEnum,
@@ -150,6 +148,10 @@ export const WalletPurposeEnumSchema = z.nativeEnum(
 )
 
 export const SplitTypeEnumSchema = z.nativeEnum(Types.checkout.Split.TypeEnum)
+
+export const CheckoutBankAccountTypeEnumSchema = z.nativeEnum(
+  Types.checkout.CheckoutBankAccount.AccountTypeEnum,
+)
 
 export const AmountSchema = z.object({
   currency: z.string().length(3).toUpperCase(),
@@ -324,8 +326,14 @@ export const FundRecipientSchema = z.object({
   walletPurpose: WalletPurposeEnumSchema.optional(),
 })
 
+export const InstallmentsSchema = z.object({
+  extra: z.number().optional(),
+  plan: PlanEnumSchema.optional(),
+  value: z.number(),
+})
+
 export const CheckoutSessionInstallmentOptionSchema = z.object({
-  plans: z.array(PlansEnumSchema).optional(),
+  plans: z.array(PlanEnumSchema).optional(),
   preselectedValue: z.number().optional(),
   values: NumberArraySchema.optional(),
 })
@@ -334,6 +342,21 @@ export const InstallmentOptionsSchema = z.record(
   z.string(),
   CheckoutSessionInstallmentOptionSchema,
 )
+
+export const ForexQuoteSchema = z.object({
+  account: z.string().optional(),
+  accountType: z.string().optional(),
+  baseAmount: AmountSchema.optional().nullable(),
+  basePoints: z.number(),
+  buy: AmountSchema.optional().nullable(),
+  interbank: AmountSchema.optional().nullable(),
+  reference: z.string().optional(),
+  sell: AmountSchema.optional().nullable(),
+  signature: z.string().optional(),
+  source: z.string().optional(),
+  type: z.string().optional(),
+  validTill: z.date(),
+})
 
 export const LineItemSchema = z.object({
   amountExcludingTax: z.number().optional(),
@@ -403,6 +426,61 @@ export const CheckoutSessionThreeDS2RequestDataSchema = z.object({
   threeDSRequestorChallengeInd:
     ThreeDSRequestorChallengeIndEnumSchema.optional(),
   workPhone: PhoneSchema.optional().nullable(),
+})
+
+export const BrowserInfoSchema = z.object({
+  acceptHeader: z.string(),
+  colorDepth: z.number(),
+  javaEnabled: z.boolean(),
+  javaScriptEnabled: z.boolean().optional(),
+  language: z.string(),
+  screenHeight: z.number(),
+  screenWidth: z.number(),
+  timeZoneOffset: z.number(),
+  userAgent: z.string(),
+})
+
+export const CheckoutBankAccountSchema = z.object({
+  accountType: CheckoutBankAccountTypeEnumSchema.optional(),
+  bankAccountNumber: z.string().optional(),
+  bankCity: z.string().optional(),
+  bankLocationId: z.string().optional(),
+  bankName: z.string().optional(),
+  bic: z.string().optional(),
+  countryCode: z.string().optional(),
+  iban: z.string().optional(),
+  ownerName: z.string().optional(),
+  taxId: z.string().optional(),
+})
+
+export const EncryptedOrderDataSchema = z.object({
+  orderData: z.string(),
+  pspReference: z.string(),
+})
+
+export const EnhancedSchemeDataSchema = z.object({
+  airline: UnknownRecordSchema.optional().nullable(),
+})
+
+export const PaymentMethodsRequestSchema = z.object({
+  additionalData: StringRecordSchema.optional(),
+  allowedPaymentMethods: StringArraySchema.optional(),
+  amount: AmountSchema.optional().nullable(),
+  blockedPaymentMethods: StringArraySchema.optional(),
+  browserInfo: BrowserInfoSchema.optional().nullable(),
+  channel: ChannelEnumSchema.optional(),
+  countryCode: z.string().optional(),
+  merchantAccount: z.string(),
+  order: EncryptedOrderDataSchema.optional().nullable(),
+  shopperConversionId: z.string().optional(),
+  shopperEmail: z.string().optional(),
+  shopperIP: z.string().optional(),
+  shopperLocale: z.string().optional(),
+  shopperReference: z.string().optional(),
+  splitCardFundingSources: z.boolean().optional(),
+  store: z.string().optional(),
+  storeFiltrationMode: StoreFiltrationModeEnumSchema.optional(),
+  telephoneNumber: z.string().optional(),
 })
 
 export const CheckoutSessionSchema = z.object({
@@ -514,6 +592,15 @@ export const PaymentMethodToStoreSchema = z.object({
   type: z.string().optional(),
 })
 
+export const StoredPaymentMethodRequestSchema = z.object({
+  merchantAccount: z.string(),
+  paymentMethod: PaymentMethodToStoreSchema,
+  recurringProcessingModel: RecurringProcessingModelEnumSchema,
+  shopperEmail: z.string().optional(),
+  shopperIP: z.string().optional(),
+  shopperReference: z.string(),
+})
+
 export const AddressDTOSchema = z.object({
   id: z.string().optional(),
   address_1: z.string(),
@@ -544,7 +631,7 @@ export const AccountHolderDTOSchema = z.object({
   id: z.string(),
   provider_id: z.string(),
   external_id: z.string(),
-  email: z.string().optional().nullable(),
+  email: z.string().nullable(),
   data: UnknownRecordSchema,
   created_at: StringDateUnionSchema.optional().nullable(),
   updated_at: StringDateUnionSchema.optional().nullable(),
