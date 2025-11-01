@@ -230,10 +230,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('initiatePayment/input', input)
     const { merchantAccount } = this.options_
     const inputData = input.data as unknown as InitiatePaymentInputData
-    const reference = input.context?.idempotency_key!
-    const shopperReference = input.context?.account_holder?.data.external_id as
-      | string
-      | undefined
+    const reference = input.context!.idempotency_key!
+    const shopperReference = input.context?.account_holder?.data.external_id as string
     const amount = this.getAmount(input.amount, input.currency_code)
     const idempotencyKey = reference
     const request: Types.checkout.PaymentMethodsRequest = {
@@ -291,7 +289,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       returnUrlPrefix: returnUrl,
     } = this.options_
     const inputData = input.data as unknown as AuthorizePaymentInputData
-    const reference = input.context?.idempotency_key!
+    const reference = input.context!.idempotency_key!
     const idempotencyKey = reference
     const request: Types.checkout.PaymentRequest = {
       ...inputData.request,
@@ -418,7 +416,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('refundPayment/input', input)
     const { merchantAccount } = this.options_
     const inputData = input.data as unknown as PaymentModificationData
-    const reference = input.context?.idempotency_key!
+    const reference = input.context?.idempotency_key
     const { authorization, message } = inputData
     const existingRefunds = inputData.refunds || []
 
