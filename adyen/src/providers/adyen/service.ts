@@ -27,6 +27,8 @@ import {
   RefundPaymentOutput,
   RetrievePaymentInput,
   RetrievePaymentOutput,
+  SavePaymentMethodInput,
+  SavePaymentMethodOutput,
   UpdatePaymentInput,
   UpdatePaymentOutput,
   WebhookActionResult,
@@ -39,21 +41,16 @@ import {
 import { getMinorUnit } from '../../utils'
 
 import {
+  AuthorizePaymentInputData,
+  InitiatePaymentInputData,
+  PaymentModificationData,
+  ProviderWebhookPayloadData,
+  SavePaymentMethodInputData,
+} from './interfaces'
+import {
   Options,
-  validateCancelPaymentInput,
-  validateCancellation,
-  validateCapturePaymentInput,
-  validateCaptures,
-  validateCreateAccountHolderInput,
-  validateDeleteAccountHolderInput,
-  validateGetPaymentStatusInput,
-  validateInitiatePaymentInput,
-  validateListPaymentMethodsInput,
   validateOptions,
-  validateProviderWebhookPayload,
-  validateRefundPaymentInput,
-  validateRefunds,
-  validateUpdatePaymentInput,
+  validatePaymentModification,
 } from './validators'
 
 interface InjectedDependencies extends Record<string, unknown> {
@@ -123,19 +120,25 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   }
 
   protected getSessionStatus(
-    code?: Types.checkout.SessionResultResponse.StatusEnum,
+    code?: Types.checkout.PaymentResponse.ResultCodeEnum,
   ): PaymentSessionStatus {
-    const codes = Types.checkout.SessionResultResponse.StatusEnum
+    const codes = Types.checkout.PaymentResponse.ResultCodeEnum
     switch (code) {
-      // https://docs.adyen.com/api-explorer/Checkout/71/get/sessions/(sessionId)
-      case codes.Active:
-      case codes.PaymentPending:
+      // https://docs.adyen.com/online-payments/build-your-integration/payment-result-codes/
+      case codes.Received:
+      case codes.Pending:
+      case codes.PresentToShopper:
         return 'pending'
-      case codes.Canceled:
+      case codes.ChallengeShopper:
+      case codes.IdentifyShopper:
+      case codes.RedirectShopper:
+      case codes.PartiallyAuthorised:
+        return 'requires_more'
+      case codes.Cancelled:
         return 'canceled'
-      case codes.Completed:
+      case codes.Authorised:
         return 'authorized'
-      case codes.Expired:
+      case codes.Error:
       case codes.Refused:
         return 'error'
       default:
@@ -167,355 +170,89 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     return storedPaymentMethods || []
   }
 
-  public async authorizePayment(
-    input: AuthorizePaymentInput,
-  ): Promise<AuthorizePaymentOutput> {
-    return this.getPaymentStatus(input)
+  public async listPaymentMethods(
+    input: ListPaymentMethodsInput,
+  ): Promise<ListPaymentMethodsOutput> {
+    this.log('listPaymentMethods/input', input)
+    const shopperReference = input.context?.account_holder?.data
+      .external_id as string
+    const methods = await this.listStoredPaymentMethods(shopperReference)
+    const output = methods.map((method, index) => ({
+      id: method.id || index.toString(),
+      data: method as Record<string, unknown>,
+    }))
+    this.log('listPaymentMethods/output', output)
+    return output
   }
 
-  public async cancelPayment(
-    input: CancelPaymentInput,
-  ): Promise<CancelPaymentOutput> {
-    this.log('cancelPayment/input', input)
-    try {
-      const { merchantAccount } = this.options_
-      const validInput = validateCancelPaymentInput(input)
-      const { reference } = validInput.data
-      const id = validInput.context?.idempotency_key
-      // TODO: implement request handling block
-      const request: Types.checkout.StandalonePaymentCancelRequest = {
-        merchantAccount,
-        paymentReference: reference,
-        reference,
-      }
-      const idempotencyKey = reference
-      const response =
-        await this.checkout.ModificationsApi.cancelAuthorisedPayment(request, {
-          idempotencyKey,
-        })
-
-      const newCancellation = { ...response, id }
-      const cancellation = validateCancellation(newCancellation)
-      const data = {
-        ...input.data,
-        cancellation,
-      }
-      this.log('cancelPayment/output', { data })
-      return { data }
-    } catch (error) {
-      this.log('cancelPayment/error', error, 'error')
-      throw error
+  public async savePaymentMethod(
+    input: SavePaymentMethodInput,
+  ): Promise<SavePaymentMethodOutput> {
+    this.log('savePaymentMethod/input', input)
+    const { recurringProcessingModel, merchantAccount } = this.options_
+    const inputData = input.data as unknown as SavePaymentMethodInputData
+    const shopperReference = input.context?.account_holder?.data
+      .external_id as string
+    const idempotencyKey = shopperReference
+    const request: Types.checkout.StoredPaymentMethodRequest = {
+      ...inputData.request,
+      shopperReference,
+      recurringProcessingModel,
+      merchantAccount,
     }
-  }
 
-  public async capturePayment(
-    input: CapturePaymentInput,
-  ): Promise<CapturePaymentOutput> {
-    this.log('capturePayment/input', input)
-    try {
-      const { merchantAccount } = this.options_
-      const validInput = validateCapturePaymentInput(input)
-      const { reference, authorization, checkoutSession, request } =
-        validInput.data
-      const id = validInput.context?.idempotency_key
-      if (request) {
-        const existingCaptures = validInput.data.captures || []
-        const newCaptures = [{ ...request, id }]
-        this.log('capturePayment/newCapture', newCaptures)
-        const captures = [...existingCaptures, ...validateCaptures(newCaptures)]
-        const data = {
-          ...input.data,
-          captures,
-          request: undefined,
-        }
-        this.log('capturePayment/output', { data })
-        return { data }
-      }
+    const response = await this.checkout.RecurringApi.storedPaymentMethods(
+      request,
+      { idempotencyKey },
+    )
 
-      const currency = checkoutSession.amount.currency
-      const payments = authorization.payments || []
-      const validPayments = payments.filter(
-        ({ pspReference, amount }) =>
-          pspReference && amount && amount.currency === currency,
-      ) as { pspReference: string; amount: Types.checkout.Amount }[]
-      const paymentsAmount = validPayments.reduce((total, { amount }) => {
-        return total + amount!.value
-      }, 0)
-      const captureAmount = validInput.amount || paymentsAmount
-      let balance = getMinorUnit(captureAmount, currency)
-
-      const promises = validPayments.map(({ pspReference, amount }) => {
-        if (balance === 0) return null
-        const value = amount.value < balance ? amount.value : balance
-        balance -= value
-        const newAmount: Types.checkout.Amount = {
-          currency,
-          value,
-        }
-
-        const request: Types.checkout.PaymentCaptureRequest = {
-          merchantAccount,
-          amount: newAmount,
-          reference,
-        }
-        const idempotencyKey = pspReference
-        return this.checkout.ModificationsApi.captureAuthorisedPayment(
-          pspReference,
-          request,
-          { idempotencyKey },
-        )
-      })
-
-      const responses = await Promise.all(promises)
-      const validResponses = responses.filter(
-        (response) => response !== null,
-      ) as Types.checkout.PaymentCaptureResponse[]
-
-      const newCaptures = validResponses.map((response) => ({
-        ...response,
-        id,
-      }))
-
-      const existingCaptures = validInput.data.captures || []
-      const captures = [...existingCaptures, ...validateCaptures(newCaptures)]
-      const data = { ...input.data, captures }
-      this.log('capturePayment/output', { data })
-      return { data }
-    } catch (error) {
-      this.log('capturePayment/error', error, 'error')
-      throw error
-    }
-  }
-
-  public async createAccountHolder(
-    input: CreateAccountHolderInput,
-  ): Promise<CreateAccountHolderOutput> {
-    this.log('createAccountHolder/input', input)
-    try {
-      const validInput = validateCreateAccountHolderInput(input)
-      const { id } = validInput.context.customer
-      this.log('createAccountHolder/output', { id })
-      return { id }
-    } catch (error) {
-      this.log('createAccountHolder/error', error, 'error')
-      throw error
-    }
-  }
-
-  public async deleteAccountHolder(
-    input: DeleteAccountHolderInput,
-  ): Promise<DeleteAccountHolderOutput> {
-    this.log('deleteAccountHolder/input', input)
-    try {
-      const { merchantAccount } = this.options_
-      const validInput = validateDeleteAccountHolderInput(input)
-      const shopperReference = validInput.context.account_holder.id
-      const methods = await this.listStoredPaymentMethods(shopperReference)
-      const promises = methods.map((method) => {
-        if (!method.id) return
-        const idempotencyKey = `${shopperReference}_${method.id}`
-        return this.checkout.RecurringApi.deleteTokenForStoredPaymentDetails(
-          method.id!,
-          shopperReference,
-          merchantAccount,
-          { idempotencyKey },
-        )
-      })
-      await Promise.all(promises)
-      this.log('deleteAccountHolder/storedPaymentMethods', methods)
-      return { data: {} }
-    } catch (error) {
-      this.log('deleteAccountHolder/error', error, 'error')
-      throw error
-    }
-  }
-
-  public async deletePayment(
-    input: DeletePaymentInput,
-  ): Promise<DeletePaymentOutput> {
-    this.log('deletePayment/input', input)
-    return { data: {} }
+    const output = { data: { ...response }, id: response.id! }
+    this.log('savePaymentMethod/output', output)
+    return output
   }
 
   public async getPaymentStatus(
     input: GetPaymentStatusInput,
   ): Promise<GetPaymentStatusOutput> {
     this.log('getPaymentStatus/input', input)
-    try {
-      const validInput = validateGetPaymentStatusInput(input)
-      const { sessionId, sessionResult } = validInput.data.sessionsResponse
-      const idempotencyKey = sessionId
-      const response =
-        await this.checkout.PaymentsApi.getResultOfPaymentSession(
-          sessionId,
-          sessionResult,
-          { idempotencyKey },
-        )
-      const status = this.getSessionStatus(response.status)
-      const data = { ...input.data, authorization: response }
-      this.log('getPaymentStatus/output', { data, status })
-      return { data, status }
-    } catch (error) {
-      this.log('getPaymentStatus/error', error, 'error')
-      throw error
-    }
-  }
-
-  public async getWebhookActionAndData(
-    input: ProviderWebhookPayload['payload'],
-  ): Promise<WebhookActionResult> {
-    this.log('getWebhookActionAndData/input', input)
-    try {
-      const providerIdentifier = AdyenProviderService.identifier
-      const validInput = validateProviderWebhookPayload(input)
-      const { notificationItems } = validInput.data
-      const validNotifications: Types.notification.NotificationRequestItem[] =
-        []
-      notificationItems.forEach((notificationItem) => {
-        const notification =
-          notificationItem.NotificationRequestItem as Types.notification.NotificationRequestItem
-        if (this.validateHMAC(notification)) {
-          validNotifications.push(notification)
-        } else {
-          this.log('getWebhookActionAndData/invalidNotification', notification)
-        }
-      })
-      const data = {
-        providerIdentifier,
-        validNotifications,
-        session_id: '',
-        amount: 0,
-      }
-      this.log('getWebhookActionAndData/output', {
-        action: PaymentActions.NOT_SUPPORTED,
-        data,
-      })
-      return { action: PaymentActions.NOT_SUPPORTED, data }
-    } catch (error) {
-      this.log('getWebhookActionAndData/error', error, 'error')
-      throw error
-    }
+    const inputData = input.data as unknown as PaymentModificationData
+    const { authorization } = inputData
+    const status = this.getSessionStatus(authorization.resultCode)
+    const data = input.data
+    const output = { data, status }
+    this.log('getPaymentStatus/output', output)
+    return output
   }
 
   public async initiatePayment(
     input: InitiatePaymentInput,
   ): Promise<InitiatePaymentOutput> {
     this.log('initiatePayment/input', input)
-    try {
-      const {
-        storePaymentMethodMode,
-        recurringProcessingModel,
-        shopperInteraction,
-        returnUrlPrefix: returnUrl,
-        merchantAccount,
-      } = this.options_
-      const validInput = validateInitiatePaymentInput(input)
-      const reference = validInput.reference
-      const shopperReference = validInput.context?.account_holder?.id
-      const { checkoutSession } = validInput?.data || {}
-      const amount = this.getAmount(validInput.amount, validInput.currency_code)
-      const request: Types.checkout.CreateCheckoutSessionRequest = {
-        ...checkoutSession,
-        shopperReference,
-        amount,
-        reference,
-        storePaymentMethodMode,
-        recurringProcessingModel,
-        shopperInteraction,
-        returnUrl,
-        merchantAccount,
-      }
-      const idempotencyKey = reference
-      const response = await this.checkout.PaymentsApi.sessions(request, {
-        idempotencyKey,
-      })
-      const data = {
-        reference,
-        session_id: validInput.data?.session_id,
-        checkoutSession: response,
-      }
-      this.log('initiatePayment/output', { data, id: reference })
-      return { data, id: reference }
-    } catch (error) {
-      this.log('initiatePayment/error', error, 'error')
-      throw error
+    const { merchantAccount } = this.options_
+    const inputData = input.data as unknown as InitiatePaymentInputData
+    const reference = input.context?.idempotency_key!
+    const shopperReference = input.context?.account_holder?.data.external_id as
+      | string
+      | undefined
+    const amount = this.getAmount(input.amount, input.currency_code)
+    const idempotencyKey = reference
+    const request: Types.checkout.PaymentMethodsRequest = {
+      ...inputData.request,
+      shopperReference,
+      amount,
+      merchantAccount,
     }
-  }
 
-  public async listPaymentMethods(
-    input: ListPaymentMethodsInput,
-  ): Promise<ListPaymentMethodsOutput> {
-    this.log('listPaymentMethods/input', input)
-    try {
-      const validInput = validateListPaymentMethodsInput(input)
-      const shopperReference = validInput.context.account_holder.data
-        .id as string
-      const methods = await this.listStoredPaymentMethods(shopperReference)
-      const formattedMethods = methods.map((method, index) => ({
-        id: method.id || index.toString(),
-        data: method as Record<string, unknown>,
-      }))
-      this.log('listPaymentMethods/output', formattedMethods)
-      return [...formattedMethods]
-    } catch (error) {
-      this.log('listPaymentMethods/error', error, 'error')
-      throw error
+    const response = await this.checkout.PaymentsApi.paymentMethods(request, {
+      idempotencyKey,
+    })
+
+    const data = {
+      paymentMethods: response,
     }
-  }
-
-  public async refundPayment(
-    input: RefundPaymentInput,
-  ): Promise<RefundPaymentOutput> {
-    this.log('refundPayment/input', input)
-    try {
-      const { merchantAccount } = this.options_
-      const validInput = validateRefundPaymentInput(input)
-      const { reference, authorization, checkoutSession } = validInput.data
-      const id = validInput.context?.idempotency_key
-      const currency = checkoutSession.amount.currency
-      let balance = getMinorUnit(validInput.amount, currency)
-      const payments = authorization.payments || []
-      const promises = payments.map(({ pspReference, amount }) => {
-        if (balance === 0) return null
-        if (!pspReference || !amount) return null
-        if (amount.currency !== currency) return null
-        const value = amount.value < balance ? amount.value : balance
-        balance -= value
-        const newAmount: Types.checkout.Amount = {
-          currency,
-          value,
-        }
-        const request: Types.checkout.PaymentRefundRequest = {
-          merchantAccount,
-          reference,
-          amount: newAmount,
-        }
-        const idempotencyKey = pspReference
-        return this.checkout.ModificationsApi.refundCapturedPayment(
-          pspReference,
-          request,
-          { idempotencyKey },
-        )
-      })
-      const responses = await Promise.all(promises)
-      const validResponses = responses.filter(
-        (response) => response !== null,
-      ) as Types.checkout.PaymentRefundResponse[]
-
-      const newRefunds = validResponses.map((response) => ({
-        ...response,
-        id,
-      }))
-
-      const existingRefunds = validInput.data.refunds || []
-      const refunds = [...existingRefunds, ...validateRefunds(newRefunds)]
-      const data = { ...input.data, refunds }
-      this.log('refundPayment/output', { data })
-      return { data }
-    } catch (error) {
-      this.log('refundPayment/error', error, 'error')
-      throw error
-    }
+    const output = { data, id: reference }
+    this.log('initiatePayment/output', output)
+    return output
   }
 
   /**
@@ -531,15 +268,255 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     input: UpdatePaymentInput,
   ): Promise<UpdatePaymentOutput> {
     this.log('updatePayment/input', input)
-    try {
-      const validInput = validateUpdatePaymentInput(input)
-      const data = { ...input.data, ...validInput.data }
-      this.log('updatePayment/output', { data })
-      return { data }
-    } catch (error) {
-      this.log('updatePayment/error', error, 'error')
-      throw error
+    const data = { ...input.data }
+    this.log('updatePayment/output', { data })
+    return { data }
+  }
+
+  public async deletePayment(
+    input: DeletePaymentInput,
+  ): Promise<DeletePaymentOutput> {
+    this.log('deletePayment/input', input)
+    return { data: {} }
+  }
+
+  public async authorizePayment(
+    input: AuthorizePaymentInput,
+  ): Promise<AuthorizePaymentOutput> {
+    this.log('authorizePayment/input', input)
+    const {
+      merchantAccount,
+      shopperInteraction,
+      recurringProcessingModel,
+      returnUrlPrefix: returnUrl,
+    } = this.options_
+    const inputData = input.data as unknown as AuthorizePaymentInputData
+    const reference = input.context?.idempotency_key!
+    const idempotencyKey = reference
+    const request: Types.checkout.PaymentRequest = {
+      ...inputData.request,
+      reference,
+      shopperInteraction,
+      recurringProcessingModel,
+      returnUrl,
+      merchantAccount,
     }
+
+    const response = await this.checkout.PaymentsApi.payments(request, {
+      idempotencyKey,
+    })
+    const status = this.getSessionStatus(response.resultCode)
+    const data = {
+      reference,
+      authorization: response,
+    }
+    const output = { data, status }
+    this.log('authorizePayment/output', output)
+    return { data, status }
+  }
+
+  public async cancelPayment(
+    input: CancelPaymentInput,
+  ): Promise<CancelPaymentOutput> {
+    this.log('cancelPayment/input', input)
+    const { merchantAccount } = this.options_
+    const inputData = input.data as unknown as PaymentModificationData
+    const reference = input.context?.idempotency_key
+    const { authorization, message } = inputData
+
+    if (message) {
+      const cancellation = validatePaymentModification({
+        ...message,
+        reference,
+      })
+      this.log('cancelPayment/cancellation', cancellation)
+      const data = {
+        ...input.data,
+        cancellation,
+        message: undefined,
+      }
+      const output = { data }
+      this.log('cancelPayment/output', output)
+      return output
+    }
+
+    const pspReference = authorization.pspReference!
+    const idempotencyKey = reference
+    const request: Types.checkout.PaymentCancelRequest = {
+      merchantAccount,
+      reference,
+    }
+
+    const response =
+      await this.checkout.ModificationsApi.cancelAuthorisedPaymentByPspReference(
+        pspReference,
+        request,
+        { idempotencyKey },
+      )
+
+    const cancellation = validatePaymentModification(response)
+    const data = {
+      ...input.data,
+      cancellation,
+    }
+    const output = { data }
+    this.log('cancelPayment/output', output)
+    return output
+  }
+
+  public async capturePayment(
+    input: CapturePaymentInput,
+  ): Promise<CapturePaymentOutput> {
+    this.log('capturePayment/input', input)
+    const { merchantAccount } = this.options_
+    const inputData = input.data as unknown as PaymentModificationData
+    const reference = input.context?.idempotency_key
+    const { authorization, message } = inputData
+    const existingCaptures = inputData.captures || []
+
+    if (message) {
+      const newCapture = validatePaymentModification({ ...message, reference })
+      this.log('capturePayment/newCapture', newCapture)
+      const captures = [...existingCaptures, newCapture]
+      const data = {
+        ...input.data,
+        captures,
+        message: undefined,
+      }
+      const output = { data }
+      this.log('capturePayment/output', output)
+      return output
+    }
+
+    const pspReference = authorization.pspReference!
+    const amount = authorization.amount!
+    const idempotencyKey = reference
+    const request: Types.checkout.PaymentCaptureRequest = {
+      merchantAccount,
+      amount,
+      reference,
+    }
+
+    const response =
+      await this.checkout.ModificationsApi.captureAuthorisedPayment(
+        pspReference,
+        request,
+        { idempotencyKey },
+      )
+
+    const newCapture = validatePaymentModification(response)
+    const captures = [...existingCaptures, newCapture]
+    const data = { ...input.data, captures }
+    const output = { data }
+    this.log('capturePayment/output', output)
+    return output
+  }
+
+  public async refundPayment(
+    input: RefundPaymentInput,
+  ): Promise<RefundPaymentOutput> {
+    this.log('refundPayment/input', input)
+    const { merchantAccount } = this.options_
+    const inputData = input.data as unknown as PaymentModificationData
+    const reference = input.context?.idempotency_key!
+    const { authorization, message } = inputData
+    const existingRefunds = inputData.refunds || []
+
+    if (message) {
+      const newRefund = validatePaymentModification({ ...message, reference })
+      this.log('refundPayment/newRefund', newRefund)
+      const refunds = [...existingRefunds, newRefund]
+      const data = {
+        ...input.data,
+        refunds,
+        message: undefined,
+      }
+      const output = { data }
+      this.log('refundPayment/output', output)
+      return output
+    }
+
+    const currency = authorization.amount!.currency
+    const pspReference = authorization.pspReference!
+    const idempotencyKey = reference
+    const amount = this.getAmount(input.amount, currency)
+    const request: Types.checkout.PaymentRefundRequest = {
+      merchantAccount,
+      reference,
+      amount,
+    }
+
+    const response = await this.checkout.ModificationsApi.refundCapturedPayment(
+      pspReference,
+      request,
+      { idempotencyKey },
+    )
+
+    const newRefund = validatePaymentModification(response)
+    const refunds = [...existingRefunds, newRefund]
+    const data = { ...input.data, refunds }
+    const output = { data }
+    this.log('refundPayment/output', output)
+    return output
+  }
+
+  public async createAccountHolder(
+    input: CreateAccountHolderInput,
+  ): Promise<CreateAccountHolderOutput> {
+    this.log('createAccountHolder/input', input)
+    const { id } = input.context.customer
+    const output = { id, data: { id } }
+    this.log('createAccountHolder/output', output)
+    return output
+  }
+
+  public async deleteAccountHolder(
+    input: DeleteAccountHolderInput,
+  ): Promise<DeleteAccountHolderOutput> {
+    this.log('deleteAccountHolder/input', input)
+    const { merchantAccount } = this.options_
+    const shopperReference = input.context.account_holder.external_id as string
+    const methods = await this.listStoredPaymentMethods(shopperReference)
+    const promises = methods.map((method) => {
+      if (!method.id) return
+      const idempotencyKey = `${shopperReference}_${method.id}`
+      return this.checkout.RecurringApi.deleteTokenForStoredPaymentDetails(
+        method.id!,
+        shopperReference,
+        merchantAccount,
+        { idempotencyKey },
+      )
+    })
+    await Promise.all(promises)
+    this.log('deleteAccountHolder/storedPaymentMethods', methods)
+    return { data: {} }
+  }
+
+  public async getWebhookActionAndData(
+    input: ProviderWebhookPayload['payload'],
+  ): Promise<WebhookActionResult> {
+    this.log('getWebhookActionAndData/input', input)
+    const providerIdentifier = AdyenProviderService.identifier
+    const inputData = input.data as unknown as ProviderWebhookPayloadData
+    const { notificationItems } = inputData
+    const validNotifications: Types.notification.NotificationRequestItem[] = []
+    notificationItems.forEach((notificationItem) => {
+      const notification = notificationItem.NotificationRequestItem
+      if (this.validateHMAC(notification)) {
+        validNotifications.push(notification)
+      } else {
+        this.log('getWebhookActionAndData/invalidNotification', notification)
+      }
+    })
+    const data = {
+      providerIdentifier,
+      validNotifications,
+      session_id: '',
+      amount: 0,
+    }
+    const output = { action: PaymentActions.NOT_SUPPORTED, data }
+    this.log('getWebhookActionAndData/output', output)
+    return output
   }
 }
 
