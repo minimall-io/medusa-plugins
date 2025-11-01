@@ -12,10 +12,10 @@ export const POST = async (
 ) => {
   const { payment_session_id } = req.params
   const { data } = req.validatedBody
-  const paymentModuleService = req.scope.resolve(Modules.PAYMENT)
+  const paymentService = req.scope.resolve(Modules.PAYMENT)
 
   const paymentSession =
-    await paymentModuleService.retrievePaymentSession(payment_session_id)
+    await paymentService.retrievePaymentSession(payment_session_id)
 
   if (!paymentSession) {
     throw new MedusaError(
@@ -30,7 +30,7 @@ export const POST = async (
   }
 
   const updatedPaymentSession =
-    await paymentModuleService.updatePaymentSession(newSession)
+    await paymentService.updatePaymentSession(newSession)
 
   res.json({
     payment_session: updatedPaymentSession,

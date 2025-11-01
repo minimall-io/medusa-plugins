@@ -9,7 +9,7 @@ const middlewares = defineMiddlewares({
   routes: [
     {
       matcher: '/store/adyen/payment-methods/:account_holder_id',
-      methods: ['GET'],
+      methods: ['GET', 'POST'],
       middlewares: [authenticate('customer', ['bearer', 'session'])],
     },
     {
