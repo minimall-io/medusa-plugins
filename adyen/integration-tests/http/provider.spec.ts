@@ -1,5 +1,6 @@
 import { Types } from '@adyen/api-library'
 import {
+  PaymentCollectionDTO,
   PaymentCustomerDTO,
   PaymentProviderContext,
 } from '@medusajs/framework/types'
@@ -31,6 +32,18 @@ medusaIntegrationTestRunner({
     })
 
     describe('Test adyen payment provider core methods.', () => {
+      let collection: PaymentCollectionDTO
+
+      beforeEach(async () => {
+        const container = getContainer()
+        const paymentService = container.resolve(Modules.PAYMENT)
+
+        const collections = await paymentService.createPaymentCollections([
+          collectionInput,
+        ])
+        collection = collections[0]
+      })
+
       it('returns formatted shopper data properties when createAccountHolder is called', async () => {
         const container = getContainer()
         const paymentService = container.resolve(Modules.PAYMENT)
@@ -53,13 +66,9 @@ medusaIntegrationTestRunner({
         expect(accountHolder.data).toHaveProperty('countryCode')
       })
 
-      it('returns amount, shopper, paymentMethods data properties when initiatePayment is called', async () => {
+      it('returns amount, shopper, and paymentMethods data properties when initiatePayment is called', async () => {
         const container = getContainer()
         const paymentService = container.resolve(Modules.PAYMENT)
-
-        const [collection] = await paymentService.createPaymentCollections([
-          collectionInput,
-        ])
 
         const accountHolderContext = { customer }
         const input = { context: accountHolderContext, provider_id }
@@ -94,10 +103,6 @@ medusaIntegrationTestRunner({
         const container = getContainer()
         const paymentService = container.resolve(Modules.PAYMENT)
 
-        const [collection] = await paymentService.createPaymentCollections([
-          collectionInput,
-        ])
-
         const session = await paymentService.createPaymentSession(
           collection.id,
           {
@@ -119,7 +124,7 @@ medusaIntegrationTestRunner({
           id: session.id,
           currency_code: collection.currency_code,
           amount: collection.amount,
-          data: { amount: alteredAmount },
+          data: { amount: alteredAmount, newProperty: 'newProperty' },
         })
 
         const [updatedSession] = await paymentService.listPaymentSessions({
@@ -136,17 +141,13 @@ medusaIntegrationTestRunner({
           .amount as Types.checkout.Amount
 
         expect(updatedSession.data).toHaveProperty('amount')
-        expect(updatedSession.data).not.toHaveProperty('request')
+        expect(updatedSession.data).toHaveProperty('newProperty')
         expect(updatedAmount.value).toEqual(originalAmount.value)
       })
 
       it('returns authorization data property when authorizePayment is called', async () => {
         const container = getContainer()
         const paymentService = container.resolve(Modules.PAYMENT)
-
-        const [collection] = await paymentService.createPaymentCollections([
-          collectionInput,
-        ])
 
         const accountHolderContext = { customer }
         const input = { context: accountHolderContext, provider_id }
@@ -187,6 +188,103 @@ medusaIntegrationTestRunner({
         )
         expect(payment.data).toHaveProperty('authorization')
         expect(payment.data).not.toHaveProperty('request')
+      })
+
+      it('cancels the non-authorized payment when cancelPayment is called', async () => {
+        const container = getContainer()
+        const paymentService = container.resolve(Modules.PAYMENT)
+
+        const session = await paymentService.createPaymentSession(
+          collection.id,
+          {
+            provider_id,
+            currency_code: collection.currency_code,
+            amount: collection.amount,
+            context: {},
+            data: { request: {} },
+          },
+        )
+
+        await paymentService.updatePaymentSession({
+          id: session.id,
+          currency_code: collection.currency_code,
+          amount: collection.amount,
+          data: {
+            request: { paymentMethod: paymentMethod, storePaymentMethod: true },
+          },
+        })
+
+        const payment = await paymentService.authorizePaymentSession(
+          session.id,
+          {},
+        )
+
+        /**
+         * As of this writing, the payment module's cancelPayment method,
+         * doesn't preserve the provider's cancelPayment method's return value.
+         * Therefore, we can only validate payment cancellation by checking the payment's canceled_at property.
+         */
+        await paymentService.cancelPayment(payment.id)
+
+        const [cancelledPayment] = await paymentService.listPayments({
+          payment_session_id: session.id,
+        })
+
+        console.log(
+          'cancelPayment/cancelledPayment',
+          JSON.stringify(cancelledPayment, null, 2),
+        )
+        expect(cancelledPayment.canceled_at).not.toBeNull()
+      })
+
+      it('returns captures data property when capturePayment is called', async () => {
+        const container = getContainer()
+        const paymentService = container.resolve(Modules.PAYMENT)
+
+        const session = await paymentService.createPaymentSession(
+          collection.id,
+          {
+            provider_id,
+            currency_code: collection.currency_code,
+            amount: collection.amount,
+            context: {},
+            data: { request: {} },
+          },
+        )
+
+        await paymentService.updatePaymentSession({
+          id: session.id,
+          currency_code: collection.currency_code,
+          amount: collection.amount,
+          data: {
+            request: { paymentMethod: paymentMethod },
+          },
+        })
+
+        const payment = await paymentService.authorizePaymentSession(
+          session.id,
+          {},
+        )
+
+        /**
+         * As of this writing, the payment module's capturePayment method,
+         * although it accepts the amount parameter,
+         * doesn't pass it to the provider's capturePayment method.
+         * Therefore, all we can do is capture the full amount in the provider's capturePayment method.
+         */
+        await paymentService.capturePayment({ payment_id: payment.id })
+
+        const [capturedPayment] = await paymentService.listPayments({
+          payment_session_id: session.id,
+        })
+
+        console.log(
+          'capturePayment/capturedPayment',
+          JSON.stringify(capturedPayment, null, 2),
+        )
+        expect(capturedPayment.data).toHaveProperty('authorization')
+        expect(capturedPayment.data).toHaveProperty('captures')
+        expect(capturedPayment.data).not.toHaveProperty('request')
       })
     })
   },
