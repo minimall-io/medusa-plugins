@@ -68,16 +68,17 @@ medusaIntegrationTestRunner({
         const paymentContext = {
           account_holder: { data: accountHolder.data },
         } as PaymentProviderContext
-        const session = await paymentService.createPaymentSession(
-          collection.id,
-          {
-            provider_id,
-            currency_code: collection.currency_code,
-            amount: collection.amount,
-            context: paymentContext,
-            data: { request: {} },
-          },
-        )
+        await paymentService.createPaymentSession(collection.id, {
+          provider_id,
+          currency_code: collection.currency_code,
+          amount: collection.amount,
+          context: paymentContext,
+          data: { request: {} },
+        })
+
+        const [session] = await paymentService.listPaymentSessions({
+          payment_collection_id: collection.id,
+        })
 
         console.log(
           'createPaymentSession/session',
@@ -86,6 +87,57 @@ medusaIntegrationTestRunner({
         expect(session.data).toHaveProperty('amount')
         expect(session.data).toHaveProperty('shopper')
         expect(session.data).toHaveProperty('paymentMethods')
+        expect(session.data).not.toHaveProperty('request')
+      })
+
+      it('returns session amount data property when updatePaymentSession is called', async () => {
+        const container = getContainer()
+        const paymentService = container.resolve(Modules.PAYMENT)
+
+        const [collection] = await paymentService.createPaymentCollections([
+          collectionInput,
+        ])
+
+        const session = await paymentService.createPaymentSession(
+          collection.id,
+          {
+            provider_id,
+            currency_code: collection.currency_code,
+            amount: collection.amount,
+            context: {},
+            data: { request: {} },
+          },
+        )
+
+        const alteredValue = Number(collection.amount) / 2
+        const alteredAmount = {
+          value: alteredValue,
+          currency: collection.currency_code,
+        }
+
+        await paymentService.updatePaymentSession({
+          id: session.id,
+          currency_code: collection.currency_code,
+          amount: collection.amount,
+          data: { amount: alteredAmount },
+        })
+
+        const [updatedSession] = await paymentService.listPaymentSessions({
+          payment_collection_id: collection.id,
+        })
+
+        console.log(
+          'updatePaymentSession/updatedSession',
+          JSON.stringify(updatedSession, null, 2),
+        )
+
+        const originalAmount = session.data!.amount as Types.checkout.Amount
+        const updatedAmount = updatedSession.data!
+          .amount as Types.checkout.Amount
+
+        expect(updatedSession.data).toHaveProperty('amount')
+        expect(updatedSession.data).not.toHaveProperty('request')
+        expect(updatedAmount.value).toEqual(originalAmount.value)
       })
 
       it('returns authorization data property when authorizePayment is called', async () => {
@@ -123,16 +175,18 @@ medusaIntegrationTestRunner({
           },
         })
 
-        const payment = await paymentService.authorizePaymentSession(
-          session.id,
-          {},
-        )
+        await paymentService.authorizePaymentSession(session.id, {})
+
+        const [payment] = await paymentService.listPayments({
+          payment_session_id: session.id,
+        })
 
         console.log(
           'authorizePaymentSession/payment',
           JSON.stringify(payment, null, 2),
         )
         expect(payment.data).toHaveProperty('authorization')
+        expect(payment.data).not.toHaveProperty('request')
       })
     })
   },
