@@ -26,7 +26,7 @@ export const POST = async (
 
   const newSession = {
     ...paymentSession,
-    data: { ...paymentSession.data, ...data },
+    data: { ...data, ...paymentSession.data },
   }
 
   const updatedPaymentSession =

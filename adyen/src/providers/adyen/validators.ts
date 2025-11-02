@@ -23,15 +23,11 @@ export const getValidator =
 export const EnvironmentEnumSchema = z.nativeEnum(EnvironmentEnum)
 
 export const ShopperInteractionEnumSchema = z.nativeEnum(
-  Types.checkout.CreateCheckoutSessionRequest.ShopperInteractionEnum,
+  Types.checkout.PaymentRequest.ShopperInteractionEnum,
 )
 
 export const RecurringProcessingModelEnumSchema = z.nativeEnum(
-  Types.checkout.StoredPaymentMethodRequest.RecurringProcessingModelEnum,
-)
-
-export const StorePaymentMethodModeEnumSchema = z.nativeEnum(
-  Types.checkout.CreateCheckoutSessionRequest.StorePaymentMethodModeEnum,
+  Types.checkout.PaymentRequest.RecurringProcessingModelEnum,
 )
 
 export const OptionsSchema = z.object({
@@ -43,7 +39,6 @@ export const OptionsSchema = z.object({
   environment: EnvironmentEnumSchema.optional(),
   shopperInteraction: ShopperInteractionEnumSchema,
   recurringProcessingModel: RecurringProcessingModelEnumSchema,
-  storePaymentMethodMode: StorePaymentMethodModeEnumSchema,
 })
 
 export const AmountSchema = z.object({

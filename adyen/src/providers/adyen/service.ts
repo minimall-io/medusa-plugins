@@ -46,6 +46,7 @@ import {
   PaymentModificationData,
   ProviderWebhookPayloadData,
   SavePaymentMethodInputData,
+  Shopper,
 } from './interfaces'
 import {
   Options,
@@ -174,8 +175,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     input: ListPaymentMethodsInput,
   ): Promise<ListPaymentMethodsOutput> {
     this.log('listPaymentMethods/input', input)
-    const shopperReference = input.context?.account_holder?.data
-      .external_id as string
+    const shopper = input.context?.account_holder?.data as Shopper
+    const shopperReference = shopper.shopperReference!
     const methods = await this.listStoredPaymentMethods(shopperReference)
     const output = methods.map((method, index) => ({
       id: method.id || index.toString(),
@@ -191,8 +192,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('savePaymentMethod/input', input)
     const { recurringProcessingModel, merchantAccount } = this.options_
     const inputData = input.data as unknown as SavePaymentMethodInputData
-    const shopperReference = input.context?.account_holder?.data
-      .external_id as string
+    const shopper = input.context?.account_holder?.data as Shopper
+    const shopperReference = shopper.shopperReference!
     const idempotencyKey = shopperReference
     const request: Types.checkout.StoredPaymentMethodRequest = {
       ...inputData.request,
@@ -218,7 +219,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const inputData = input.data as unknown as PaymentModificationData
     const { authorization } = inputData
     const status = this.getSessionStatus(authorization.resultCode)
-    const data = input.data
+    const data = { ...input.data }
     const output = { data, status }
     this.log('getPaymentStatus/output', output)
     return output
@@ -231,22 +232,22 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const { merchantAccount } = this.options_
     const inputData = input.data as unknown as InitiatePaymentInputData
     const reference = input.context!.idempotency_key!
-    const shopperReference = input.context?.account_holder?.data.external_id as string
+    const shopper = input.context?.account_holder?.data as Shopper
     const amount = this.getAmount(input.amount, input.currency_code)
-    const idempotencyKey = reference
     const request: Types.checkout.PaymentMethodsRequest = {
       ...inputData.request,
-      shopperReference,
+      ...shopper,
       amount,
       merchantAccount,
     }
 
-    const response = await this.checkout.PaymentsApi.paymentMethods(request, {
-      idempotencyKey,
-    })
+    const response = await this.checkout.PaymentsApi.paymentMethods(request)
 
     const data = {
+      amount,
+      shopper,
       paymentMethods: response,
+      request: undefined,
     }
     const output = { data, id: reference }
     this.log('initiatePayment/output', output)
@@ -266,9 +267,11 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     input: UpdatePaymentInput,
   ): Promise<UpdatePaymentOutput> {
     this.log('updatePayment/input', input)
-    const data = { ...input.data }
-    this.log('updatePayment/output', { data })
-    return { data }
+    const amount = this.getAmount(input.amount, input.currency_code)
+    const data = { ...input.data, amount }
+    const output = { data }
+    this.log('updatePayment/output', output)
+    return output
   }
 
   public async deletePayment(
@@ -289,10 +292,14 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       returnUrlPrefix: returnUrl,
     } = this.options_
     const inputData = input.data as unknown as AuthorizePaymentInputData
+    const shopper = inputData.shopper || {}
+    const amount = inputData.amount
     const reference = input.context!.idempotency_key!
     const idempotencyKey = reference
     const request: Types.checkout.PaymentRequest = {
       ...inputData.request,
+      ...shopper,
+      amount,
       reference,
       shopperInteraction,
       recurringProcessingModel,
@@ -305,12 +312,12 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     })
     const status = this.getSessionStatus(response.resultCode)
     const data = {
-      reference,
       authorization: response,
+      request: undefined,
     }
     const output = { data, status }
     this.log('authorizePayment/output', output)
-    return { data, status }
+    return output
   }
 
   public async cancelPayment(
@@ -462,8 +469,34 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     input: CreateAccountHolderInput,
   ): Promise<CreateAccountHolderOutput> {
     this.log('createAccountHolder/input', input)
-    const { id } = input.context.customer
-    const output = { id, data: { id } }
+    const {
+      id,
+      email,
+      phone,
+      first_name,
+      last_name,
+      company_name,
+      billing_address,
+    } = input.context.customer
+    const shopperReference = id
+    const shopperEmail = email
+    const telephoneNumber = phone || undefined
+    const firstName = first_name || undefined
+    const lastName = last_name || undefined
+    const companyName = company_name || undefined
+    const countryCode = billing_address?.country_code || undefined
+    const shopperName =
+      firstName && lastName ? { firstName, lastName } : undefined
+    const company = companyName ? { name: companyName } : undefined
+    const data = {
+      shopperReference,
+      shopperEmail,
+      telephoneNumber,
+      shopperName,
+      company,
+      countryCode,
+    }
+    const output = { id, data }
     this.log('createAccountHolder/output', output)
     return output
   }
@@ -473,7 +506,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<DeleteAccountHolderOutput> {
     this.log('deleteAccountHolder/input', input)
     const { merchantAccount } = this.options_
-    const shopperReference = input.context.account_holder.external_id as string
+    const shopper = input.context.account_holder.data as Shopper
+    const shopperReference = shopper.shopperReference!
     const methods = await this.listStoredPaymentMethods(shopperReference)
     const promises = methods.map((method) => {
       if (!method.id) return
