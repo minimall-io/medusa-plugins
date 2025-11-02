@@ -286,8 +286,66 @@ medusaIntegrationTestRunner({
         expect(capturedPayment.data).toHaveProperty('captures')
         expect(capturedPayment.data).not.toHaveProperty('request')
       })
+
+      it('returns refunds data property when refundPayment is called', async () => {
+        const container = getContainer()
+        const paymentService = container.resolve(Modules.PAYMENT)
+
+        const session = await paymentService.createPaymentSession(
+          collection.id,
+          {
+            provider_id,
+            currency_code: collection.currency_code,
+            amount: collection.amount,
+            context: {},
+            data: { request: {} },
+          },
+        )
+
+        await paymentService.updatePaymentSession({
+          id: session.id,
+          currency_code: collection.currency_code,
+          amount: collection.amount,
+          data: {
+            request: { paymentMethod: paymentMethod },
+          },
+        })
+
+        const payment = await paymentService.authorizePaymentSession(
+          session.id,
+          {},
+        )
+
+        await paymentService.capturePayment({ payment_id: payment.id })
+
+        const totalAmount = Number(collection.amount)
+        const halfAmount = Math.round(totalAmount / 2)
+        const remainingAmount = totalAmount - halfAmount
+
+        await paymentService.refundPayment({
+          payment_id: payment.id,
+          amount: halfAmount,
+        })
+
+        await paymentService.refundPayment({
+          payment_id: payment.id,
+          amount: remainingAmount,
+        })
+
+        const [refundedPayment] = await paymentService.listPayments({
+          payment_session_id: session.id,
+        })
+
+        console.log(
+          'refundPayment/refundedPayment',
+          JSON.stringify(refundedPayment, null, 2),
+        )
+        expect(refundedPayment.data).toHaveProperty('authorization')
+        expect(refundedPayment.data).toHaveProperty('refunds')
+        expect(refundedPayment.data).not.toHaveProperty('request')
+      })
     })
   },
 })
 
-jest.setTimeout(60 * 1000)
+jest.setTimeout(120 * 1000)
