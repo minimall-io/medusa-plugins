@@ -1,12 +1,19 @@
 import { Types } from '@adyen/api-library'
-import { AddressDTO } from '@medusajs/framework/types'
+import { AddressDTO, PaymentCustomerDTO } from '@medusajs/framework/types'
 
-export const getProviderId = () => `pp_adyen_${process.env.ADYEN_PROVIDER_ID}`
+export const getProviderId = (): string =>
+  `pp_adyen_${process.env.ADYEN_PROVIDER_ID}`
 
-export const getCurrencyCode = (currency_code: string = 'usd') => currency_code
+export const getCurrencyCode = (currency_code: string = 'usd'): string =>
+  currency_code
 
-export const getAmount = (multiplier: number = 100, precision: number = 2) =>
-  Number((Math.random() * multiplier).toFixed(precision))
+export const getAmount = (
+  amount?: number,
+  minimum: number = 20,
+  multiplier: number = 100,
+  precision: number = 2,
+): number =>
+  amount || minimum + Number((Math.random() * multiplier).toFixed(precision))
 
 export const getCustomer = (
   customerSuffix?: string,
@@ -17,7 +24,7 @@ export const getCustomer = (
   customerCompanyName?: string,
   customerPhone?: string,
   customerBillingAddress?: AddressDTO,
-) => {
+): PaymentCustomerDTO => {
   const timestamp = Date.now()
   const suffix = customerSuffix || timestamp.toString()
   const id = customerId || `customer_${suffix}`
@@ -43,12 +50,14 @@ export const getCardDetails = (
   expiryMonth: string = '03',
   expiryYear: string = '2030',
   securityCode: string = '737',
-) => {
+  holderName: string = 'John Doe',
+): Types.checkout.CardDetails => {
   return {
     type: Types.checkout.CardDetails.TypeEnum.Scheme,
     encryptedCardNumber: `test_${cardNumber}`,
     encryptedExpiryMonth: `test_${expiryMonth}`,
     encryptedExpiryYear: `test_${expiryYear}`,
     encryptedSecurityCode: `test_${securityCode}`,
+    holderName: holderName,
   }
 }

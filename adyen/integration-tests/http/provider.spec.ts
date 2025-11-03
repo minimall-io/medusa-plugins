@@ -1,8 +1,11 @@
 import { Types } from '@adyen/api-library'
 import {
+  AccountHolderDTO,
   PaymentCollectionDTO,
   PaymentCustomerDTO,
+  PaymentDTO,
   PaymentProviderContext,
+  PaymentSessionDTO,
 } from '@medusajs/framework/types'
 import { Modules } from '@medusajs/framework/utils'
 import { medusaIntegrationTestRunner } from '@medusajs/test-utils'
@@ -21,6 +24,7 @@ medusaIntegrationTestRunner({
     let provider_id: string
     let customer: PaymentCustomerDTO
     let paymentMethod: Types.checkout.CardDetails
+    let cardDetails: Types.checkout.CardDetails
 
     beforeAll(async () => {
       const currency_code = getCurrencyCode()
@@ -29,33 +33,21 @@ medusaIntegrationTestRunner({
       provider_id = getProviderId()
       customer = getCustomer()
       paymentMethod = getCardDetails()
+      cardDetails = getCardDetails()
     })
 
-    describe('Test adyen payment provider core methods.', () => {
-      let collection: PaymentCollectionDTO
+    describe('Test storing, retrieving, and deleting payment methods', () => {
+      let accountHolder: AccountHolderDTO
 
       beforeEach(async () => {
         const container = getContainer()
         const paymentService = container.resolve(Modules.PAYMENT)
 
-        const collections = await paymentService.createPaymentCollections([
-          collectionInput,
-        ])
-        collection = collections[0]
+        const input = { context: { customer }, provider_id }
+        accountHolder = await paymentService.createAccountHolder(input)
       })
 
       it('returns formatted shopper data properties when createAccountHolder is called', async () => {
-        const container = getContainer()
-        const paymentService = container.resolve(Modules.PAYMENT)
-
-        const context = { customer }
-        const input = { context, provider_id }
-        const accountHolder = await paymentService.createAccountHolder(input)
-
-        console.log(
-          'createAccountHolder/accountHolder',
-          JSON.stringify(accountHolder, null, 2),
-        )
         expect(accountHolder).toHaveProperty('id')
         expect(accountHolder).toHaveProperty('data')
         expect(accountHolder.data).toHaveProperty('shopperReference')
@@ -66,22 +58,96 @@ medusaIntegrationTestRunner({
         expect(accountHolder.data).toHaveProperty('countryCode')
       })
 
+      it('stores payment method for the customer when storePaymentMethod is called', async () => {
+        const container = getContainer()
+        const paymentService = container.resolve(Modules.PAYMENT)
+
+        const context = { account_holder: accountHolder }
+        const data = { request: { paymentMethod: cardDetails } }
+        const input = { context, data, provider_id }
+        const paymentMethod = await paymentService.createPaymentMethods(input)
+
+        console.log(
+          'createPaymentMethods/paymentMethod',
+          JSON.stringify(paymentMethod, null, 2),
+        )
+        expect(paymentMethod).toHaveProperty('id')
+        expect(paymentMethod).toHaveProperty('data')
+      })
+
+      it('list stored payment methods for the customer when listPaymentMethods is called', async () => {
+        const container = getContainer()
+        const paymentService = container.resolve(Modules.PAYMENT)
+
+        const context = { account_holder: accountHolder }
+        const data = { request: { paymentMethod: cardDetails } }
+        const input = { context, data, provider_id }
+        await paymentService.createPaymentMethods(input)
+
+        const paymentMethods = await paymentService.listPaymentMethods({
+          context,
+          provider_id,
+        })
+
+        console.log(
+          'listPaymentMethods/paymentMethods',
+          JSON.stringify(paymentMethods, null, 2),
+        )
+        expect(paymentMethods).toHaveLength(1)
+      })
+
+      it('delete stored payment methods for the customer when deleteAccountHolder is called', async () => {
+        const container = getContainer()
+        const paymentService = container.resolve(Modules.PAYMENT)
+
+        const context = { account_holder: accountHolder }
+        const data = { request: { paymentMethod: cardDetails } }
+        const input = { context, data, provider_id }
+        await paymentService.createPaymentMethods(input)
+        await paymentService.deleteAccountHolder(accountHolder.id)
+
+        const paymentMethods = await paymentService.listPaymentMethods({
+          context,
+          provider_id,
+        })
+
+        console.log(
+          'listPaymentMethods/paymentMethods',
+          JSON.stringify(paymentMethods, null, 2),
+        )
+        expect(paymentMethods).toHaveLength(0)
+      })
+    })
+
+    describe('Test payment initialization', () => {
+      let collection: PaymentCollectionDTO
+      let accountHolder: AccountHolderDTO
+
+      beforeEach(async () => {
+        const container = getContainer()
+        const paymentService = container.resolve(Modules.PAYMENT)
+
+        const collections = await paymentService.createPaymentCollections([
+          collectionInput,
+        ])
+        collection = collections[0]
+
+        const input = { context: { customer }, provider_id }
+        accountHolder = await paymentService.createAccountHolder(input)
+      })
+
       it('returns amount, shopper, and paymentMethods data properties when initiatePayment is called', async () => {
         const container = getContainer()
         const paymentService = container.resolve(Modules.PAYMENT)
 
-        const accountHolderContext = { customer }
-        const input = { context: accountHolderContext, provider_id }
-        const accountHolder = await paymentService.createAccountHolder(input)
-
-        const paymentContext = {
+        const context = {
           account_holder: { data: accountHolder.data },
         } as PaymentProviderContext
         await paymentService.createPaymentSession(collection.id, {
           provider_id,
           currency_code: collection.currency_code,
           amount: collection.amount,
-          context: paymentContext,
+          context,
           data: { request: {} },
         })
 
@@ -89,31 +155,63 @@ medusaIntegrationTestRunner({
           payment_collection_id: collection.id,
         })
 
-        console.log(
-          'createPaymentSession/session',
-          JSON.stringify(session, null, 2),
-        )
         expect(session.data).toHaveProperty('amount')
         expect(session.data).toHaveProperty('shopper')
         expect(session.data).toHaveProperty('paymentMethods')
         expect(session.data).not.toHaveProperty('request')
       })
 
+      it('returns amount and paymentMethods data properties when initiatePayment is called without account holder context', async () => {
+        const container = getContainer()
+        const paymentService = container.resolve(Modules.PAYMENT)
+
+        const context = {}
+        await paymentService.createPaymentSession(collection.id, {
+          provider_id,
+          currency_code: collection.currency_code,
+          amount: collection.amount,
+          context,
+          data: { request: {} },
+        })
+
+        const [session] = await paymentService.listPaymentSessions({
+          payment_collection_id: collection.id,
+        })
+
+        expect(session.data).toHaveProperty('amount')
+        expect(session.data).toHaveProperty('paymentMethods')
+        expect(session.data).not.toHaveProperty('request')
+      })
+    })
+
+    describe('Test payment updates', () => {
+      let collection: PaymentCollectionDTO
+      let session: PaymentSessionDTO
+
+      beforeEach(async () => {
+        const container = getContainer()
+        const paymentService = container.resolve(Modules.PAYMENT)
+
+        const collections = await paymentService.createPaymentCollections([
+          collectionInput,
+        ])
+        collection = collections[0]
+
+        session = await paymentService.createPaymentSession(collection.id, {
+          provider_id,
+          currency_code: collection.currency_code,
+          amount: collection.amount,
+          data: { request: {} },
+        })
+      })
+
       it('returns session amount data property when updatePaymentSession is called', async () => {
         const container = getContainer()
         const paymentService = container.resolve(Modules.PAYMENT)
 
-        const session = await paymentService.createPaymentSession(
-          collection.id,
-          {
-            provider_id,
-            currency_code: collection.currency_code,
-            amount: collection.amount,
-            context: {},
-            data: { request: {} },
-          },
-        )
+        const originalAmount = session.data!.amount as Types.checkout.Amount
 
+        // trying to update the amount to half of the original amount
         const alteredValue = Number(collection.amount) / 2
         const alteredAmount = {
           value: alteredValue,
@@ -131,12 +229,6 @@ medusaIntegrationTestRunner({
           payment_collection_id: collection.id,
         })
 
-        console.log(
-          'updatePaymentSession/updatedSession',
-          JSON.stringify(updatedSession, null, 2),
-        )
-
-        const originalAmount = session.data!.amount as Types.checkout.Amount
         const updatedAmount = updatedSession.data!
           .amount as Types.checkout.Amount
 
@@ -144,28 +236,242 @@ medusaIntegrationTestRunner({
         expect(updatedSession.data).toHaveProperty('newProperty')
         expect(updatedAmount.value).toEqual(originalAmount.value)
       })
+    })
+
+    describe('Test payment authorizations', () => {
+      let collection: PaymentCollectionDTO
+      let accountHolder: AccountHolderDTO
+      let sessionWithAccountHolder: PaymentSessionDTO
+      let sessionWithoutAccountHolder: PaymentSessionDTO
+
+      beforeEach(async () => {
+        const container = getContainer()
+        const paymentService = container.resolve(Modules.PAYMENT)
+
+        const collections = await paymentService.createPaymentCollections([
+          collectionInput,
+        ])
+        collection = collections[0]
+        const input = { context: { customer }, provider_id }
+        accountHolder = await paymentService.createAccountHolder(input)
+
+        sessionWithoutAccountHolder = await paymentService.createPaymentSession(
+          collection.id,
+          {
+            provider_id,
+            currency_code: collection.currency_code,
+            amount: collection.amount,
+            data: { request: {} },
+          },
+        )
+
+        const context = {
+          account_holder: { data: accountHolder.data },
+        } as PaymentProviderContext
+        sessionWithAccountHolder = await paymentService.createPaymentSession(
+          collection.id,
+          {
+            provider_id,
+            currency_code: collection.currency_code,
+            amount: collection.amount,
+            context,
+            data: { request: {} },
+          },
+        )
+      })
+
+      it('returns authorization data property when authorizePayment is called using account holder context', async () => {
+        const container = getContainer()
+        const paymentService = container.resolve(Modules.PAYMENT)
+
+        await paymentService.updatePaymentSession({
+          id: sessionWithAccountHolder.id,
+          currency_code: collection.currency_code,
+          amount: collection.amount,
+          data: {
+            request: {
+              paymentMethod: paymentMethod,
+            },
+          },
+        })
+
+        await paymentService.authorizePaymentSession(
+          sessionWithAccountHolder.id,
+          {},
+        )
+
+        const [payment] = await paymentService.listPayments({
+          payment_session_id: sessionWithAccountHolder.id,
+        })
+
+        const { data } = payment
+
+        expect(data).toHaveProperty('authorization')
+        expect(data).not.toHaveProperty('request')
+      })
+
+      it('returns authorization data property with saved payment method when authorizePayment is called with account holder context and storePaymentMethod is true', async () => {
+        const container = getContainer()
+        const paymentService = container.resolve(Modules.PAYMENT)
+
+        await paymentService.updatePaymentSession({
+          id: sessionWithAccountHolder.id,
+          currency_code: collection.currency_code,
+          amount: collection.amount,
+          data: {
+            request: { paymentMethod: paymentMethod, storePaymentMethod: true },
+          },
+        })
+
+        await paymentService.authorizePaymentSession(
+          sessionWithAccountHolder.id,
+          {},
+        )
+
+        const [payment] = await paymentService.listPayments({
+          payment_session_id: sessionWithAccountHolder.id,
+        })
+
+        const { data } = payment
+        const authorization = data!
+          .authorization as Types.checkout.PaymentResponse
+
+        expect(data).toHaveProperty('authorization')
+        expect(authorization).toHaveProperty('additionalData')
+        expect(
+          authorization.additionalData!['tokenization.shopperReference'],
+        ).toEqual(accountHolder.data!.shopperReference)
+        expect(data).not.toHaveProperty('request')
+      })
+
+      it('returns authorization data property with saved payment method when authorizePayment is called with shopper data in the request and storePaymentMethod is true', async () => {
+        const container = getContainer()
+        const paymentService = container.resolve(Modules.PAYMENT)
+
+        await paymentService.updatePaymentSession({
+          id: sessionWithoutAccountHolder.id,
+          currency_code: collection.currency_code,
+          amount: collection.amount,
+          data: {
+            request: {
+              ...accountHolder.data,
+              paymentMethod: paymentMethod,
+              storePaymentMethod: true,
+            },
+          },
+        })
+
+        await paymentService.authorizePaymentSession(
+          sessionWithoutAccountHolder.id,
+          {},
+        )
+
+        const [payment] = await paymentService.listPayments({
+          payment_session_id: sessionWithoutAccountHolder.id,
+        })
+
+        const { data } = payment
+        const authorization = data!
+          .authorization as Types.checkout.PaymentResponse
+
+        expect(data).toHaveProperty('authorization')
+        expect(authorization).toHaveProperty('additionalData')
+        expect(
+          authorization.additionalData!['tokenization.shopperReference'],
+        ).toEqual(accountHolder.data!.shopperReference)
+        expect(data).not.toHaveProperty('request')
+      })
+
+      it('returns authorization data property with saved payment method when authorizePayment is called with account holder context preference and storePaymentMethod is true', async () => {
+        const container = getContainer()
+        const paymentService = container.resolve(Modules.PAYMENT)
+
+        await paymentService.updatePaymentSession({
+          id: sessionWithAccountHolder.id,
+          currency_code: collection.currency_code,
+          amount: collection.amount,
+          data: {
+            request: {
+              shopperReference: 'random_shopper_reference',
+              paymentMethod: paymentMethod,
+              storePaymentMethod: true,
+            },
+          },
+        })
+
+        await paymentService.authorizePaymentSession(
+          sessionWithAccountHolder.id,
+          {},
+        )
+
+        const [payment] = await paymentService.listPayments({
+          payment_session_id: sessionWithAccountHolder.id,
+        })
+
+        const { data } = payment
+        const authorization = data!
+          .authorization as Types.checkout.PaymentResponse
+
+        expect(data).toHaveProperty('authorization')
+        expect(authorization).toHaveProperty('additionalData')
+        expect(
+          authorization.additionalData!['tokenization.shopperReference'],
+        ).toEqual(accountHolder.data!.shopperReference)
+        expect(data).not.toHaveProperty('request')
+      })
 
       it('returns authorization data property when authorizePayment is called', async () => {
         const container = getContainer()
         const paymentService = container.resolve(Modules.PAYMENT)
 
-        const accountHolderContext = { customer }
-        const input = { context: accountHolderContext, provider_id }
-        const accountHolder = await paymentService.createAccountHolder(input)
-
-        const paymentContext = {
-          account_holder: { data: accountHolder.data },
-        } as PaymentProviderContext
-        const session = await paymentService.createPaymentSession(
-          collection.id,
-          {
-            provider_id,
-            currency_code: collection.currency_code,
-            amount: collection.amount,
-            context: paymentContext,
-            data: { request: {} },
+        await paymentService.updatePaymentSession({
+          id: sessionWithoutAccountHolder.id,
+          currency_code: collection.currency_code,
+          amount: collection.amount,
+          data: {
+            request: {
+              paymentMethod: paymentMethod,
+            },
           },
+        })
+
+        await paymentService.authorizePaymentSession(
+          sessionWithoutAccountHolder.id,
+          {},
         )
+
+        const [payment] = await paymentService.listPayments({
+          payment_session_id: sessionWithoutAccountHolder.id,
+        })
+
+        const { data } = payment
+
+        expect(data).toHaveProperty('authorization')
+        expect(data).not.toHaveProperty('request')
+      })
+    })
+
+    describe('Test payment modification methods', () => {
+      let collection: PaymentCollectionDTO
+      let session: PaymentSessionDTO
+      let payment: PaymentDTO
+
+      beforeEach(async () => {
+        const container = getContainer()
+        const paymentService = container.resolve(Modules.PAYMENT)
+
+        const collections = await paymentService.createPaymentCollections([
+          collectionInput,
+        ])
+        collection = collections[0]
+
+        session = await paymentService.createPaymentSession(collection.id, {
+          provider_id,
+          currency_code: collection.currency_code,
+          amount: collection.amount,
+          context: {},
+          data: { request: {} },
+        })
 
         await paymentService.updatePaymentSession({
           id: session.id,
@@ -176,48 +482,12 @@ medusaIntegrationTestRunner({
           },
         })
 
-        await paymentService.authorizePaymentSession(session.id, {})
-
-        const [payment] = await paymentService.listPayments({
-          payment_session_id: session.id,
-        })
-
-        console.log(
-          'authorizePaymentSession/payment',
-          JSON.stringify(payment, null, 2),
-        )
-        expect(payment.data).toHaveProperty('authorization')
-        expect(payment.data).not.toHaveProperty('request')
+        payment = await paymentService.authorizePaymentSession(session.id, {})
       })
 
       it('cancels the non-authorized payment when cancelPayment is called', async () => {
         const container = getContainer()
         const paymentService = container.resolve(Modules.PAYMENT)
-
-        const session = await paymentService.createPaymentSession(
-          collection.id,
-          {
-            provider_id,
-            currency_code: collection.currency_code,
-            amount: collection.amount,
-            context: {},
-            data: { request: {} },
-          },
-        )
-
-        await paymentService.updatePaymentSession({
-          id: session.id,
-          currency_code: collection.currency_code,
-          amount: collection.amount,
-          data: {
-            request: { paymentMethod: paymentMethod, storePaymentMethod: true },
-          },
-        })
-
-        const payment = await paymentService.authorizePaymentSession(
-          session.id,
-          {},
-        )
 
         /**
          * As of this writing, the payment module's cancelPayment method,
@@ -230,41 +500,12 @@ medusaIntegrationTestRunner({
           payment_session_id: session.id,
         })
 
-        console.log(
-          'cancelPayment/cancelledPayment',
-          JSON.stringify(cancelledPayment, null, 2),
-        )
         expect(cancelledPayment.canceled_at).not.toBeNull()
       })
 
       it('returns captures data property when capturePayment is called', async () => {
         const container = getContainer()
         const paymentService = container.resolve(Modules.PAYMENT)
-
-        const session = await paymentService.createPaymentSession(
-          collection.id,
-          {
-            provider_id,
-            currency_code: collection.currency_code,
-            amount: collection.amount,
-            context: {},
-            data: { request: {} },
-          },
-        )
-
-        await paymentService.updatePaymentSession({
-          id: session.id,
-          currency_code: collection.currency_code,
-          amount: collection.amount,
-          data: {
-            request: { paymentMethod: paymentMethod },
-          },
-        })
-
-        const payment = await paymentService.authorizePaymentSession(
-          session.id,
-          {},
-        )
 
         /**
          * As of this writing, the payment module's capturePayment method,
@@ -278,10 +519,6 @@ medusaIntegrationTestRunner({
           payment_session_id: session.id,
         })
 
-        console.log(
-          'capturePayment/capturedPayment',
-          JSON.stringify(capturedPayment, null, 2),
-        )
         expect(capturedPayment.data).toHaveProperty('authorization')
         expect(capturedPayment.data).toHaveProperty('captures')
         expect(capturedPayment.data).not.toHaveProperty('request')
@@ -291,40 +528,23 @@ medusaIntegrationTestRunner({
         const container = getContainer()
         const paymentService = container.resolve(Modules.PAYMENT)
 
-        const session = await paymentService.createPaymentSession(
-          collection.id,
-          {
-            provider_id,
-            currency_code: collection.currency_code,
-            amount: collection.amount,
-            context: {},
-            data: { request: {} },
-          },
-        )
-
-        await paymentService.updatePaymentSession({
-          id: session.id,
-          currency_code: collection.currency_code,
-          amount: collection.amount,
-          data: {
-            request: { paymentMethod: paymentMethod },
-          },
-        })
-
-        const payment = await paymentService.authorizePaymentSession(
-          session.id,
-          {},
-        )
-
         await paymentService.capturePayment({ payment_id: payment.id })
 
         const totalAmount = Number(collection.amount)
-        const halfAmount = Math.round(totalAmount / 2)
-        const remainingAmount = totalAmount - halfAmount
+        const ten = 10
+        const remainingAmount = totalAmount - ten
 
+        /**
+         * As of this writing, the payment module's refundPayment method,
+         * is missing automatic refund of the remaining amount (without amount parameter).
+         * Without the amount parameter, the provider's refundPayment method
+         * will try to refund the full amount, which will fail in cases where previous refunds were issued
+         * and therefore decreased the amount available for refund.
+         * Therefore, we need to refund the remaining amount manually.
+         */
         await paymentService.refundPayment({
           payment_id: payment.id,
-          amount: halfAmount,
+          amount: ten,
         })
 
         await paymentService.refundPayment({
@@ -336,10 +556,6 @@ medusaIntegrationTestRunner({
           payment_session_id: session.id,
         })
 
-        console.log(
-          'refundPayment/refundedPayment',
-          JSON.stringify(refundedPayment, null, 2),
-        )
         expect(refundedPayment.data).toHaveProperty('authorization')
         expect(refundedPayment.data).toHaveProperty('refunds')
         expect(refundedPayment.data).not.toHaveProperty('request')
