@@ -35,6 +35,7 @@ import {
 } from '@medusajs/framework/types'
 import {
   AbstractPaymentProvider,
+  MedusaError,
   PaymentActions,
 } from '@medusajs/framework/utils'
 
@@ -215,14 +216,10 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async getPaymentStatus(
     input: GetPaymentStatusInput,
   ): Promise<GetPaymentStatusOutput> {
-    this.log('getPaymentStatus/input', input)
-    const inputData = input.data as unknown as PaymentModificationData
-    const { authorization } = inputData
-    const status = this.getSessionStatus(authorization.resultCode)
-    const data = { ...input.data }
-    const output = { data, status }
-    this.log('getPaymentStatus/output', output)
-    return output
+    throw new MedusaError(
+      MedusaError.Types.NOT_ALLOWED,
+      'Method not implemented.',
+    )
   }
 
   public async initiatePayment(
