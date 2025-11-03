@@ -42,18 +42,47 @@ import {
 import { getMinorUnit } from '../../utils'
 
 import {
-  AuthorizePaymentInputData,
-  InitiatePaymentInputData,
-  PaymentModificationData,
-  ProviderWebhookPayloadData,
-  SavePaymentMethodInputData,
-  Shopper,
-} from './interfaces'
-import {
   Options,
+  PaymentModification,
   validateOptions,
   validatePaymentModification,
 } from './validators'
+
+interface Shopper
+  extends Pick<
+    Types.checkout.PaymentRequest,
+    | 'shopperReference'
+    | 'shopperEmail'
+    | 'telephoneNumber'
+    | 'shopperName'
+    | 'company'
+    | 'countryCode'
+  > {}
+
+interface InitiatePaymentInputData {
+  request: Types.checkout.PaymentMethodsRequest
+}
+
+interface SavePaymentMethodInputData {
+  request: Types.checkout.StoredPaymentMethodRequest
+}
+
+interface AuthorizePaymentInputData {
+  amount: Types.checkout.Amount
+  request: Types.checkout.PaymentRequest
+  shopper?: Shopper
+}
+
+interface PaymentModificationData {
+  amount: Types.checkout.Amount
+  authorization: Types.checkout.PaymentResponse
+  cancellation?: PaymentModification
+  captures?: PaymentModification[]
+  refunds?: PaymentModification[]
+  message?: Types.notification.NotificationRequestItem
+}
+
+type ProviderWebhookPayloadData = Types.notification.Notification
 
 interface InjectedDependencies extends Record<string, unknown> {
   logger: Logger
