@@ -181,9 +181,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     notification: Types.notification.NotificationRequestItem,
   ): boolean {
     const { hmacKey } = this.options_
-    // TODO: Uncomment this when we are done with testing
-    // return this.hmac.validateHMAC(notification, hmacKey)
-    return true
+    return this.hmac.validateHMAC(notification, hmacKey)
   }
 
   protected async listStoredPaymentMethods(
