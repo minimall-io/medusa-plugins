@@ -46,13 +46,14 @@ export const getCustomer = (
 }
 
 export const getCardDetails = (
+  encrypted: boolean = true,
   cardNumber: string = '4000060000000006',
   expiryMonth: string = '03',
   expiryYear: string = '2030',
   securityCode: string = '737',
   holderName: string = 'John Doe',
 ): Types.checkout.CardDetails => {
-  return {
+  const encryptedCardDetails = {
     type: Types.checkout.CardDetails.TypeEnum.Scheme,
     encryptedCardNumber: `test_${cardNumber}`,
     encryptedExpiryMonth: `test_${expiryMonth}`,
@@ -60,4 +61,35 @@ export const getCardDetails = (
     encryptedSecurityCode: `test_${securityCode}`,
     holderName: holderName,
   }
+
+  // const unencryptedCardDetails = {
+  //   type: Types.checkout.CardDetails.TypeEnum.Scheme,
+  //   number: `test_${cardNumber}`,
+  //   expiryMonth: `test_${expiryMonth}`,
+  //   expiryYear: `test_${expiryYear}`,
+  //   cvc: `test_${securityCode}`,
+  //   holderName: holderName,
+  // }
+
+  const unencryptedCardDetails = {
+    type: Types.checkout.CardDetails.TypeEnum.Scheme,
+    number: cardNumber,
+    expiryMonth: expiryMonth,
+    expiryYear: expiryYear,
+    cvc: securityCode,
+    holderName: holderName,
+  }
+
+  return encrypted ? encryptedCardDetails : unencryptedCardDetails
 }
+
+/**
+savePaymentMethod/request {"paymentMethod":{"type":"scheme","number":"test_4000060000000006","expiryMonth":"test_03","expiryYear":"test_2030","cvc":"test_737","holderName":"John Doe"},"shopperReference":"customer_1762258527978","recurringProcessingModel":"CardOnFile","merchantAccount":"MinimallLLCECOM"}
+
+savePaymentMethod/request {"paymentMethod":{"type":"scheme","number":"4000060000000006","expiryMonth":"03","expiryYear":"2030","cvc":"737","holderName":"John Doe"},"shopperReference":"customer_1762258674961","recurringProcessingModel":"CardOnFile","merchantAccount":"MinimallLLCECOM"}
+
+savePaymentMethod/request {"paymentMethod":{"type":"scheme","encryptedCardNumber":"test_4000060000000006","encryptedExpiryMonth":"test_03","encryptedExpiryYear":"test_2030","encryptedSecurityCode":"test_737","holderName":"John Doe"},"shopperReference":"customer_1762258731675","recurringProcessingModel":"CardOnFile","merchantAccount":"MinimallLLCECOM"}
+
+const checkout = new CheckoutAPI(client);
+const response = await checkout.RecurringApi.storedPaymentMethods(request)
+ */

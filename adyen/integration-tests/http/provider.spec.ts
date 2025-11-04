@@ -15,7 +15,7 @@ import {
   getCurrencyCode,
   getCustomer,
   getProviderId,
-} from '../mocks'
+} from '../fixtures'
 
 medusaIntegrationTestRunner({
   debug: false,
@@ -24,7 +24,8 @@ medusaIntegrationTestRunner({
     let provider_id: string
     let customer: PaymentCustomerDTO
     let paymentMethod: Types.checkout.CardDetails
-    let cardDetails: Types.checkout.CardDetails
+    let encryptedCardDetails: Types.checkout.CardDetails
+    let unencryptedCardDetails: Types.checkout.CardDetails
 
     beforeAll(async () => {
       const currency_code = getCurrencyCode()
@@ -33,7 +34,8 @@ medusaIntegrationTestRunner({
       provider_id = getProviderId()
       customer = getCustomer()
       paymentMethod = getCardDetails()
-      cardDetails = getCardDetails()
+      encryptedCardDetails = getCardDetails()
+      unencryptedCardDetails = getCardDetails(false)
     })
 
     describe('Test storing, retrieving, and deleting payment methods', () => {
@@ -58,12 +60,12 @@ medusaIntegrationTestRunner({
         expect(accountHolder.data).toHaveProperty('countryCode')
       })
 
-      it('stores payment method for the customer when storePaymentMethod is called', async () => {
+      fit('stores payment method for the customer when storePaymentMethod is called', async () => {
         const container = getContainer()
         const paymentService = container.resolve(Modules.PAYMENT)
 
         const context = { account_holder: accountHolder }
-        const data = { request: { paymentMethod: cardDetails } }
+        const data = { request: { paymentMethod: encryptedCardDetails } }
         const input = { context, data, provider_id }
         const paymentMethod = await paymentService.createPaymentMethods(input)
 
@@ -80,7 +82,7 @@ medusaIntegrationTestRunner({
         const paymentService = container.resolve(Modules.PAYMENT)
 
         const context = { account_holder: accountHolder }
-        const data = { request: { paymentMethod: cardDetails } }
+        const data = { request: { paymentMethod: encryptedCardDetails } }
         const input = { context, data, provider_id }
         await paymentService.createPaymentMethods(input)
 
@@ -101,7 +103,7 @@ medusaIntegrationTestRunner({
         const paymentService = container.resolve(Modules.PAYMENT)
 
         const context = { account_holder: accountHolder }
-        const data = { request: { paymentMethod: cardDetails } }
+        const data = { request: { paymentMethod: encryptedCardDetails } }
         const input = { context, data, provider_id }
         await paymentService.createPaymentMethods(input)
         await paymentService.deleteAccountHolder(accountHolder.id)
