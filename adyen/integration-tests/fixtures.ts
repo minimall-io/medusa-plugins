@@ -1,8 +1,16 @@
 import { Types } from '@adyen/api-library'
 import { AddressDTO, PaymentCustomerDTO } from '@medusajs/framework/types'
 
-export const getProviderId = (): string =>
-  `pp_adyen_${process.env.ADYEN_PROVIDER_ID}`
+type NotificationRequestItem = Types.notification.NotificationRequestItem
+type EventCodeEnum = Types.notification.NotificationRequestItem.EventCodeEnum
+type SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
+const SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
+type CardDetails = Types.checkout.CardDetails
+const TypeEnum = Types.checkout.CardDetails.TypeEnum
+
+const adyenProviderId = process.env.ADYEN_PROVIDER_ID
+
+export const getProviderId = (): string => `pp_adyen_${adyenProviderId}`
 
 export const getCurrencyCode = (currency_code: string = 'usd'): string =>
   currency_code
@@ -52,9 +60,9 @@ export const getCardDetails = (
   expiryYear: string = '2030',
   securityCode: string = '737',
   holderName: string = 'John Doe',
-): Types.checkout.CardDetails => {
+): CardDetails => {
   const encryptedCardDetails = {
-    type: Types.checkout.CardDetails.TypeEnum.Scheme,
+    type: TypeEnum.Scheme,
     encryptedCardNumber: `test_${cardNumber}`,
     encryptedExpiryMonth: `test_${expiryMonth}`,
     encryptedExpiryYear: `test_${expiryYear}`,
@@ -63,7 +71,7 @@ export const getCardDetails = (
   }
 
   // const unencryptedCardDetails = {
-  //   type: Types.checkout.CardDetails.TypeEnum.Scheme,
+  //   type: TypeEnum.Scheme,
   //   number: `test_${cardNumber}`,
   //   expiryMonth: `test_${expiryMonth}`,
   //   expiryYear: `test_${expiryYear}`,
@@ -72,7 +80,7 @@ export const getCardDetails = (
   // }
 
   const unencryptedCardDetails = {
-    type: Types.checkout.CardDetails.TypeEnum.Scheme,
+    type: TypeEnum.Scheme,
     number: cardNumber,
     expiryMonth: expiryMonth,
     expiryYear: expiryYear,
@@ -83,13 +91,26 @@ export const getCardDetails = (
   return encrypted ? encryptedCardDetails : unencryptedCardDetails
 }
 
-/**
-savePaymentMethod/request {"paymentMethod":{"type":"scheme","number":"test_4000060000000006","expiryMonth":"test_03","expiryYear":"test_2030","cvc":"test_737","holderName":"John Doe"},"shopperReference":"customer_1762258527978","recurringProcessingModel":"CardOnFile","merchantAccount":"MinimallLLCECOM"}
-
-savePaymentMethod/request {"paymentMethod":{"type":"scheme","number":"4000060000000006","expiryMonth":"03","expiryYear":"2030","cvc":"737","holderName":"John Doe"},"shopperReference":"customer_1762258674961","recurringProcessingModel":"CardOnFile","merchantAccount":"MinimallLLCECOM"}
-
-savePaymentMethod/request {"paymentMethod":{"type":"scheme","encryptedCardNumber":"test_4000060000000006","encryptedExpiryMonth":"test_03","encryptedExpiryYear":"test_2030","encryptedSecurityCode":"test_737","holderName":"John Doe"},"shopperReference":"customer_1762258731675","recurringProcessingModel":"CardOnFile","merchantAccount":"MinimallLLCECOM"}
-
-const checkout = new CheckoutAPI(client);
-const response = await checkout.RecurringApi.storedPaymentMethods(request)
- */
+export const getNotificationRequestItem = (
+  pspReference: string,
+  merchantReference: string,
+  value: number,
+  currency: string,
+  eventCode: EventCodeEnum,
+  success: SuccessEnum = SuccessEnum.True,
+): NotificationRequestItem => {
+  const eventDate = new Date().toISOString()
+  const amount = {
+    value,
+    currency,
+  }
+  return {
+    merchantAccountCode: adyenProviderId!,
+    eventDate,
+    amount,
+    eventCode,
+    pspReference,
+    merchantReference,
+    success,
+  }
+}
