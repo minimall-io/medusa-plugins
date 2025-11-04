@@ -97,7 +97,7 @@ export const getNotificationRequestItem = (
   value: number,
   currency: string,
   eventCode: EventCodeEnum,
-  success: SuccessEnum = SuccessEnum.True,
+  success: SuccessEnum,
 ): NotificationRequestItem => {
   const eventDate = new Date().toISOString()
   const amount = {

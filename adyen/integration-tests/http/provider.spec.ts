@@ -60,7 +60,7 @@ medusaIntegrationTestRunner({
         expect(accountHolder.data).toHaveProperty('countryCode')
       })
 
-      fit('stores payment method for the customer when storePaymentMethod is called', async () => {
+      it('stores payment method for the customer when storePaymentMethod is called', async () => {
         const container = getContainer()
         const paymentService = container.resolve(Modules.PAYMENT)
 
