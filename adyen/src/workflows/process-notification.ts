@@ -28,8 +28,6 @@ const isCatureNotSuccess = ({
 const processNotificationWorkflowFunction = (
   input: NotificationRequestItem,
 ): WorkflowResponse<unknown, any[]> => {
-  // addNotificationToPaymentDataStep(input)
-
   when('is-capture-success', input, isCaptureSuccess).then(() => {
     processCaptureSuccessStep(input)
     errorTestStep()
