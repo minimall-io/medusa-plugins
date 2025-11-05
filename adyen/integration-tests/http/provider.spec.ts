@@ -23,7 +23,6 @@ medusaIntegrationTestRunner({
     let collectionInput: { currency_code: string; amount: number }
     let provider_id: string
     let customer: PaymentCustomerDTO
-    let paymentMethod: Types.checkout.CardDetails
     let encryptedCardDetails: Types.checkout.CardDetails
     let unencryptedCardDetails: Types.checkout.CardDetails
 
@@ -33,7 +32,6 @@ medusaIntegrationTestRunner({
       collectionInput = { currency_code, amount }
       provider_id = getProviderId()
       customer = getCustomer()
-      paymentMethod = getCardDetails()
       encryptedCardDetails = getCardDetails()
       unencryptedCardDetails = getCardDetails(false)
     })
@@ -292,7 +290,7 @@ medusaIntegrationTestRunner({
           amount: collection.amount,
           data: {
             request: {
-              paymentMethod: paymentMethod,
+              paymentMethod: encryptedCardDetails,
             },
           },
         })
@@ -321,7 +319,10 @@ medusaIntegrationTestRunner({
           currency_code: collection.currency_code,
           amount: collection.amount,
           data: {
-            request: { paymentMethod: paymentMethod, storePaymentMethod: true },
+            request: {
+              paymentMethod: encryptedCardDetails,
+              storePaymentMethod: true,
+            },
           },
         })
 
@@ -357,7 +358,7 @@ medusaIntegrationTestRunner({
           data: {
             request: {
               ...accountHolder.data,
-              paymentMethod: paymentMethod,
+              paymentMethod: encryptedCardDetails,
               storePaymentMethod: true,
             },
           },
@@ -395,7 +396,7 @@ medusaIntegrationTestRunner({
           data: {
             request: {
               shopperReference: 'random_shopper_reference',
-              paymentMethod: paymentMethod,
+              paymentMethod: encryptedCardDetails,
               storePaymentMethod: true,
             },
           },
@@ -432,7 +433,7 @@ medusaIntegrationTestRunner({
           amount: collection.amount,
           data: {
             request: {
-              paymentMethod: paymentMethod,
+              paymentMethod: encryptedCardDetails,
             },
           },
         })
@@ -480,7 +481,10 @@ medusaIntegrationTestRunner({
           currency_code: collection.currency_code,
           amount: collection.amount,
           data: {
-            request: { paymentMethod: paymentMethod, storePaymentMethod: true },
+            request: {
+              paymentMethod: encryptedCardDetails,
+              storePaymentMethod: true,
+            },
           },
         })
 
