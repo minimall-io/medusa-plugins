@@ -58,7 +58,7 @@ medusaIntegrationTestRunner({
         expect(accountHolder.data).toHaveProperty('countryCode')
       })
 
-      fit('stores payment method for the customer when storePaymentMethod is called', async () => {
+      it('stores payment method for the customer when storePaymentMethod is called', async () => {
         const container = getContainer()
         const paymentService = container.resolve(Modules.PAYMENT)
 
@@ -67,10 +67,6 @@ medusaIntegrationTestRunner({
         const input = { context, data, provider_id }
         const paymentMethod = await paymentService.createPaymentMethods(input)
 
-        console.log(
-          'createPaymentMethods/paymentMethod',
-          JSON.stringify(paymentMethod, null, 2),
-        )
         expect(paymentMethod).toHaveProperty('id')
         expect(paymentMethod).toHaveProperty('data')
       })
@@ -89,10 +85,6 @@ medusaIntegrationTestRunner({
           provider_id,
         })
 
-        console.log(
-          'listPaymentMethods/paymentMethods',
-          JSON.stringify(paymentMethods, null, 2),
-        )
         expect(paymentMethods).toHaveLength(1)
       })
 
@@ -111,15 +103,11 @@ medusaIntegrationTestRunner({
           provider_id,
         })
 
-        console.log(
-          'listPaymentMethods/paymentMethods',
-          JSON.stringify(paymentMethods, null, 2),
-        )
         expect(paymentMethods).toHaveLength(0)
       })
     })
 
-    xdescribe('Test payment initialization', () => {
+    describe('Test payment initialization', () => {
       let collection: PaymentCollectionDTO
       let accountHolder: AccountHolderDTO
 
@@ -184,7 +172,7 @@ medusaIntegrationTestRunner({
       })
     })
 
-    xdescribe('Test payment updates', () => {
+    describe('Test payment updates', () => {
       let collection: PaymentCollectionDTO
       let session: PaymentSessionDTO
 
@@ -238,7 +226,7 @@ medusaIntegrationTestRunner({
       })
     })
 
-    xdescribe('Test payment authorizations', () => {
+    describe('Test payment authorizations', () => {
       let collection: PaymentCollectionDTO
       let accountHolder: AccountHolderDTO
       let sessionWithAccountHolder: PaymentSessionDTO
@@ -454,7 +442,7 @@ medusaIntegrationTestRunner({
       })
     })
 
-    xdescribe('Test payment modification methods', () => {
+    describe('Test payment modification methods', () => {
       let collection: PaymentCollectionDTO
       let session: PaymentSessionDTO
       let payment: PaymentDTO
