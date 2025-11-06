@@ -43,8 +43,8 @@ const generateNewDataPayment = (
     return { id: payment.id, data: newData } as PaymentDTO
   }
 
-  const request = { ...notification, status, reference: merchantReference }
-  const newData = { ...data, request } as PaymentDTO['data']
+  const message = { ...notification, status, reference: merchantReference }
+  const newData = { ...data, message } as PaymentDTO['data']
   return { id: payment.id, data: newData } as PaymentDTO
 }
 
@@ -91,7 +91,7 @@ const processCaptureSuccessStepInvoke = async (
   notification: NotificationRequestItem,
   { container }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, CompensateInput>> => {
-  const { merchantReference, amount } = notification
+  const { merchantReference, amount, merchantAccountCode } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
@@ -106,11 +106,11 @@ const processCaptureSuccessStepInvoke = async (
   const processedPayment = generateNewDataPayment(notification, originalPayment)
   const updatedPayment = await paymentService.updatePayment(processedPayment)
 
-  if (updatedPayment.data?.request && amount?.value && amount?.currency) {
+  if (updatedPayment.data?.message && amount?.value && amount?.currency) {
     const capture = {
       payment_id: updatedPayment.id,
       amount: getWholeUnit(amount.value, amount.currency),
-      captured_by: notification.merchantAccountCode,
+      captured_by: merchantAccountCode,
     }
     await paymentService.capturePayment(capture)
   }
