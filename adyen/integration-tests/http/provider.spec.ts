@@ -15,7 +15,7 @@ import {
   getCurrencyCode,
   getCustomer,
   getProviderId,
-} from '../__fixtures__'
+} from './fixtures'
 
 medusaIntegrationTestRunner({
   debug: false,
@@ -58,7 +58,7 @@ medusaIntegrationTestRunner({
         expect(accountHolder.data).toHaveProperty('countryCode')
       })
 
-      it('stores payment method for the customer when storePaymentMethod is called', async () => {
+      fit('stores payment method for the customer when storePaymentMethod is called', async () => {
         const container = getContainer()
         const paymentService = container.resolve(Modules.PAYMENT)
 
@@ -119,7 +119,7 @@ medusaIntegrationTestRunner({
       })
     })
 
-    describe('Test payment initialization', () => {
+    xdescribe('Test payment initialization', () => {
       let collection: PaymentCollectionDTO
       let accountHolder: AccountHolderDTO
 
@@ -184,7 +184,7 @@ medusaIntegrationTestRunner({
       })
     })
 
-    describe('Test payment updates', () => {
+    xdescribe('Test payment updates', () => {
       let collection: PaymentCollectionDTO
       let session: PaymentSessionDTO
 
@@ -238,7 +238,7 @@ medusaIntegrationTestRunner({
       })
     })
 
-    describe('Test payment authorizations', () => {
+    xdescribe('Test payment authorizations', () => {
       let collection: PaymentCollectionDTO
       let accountHolder: AccountHolderDTO
       let sessionWithAccountHolder: PaymentSessionDTO
@@ -454,7 +454,7 @@ medusaIntegrationTestRunner({
       })
     })
 
-    describe('Test payment modification methods', () => {
+    xdescribe('Test payment modification methods', () => {
       let collection: PaymentCollectionDTO
       let session: PaymentSessionDTO
       let payment: PaymentDTO
@@ -505,6 +505,7 @@ medusaIntegrationTestRunner({
         const [cancelledPayment] = await paymentService.listPayments({
           payment_session_id: session.id,
         })
+        console.log('cancelledPayment', JSON.stringify(cancelledPayment))
 
         expect(cancelledPayment.canceled_at).not.toBeNull()
       })

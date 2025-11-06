@@ -11,7 +11,7 @@ import {
   getCurrencyCode,
   getCustomer,
   getProviderId,
-} from '../__fixtures__'
+} from './fixtures'
 
 medusaIntegrationTestRunner({
   debug: false,
