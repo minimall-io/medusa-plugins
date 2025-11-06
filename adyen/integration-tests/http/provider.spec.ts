@@ -24,7 +24,6 @@ medusaIntegrationTestRunner({
     let provider_id: string
     let customer: PaymentCustomerDTO
     let encryptedCardDetails: Types.checkout.CardDetails
-    let unencryptedCardDetails: Types.checkout.CardDetails
 
     beforeAll(async () => {
       const currency_code = getCurrencyCode()
@@ -33,7 +32,6 @@ medusaIntegrationTestRunner({
       provider_id = getProviderId()
       customer = getCustomer()
       encryptedCardDetails = getCardDetails()
-      unencryptedCardDetails = getCardDetails(false)
     })
 
     describe('Test storing, retrieving, and deleting payment methods', () => {
