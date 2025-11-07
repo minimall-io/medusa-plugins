@@ -74,6 +74,7 @@ interface AuthorizePaymentInputData {
 }
 
 interface PaymentModificationData {
+  reference: string
   amount: Types.checkout.Amount
   authorization: Types.checkout.PaymentResponse
   cancellation?: PaymentModification
@@ -121,7 +122,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const defaultLoggingLevel =
       environment === EnvironmentEnum.TEST ? 'debug' : null
     const loggingLevel = level || defaultLoggingLevel
-    const message = `${title}: ${JSON.stringify(data, null, 2)}`
+    const stringData = JSON.stringify(data, null, 2)
+    const message = `${title}: ${stringData}`
     switch (loggingLevel) {
       case 'error':
         return this.logger_.error(message)
@@ -133,8 +135,10 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         return this.logger_.http(message)
       case 'verbose':
         return this.logger_.verbose(message)
-      case 'debug':
+      case 'debug': {
+        console.log(title, stringData)
         return this.logger_.debug(message)
+      }
       default:
         return
     }
@@ -336,6 +340,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     })
     const status = this.getSessionStatus(response.resultCode)
     const data = {
+      reference,
       authorization: response,
       request: undefined,
     }
@@ -350,13 +355,15 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('cancelPayment/input', input)
     const { merchantAccount } = this.options_
     const inputData = input.data as unknown as PaymentModificationData
-    const reference = input.context?.idempotency_key
+    const reference = inputData.reference
+    const id = input.context?.idempotency_key
     const { authorization, message } = inputData
 
     if (message) {
       const cancellation = validatePaymentModification({
         ...message,
         reference,
+        id,
       })
       this.log('cancelPayment/cancellation', cancellation)
       const data = {
@@ -370,7 +377,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     }
 
     const pspReference = authorization.pspReference!
-    const idempotencyKey = reference
+    const idempotencyKey = id
     const request: Types.checkout.PaymentCancelRequest = {
       merchantAccount,
       reference,
@@ -383,7 +390,10 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         { idempotencyKey },
       )
 
-    const cancellation = validatePaymentModification(response)
+    const cancellation = validatePaymentModification({
+      ...response,
+      id,
+    })
     const data = {
       ...input.data,
       cancellation,
@@ -399,12 +409,17 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('capturePayment/input', input)
     const { merchantAccount } = this.options_
     const inputData = input.data as unknown as PaymentModificationData
-    const reference = input.context?.idempotency_key
+    const reference = inputData.reference
+    const id = input.context?.idempotency_key
     const { authorization, message } = inputData
     const existingCaptures = inputData.captures || []
 
     if (message) {
-      const newCapture = validatePaymentModification({ ...message, reference })
+      const newCapture = validatePaymentModification({
+        ...message,
+        reference,
+        id,
+      })
       this.log('capturePayment/newCapture', newCapture)
       const captures = [...existingCaptures, newCapture]
       const data = {
@@ -419,7 +434,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
     const pspReference = authorization.pspReference!
     const amount = authorization.amount!
-    const idempotencyKey = reference
+    const idempotencyKey = id
     const request: Types.checkout.PaymentCaptureRequest = {
       merchantAccount,
       amount,
@@ -433,7 +448,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         { idempotencyKey },
       )
 
-    const newCapture = validatePaymentModification(response)
+    const newCapture = validatePaymentModification({ ...response, id })
     const captures = [...existingCaptures, newCapture]
     const data = { ...input.data, captures }
     const output = { data }
@@ -447,12 +462,17 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('refundPayment/input', input)
     const { merchantAccount } = this.options_
     const inputData = input.data as unknown as PaymentModificationData
-    const reference = input.context?.idempotency_key
+    const reference = inputData.reference
+    const id = input.context?.idempotency_key
     const { authorization, message } = inputData
     const existingRefunds = inputData.refunds || []
 
     if (message) {
-      const newRefund = validatePaymentModification({ ...message, reference })
+      const newRefund = validatePaymentModification({
+        ...message,
+        reference,
+        id,
+      })
       this.log('refundPayment/newRefund', newRefund)
       const refunds = [...existingRefunds, newRefund]
       const data = {
@@ -467,7 +487,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
     const currency = authorization.amount!.currency
     const pspReference = authorization.pspReference!
-    const idempotencyKey = reference
+    const idempotencyKey = id
     const amount = this.getAmount(input.amount, currency)
     const request: Types.checkout.PaymentRefundRequest = {
       merchantAccount,
@@ -481,7 +501,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       { idempotencyKey },
     )
 
-    const newRefund = validatePaymentModification(response)
+    const newRefund = validatePaymentModification({ ...response, id })
     const refunds = [...existingRefunds, newRefund]
     const data = { ...input.data, refunds }
     const output = { data }

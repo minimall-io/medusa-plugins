@@ -49,7 +49,8 @@ export const AmountSchema = z.object({
 export const PaymentModificationSchema = z.object({
   pspReference: z.string(),
   status: z.string(),
-  reference: z.string().optional(),
+  reference: z.string(),
+  id: z.string().optional(),
   amount: AmountSchema.optional(),
 })
 
