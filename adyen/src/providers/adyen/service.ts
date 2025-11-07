@@ -188,28 +188,23 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     return this.hmac.validateHMAC(notification, hmacKey)
   }
 
-  protected async listStoredPaymentMethods(
-    shopperReference: string,
-  ): Promise<Types.checkout.StoredPaymentMethodResource[]> {
+  public async listPaymentMethods(
+    input: ListPaymentMethodsInput,
+  ): Promise<ListPaymentMethodsOutput> {
+    this.log('listPaymentMethods/input', input)
     const { merchantAccount } = this.options_
+    const shopper = input.context?.account_holder?.data as Shopper
+    const shopperReference = shopper.shopperReference!
     const idempotencyKey = shopperReference
+
     const response =
       await this.checkout.RecurringApi.getTokensForStoredPaymentDetails(
         shopperReference,
         merchantAccount,
         { idempotencyKey },
       )
-    const { storedPaymentMethods } = response
-    return storedPaymentMethods || []
-  }
 
-  public async listPaymentMethods(
-    input: ListPaymentMethodsInput,
-  ): Promise<ListPaymentMethodsOutput> {
-    this.log('listPaymentMethods/input', input)
-    const shopper = input.context?.account_holder?.data as Shopper
-    const shopperReference = shopper.shopperReference!
-    const methods = await this.listStoredPaymentMethods(shopperReference)
+    const methods = response.storedPaymentMethods || []
     const output = methods.map((method, index) => ({
       id: method.id || index.toString(),
       data: method as Record<string, unknown>,
@@ -259,7 +254,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('initiatePayment/input', input)
     const { merchantAccount } = this.options_
     const inputData = input.data as unknown as InitiatePaymentInputData
-    const reference = input.context!.idempotency_key!
+    const sessionId = input.context!.idempotency_key!
     const shopper = input.context?.account_holder?.data as Shopper
     const amount = this.getAmount(input.amount, input.currency_code)
     const request: Types.checkout.PaymentMethodsRequest = {
@@ -277,7 +272,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       paymentMethods: response,
       request: undefined,
     }
-    const output = { data, id: reference }
+    const output = { data, id: sessionId }
     this.log('initiatePayment/output', output)
     return output
   }
@@ -322,8 +317,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const inputData = input.data as unknown as AuthorizePaymentInputData
     const shopper = inputData.shopper || {}
     const amount = inputData.amount
-    const reference = input.context!.idempotency_key!
-    const idempotencyKey = reference
+    const sessionId = input.context!.idempotency_key!
+    const reference = sessionId
+    const idempotencyKey = sessionId
     const request: Types.checkout.PaymentRequest = {
       ...inputData.request,
       ...shopper,
@@ -338,6 +334,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const response = await this.checkout.PaymentsApi.payments(request, {
       idempotencyKey,
     })
+
     const status = this.getSessionStatus(response.resultCode)
     const data = {
       reference,
@@ -355,9 +352,11 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('cancelPayment/input', input)
     const { merchantAccount } = this.options_
     const inputData = input.data as unknown as PaymentModificationData
-    const reference = inputData.reference
-    const id = input.context?.idempotency_key
-    const { authorization, message } = inputData
+    const { authorization, message, reference } = inputData
+    const paymentId = input.context?.idempotency_key
+    const id = paymentId
+    const idempotencyKey = paymentId
+    const pspReference = authorization.pspReference!
 
     if (message) {
       const cancellation = validatePaymentModification({
@@ -376,8 +375,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       return output
     }
 
-    const pspReference = authorization.pspReference!
-    const idempotencyKey = id
     const request: Types.checkout.PaymentCancelRequest = {
       merchantAccount,
       reference,
@@ -409,9 +406,12 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('capturePayment/input', input)
     const { merchantAccount } = this.options_
     const inputData = input.data as unknown as PaymentModificationData
-    const reference = inputData.reference
-    const id = input.context?.idempotency_key
-    const { authorization, message } = inputData
+    const { authorization, message, reference } = inputData
+    const captureId = input.context?.idempotency_key
+    const id = captureId
+    const idempotencyKey = captureId
+    const pspReference = authorization.pspReference!
+    const amount = authorization.amount!
     const existingCaptures = inputData.captures || []
 
     if (message) {
@@ -432,9 +432,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       return output
     }
 
-    const pspReference = authorization.pspReference!
-    const amount = authorization.amount!
-    const idempotencyKey = id
     const request: Types.checkout.PaymentCaptureRequest = {
       merchantAccount,
       amount,
@@ -462,9 +459,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('refundPayment/input', input)
     const { merchantAccount } = this.options_
     const inputData = input.data as unknown as PaymentModificationData
-    const reference = inputData.reference
-    const id = input.context?.idempotency_key
-    const { authorization, message } = inputData
+    const { authorization, message, reference } = inputData
+    const refundId = input.context?.idempotency_key
+    const id = refundId
+    const idempotencyKey = refundId
+    const currency = authorization.amount!.currency
+    const amount = this.getAmount(input.amount, currency)
+    const pspReference = authorization.pspReference!
     const existingRefunds = inputData.refunds || []
 
     if (message) {
@@ -485,10 +486,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       return output
     }
 
-    const currency = authorization.amount!.currency
-    const pspReference = authorization.pspReference!
-    const idempotencyKey = id
-    const amount = this.getAmount(input.amount, currency)
     const request: Types.checkout.PaymentRefundRequest = {
       merchantAccount,
       reference,
@@ -552,7 +549,17 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const { merchantAccount } = this.options_
     const shopper = input.context.account_holder.data as Shopper
     const shopperReference = shopper.shopperReference!
-    const methods = await this.listStoredPaymentMethods(shopperReference)
+    const idempotencyKey = shopperReference
+
+    const response =
+      await this.checkout.RecurringApi.getTokensForStoredPaymentDetails(
+        shopperReference,
+        merchantAccount,
+        { idempotencyKey },
+      )
+
+    const methods = response.storedPaymentMethods || []
+
     const promises = methods.map((method) => {
       if (!method.id) return
       const idempotencyKey = `${shopperReference}_${method.id}`
@@ -564,6 +571,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       )
     })
     await Promise.all(promises)
+
     this.log('deleteAccountHolder/storedPaymentMethods', methods)
     return { data: {} }
   }
