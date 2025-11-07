@@ -17,6 +17,8 @@ import {
   getProviderId,
 } from './fixtures'
 
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 medusaIntegrationTestRunner({
   debug: false,
   testSuite: ({ getContainer }) => {
@@ -43,6 +45,7 @@ medusaIntegrationTestRunner({
 
         const input = { context: { customer }, provider_id }
         accountHolder = await paymentService.createAccountHolder(input)
+        await delay(1000)
       })
 
       it('returns formatted shopper data properties when createAccountHolder is called', async () => {
@@ -120,6 +123,7 @@ medusaIntegrationTestRunner({
 
         const input = { context: { customer }, provider_id }
         accountHolder = await paymentService.createAccountHolder(input)
+        await delay(1000)
       })
 
       it('returns amount, shopper, and paymentMethods data properties when initiatePayment is called', async () => {
@@ -189,6 +193,7 @@ medusaIntegrationTestRunner({
           amount: collection.amount,
           data: { request: {} },
         })
+        await delay(1000)
       })
 
       it('returns session amount data property when updatePaymentSession is called', async () => {
@@ -264,6 +269,7 @@ medusaIntegrationTestRunner({
             data: { request: {} },
           },
         )
+        await delay(1000)
       })
 
       it('returns authorization data property when authorizePayment is called using account holder context', async () => {
@@ -292,6 +298,8 @@ medusaIntegrationTestRunner({
 
         const { data } = payment
 
+        expect(data).toHaveProperty('reference')
+        expect(data!.reference).toBe(sessionWithAccountHolder.id)
         expect(data).toHaveProperty('authorization')
         expect(data).not.toHaveProperty('request')
       })
@@ -325,6 +333,8 @@ medusaIntegrationTestRunner({
         const authorization = data!
           .authorization as Types.checkout.PaymentResponse
 
+        expect(data).toHaveProperty('reference')
+        expect(data!.reference).toBe(sessionWithAccountHolder.id)
         expect(data).toHaveProperty('authorization')
         expect(authorization).toHaveProperty('additionalData')
         expect(
@@ -363,6 +373,8 @@ medusaIntegrationTestRunner({
         const authorization = data!
           .authorization as Types.checkout.PaymentResponse
 
+        expect(data).toHaveProperty('reference')
+        expect(data!.reference).toBe(sessionWithoutAccountHolder.id)
         expect(data).toHaveProperty('authorization')
         expect(authorization).toHaveProperty('additionalData')
         expect(
@@ -401,6 +413,8 @@ medusaIntegrationTestRunner({
         const authorization = data!
           .authorization as Types.checkout.PaymentResponse
 
+        expect(data).toHaveProperty('reference')
+        expect(data!.reference).toBe(sessionWithAccountHolder.id)
         expect(data).toHaveProperty('authorization')
         expect(authorization).toHaveProperty('additionalData')
         expect(
@@ -435,6 +449,8 @@ medusaIntegrationTestRunner({
 
         const { data } = payment
 
+        expect(data).toHaveProperty('reference')
+        expect(data!.reference).toBe(sessionWithoutAccountHolder.id)
         expect(data).toHaveProperty('authorization')
         expect(data).not.toHaveProperty('request')
       })
@@ -475,6 +491,7 @@ medusaIntegrationTestRunner({
         })
 
         payment = await paymentService.authorizePaymentSession(session.id, {})
+        await delay(1000)
       })
 
       it('cancels the non-authorized payment when cancelPayment is called', async () => {
@@ -557,4 +574,4 @@ medusaIntegrationTestRunner({
   },
 })
 
-jest.setTimeout(120 * 1000)
+jest.setTimeout(60 * 1000)
