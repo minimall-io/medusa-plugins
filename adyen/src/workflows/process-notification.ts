@@ -37,7 +37,7 @@ const isCatureNotSuccess = ({
 const processNotificationWorkflow = createWorkflow(
   processNotificationWorkflowId,
   (input: WorkflowData<NotificationRequestItem>) => {
-    const validateNotification = createHook('validateNotification', { input })
+    const validateNotification = createHook('validateNotification', input)
 
     const captureSuccess = when(
       'capture-success',
@@ -52,9 +52,7 @@ const processNotificationWorkflow = createWorkflow(
       (data) => ({ ...data }),
     )
 
-    const notificationProcessed = createHook('notificationProcessed', {
-      results,
-    })
+    const notificationProcessed = createHook('notificationProcessed', results)
 
     return new WorkflowResponse(results, {
       hooks: [validateNotification, notificationProcessed],
