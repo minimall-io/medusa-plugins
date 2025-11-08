@@ -1,6 +1,8 @@
 import { Types } from '@adyen/api-library'
 import {
   AccountHolderDTO,
+  IPaymentModuleService,
+  MedusaContainer,
   PaymentCollectionDTO,
   PaymentCustomerDTO,
   PaymentDTO,
@@ -23,12 +25,16 @@ medusaIntegrationTestRunner({
   debug: false,
   testSuite: ({ getContainer }) => {
     describe('Adyen Payment Provider', () => {
+      let container: MedusaContainer
+      let paymentService: IPaymentModuleService
       let collectionInput: { currency_code: string; amount: number }
       let provider_id: string
       let customer: PaymentCustomerDTO
       let encryptedCardDetails: Types.checkout.CardDetails
 
       beforeAll(async () => {
+        container = getContainer()
+        paymentService = container.resolve(Modules.PAYMENT)
         const currency_code = getCurrencyCode()
         const amount = getAmount()
         collectionInput = { currency_code, amount }
@@ -41,9 +47,6 @@ medusaIntegrationTestRunner({
         let accountHolder: AccountHolderDTO
 
         beforeEach(async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           const input = { context: { customer }, provider_id }
           accountHolder = await paymentService.createAccountHolder(input)
           await delay(1000)
@@ -61,9 +64,6 @@ medusaIntegrationTestRunner({
         })
 
         it('stores payment method for the customer when storePaymentMethod is called', async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           const context = { account_holder: accountHolder }
           const data = { request: { paymentMethod: encryptedCardDetails } }
           const input = { context, data, provider_id }
@@ -74,9 +74,6 @@ medusaIntegrationTestRunner({
         })
 
         it('list stored payment methods for the customer when listPaymentMethods is called', async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           const context = { account_holder: accountHolder }
           const data = { request: { paymentMethod: encryptedCardDetails } }
           const input = { context, data, provider_id }
@@ -91,9 +88,6 @@ medusaIntegrationTestRunner({
         })
 
         it('delete stored payment methods for the customer when deleteAccountHolder is called', async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           const context = { account_holder: accountHolder }
           const data = { request: { paymentMethod: encryptedCardDetails } }
           const input = { context, data, provider_id }
@@ -114,9 +108,6 @@ medusaIntegrationTestRunner({
         let accountHolder: AccountHolderDTO
 
         beforeEach(async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           const collections = await paymentService.createPaymentCollections([
             collectionInput,
           ])
@@ -128,9 +119,6 @@ medusaIntegrationTestRunner({
         })
 
         it('returns amount, shopper, and paymentMethods data properties when initiatePayment is called', async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           const context = {
             account_holder: { data: accountHolder.data },
           } as PaymentProviderContext
@@ -153,9 +141,6 @@ medusaIntegrationTestRunner({
         })
 
         it('returns amount and paymentMethods data properties when initiatePayment is called without account holder context', async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           const context = {}
           await paymentService.createPaymentSession(collection.id, {
             provider_id,
@@ -180,9 +165,6 @@ medusaIntegrationTestRunner({
         let session: PaymentSessionDTO
 
         beforeEach(async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           const collections = await paymentService.createPaymentCollections([
             collectionInput,
           ])
@@ -198,9 +180,6 @@ medusaIntegrationTestRunner({
         })
 
         it('returns session amount data property when updatePaymentSession is called', async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           const originalAmount = session.data!.amount as Types.checkout.Amount
 
           // trying to update the amount to half of the original amount
@@ -237,9 +216,6 @@ medusaIntegrationTestRunner({
         let sessionWithoutAccountHolder: PaymentSessionDTO
 
         beforeEach(async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           const collections = await paymentService.createPaymentCollections([
             collectionInput,
           ])
@@ -272,9 +248,6 @@ medusaIntegrationTestRunner({
         })
 
         it('returns authorization data property when authorizePayment is called using account holder context', async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           await paymentService.updatePaymentSession({
             id: sessionWithAccountHolder.id,
             currency_code: collection.currency_code,
@@ -304,9 +277,6 @@ medusaIntegrationTestRunner({
         })
 
         it('returns authorization data property with saved payment method when authorizePayment is called with account holder context and storePaymentMethod is true', async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           await paymentService.updatePaymentSession({
             id: sessionWithAccountHolder.id,
             currency_code: collection.currency_code,
@@ -343,9 +313,6 @@ medusaIntegrationTestRunner({
         })
 
         it('returns authorization data property with saved payment method when authorizePayment is called with shopper data in the request and storePaymentMethod is true', async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           await paymentService.updatePaymentSession({
             id: sessionWithoutAccountHolder.id,
             currency_code: collection.currency_code,
@@ -383,9 +350,6 @@ medusaIntegrationTestRunner({
         })
 
         it('returns authorization data property with saved payment method when authorizePayment is called with account holder context preference and storePaymentMethod is true', async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           await paymentService.updatePaymentSession({
             id: sessionWithAccountHolder.id,
             currency_code: collection.currency_code,
@@ -423,9 +387,6 @@ medusaIntegrationTestRunner({
         })
 
         it('returns authorization data property when authorizePayment is called', async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           await paymentService.updatePaymentSession({
             id: sessionWithoutAccountHolder.id,
             currency_code: collection.currency_code,
@@ -461,9 +422,6 @@ medusaIntegrationTestRunner({
         let payment: PaymentDTO
 
         beforeEach(async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           const collections = await paymentService.createPaymentCollections([
             collectionInput,
           ])
@@ -494,9 +452,6 @@ medusaIntegrationTestRunner({
         })
 
         it('cancels the non-authorized payment when cancelPayment is called', async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           /**
            * As of this writing, the payment module's cancelPayment method,
            * doesn't preserve the provider's cancelPayment method's return value.
@@ -513,9 +468,6 @@ medusaIntegrationTestRunner({
         })
 
         it('returns captures data property when capturePayment is called', async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           /**
            * As of this writing, the payment module's capturePayment method,
            * although it accepts the amount parameter,
@@ -534,9 +486,6 @@ medusaIntegrationTestRunner({
         })
 
         it('returns refunds data property when refundPayment is called', async () => {
-          const container = getContainer()
-          const paymentService = container.resolve(Modules.PAYMENT)
-
           await paymentService.capturePayment({ payment_id: payment.id })
 
           const totalAmount = Number(collection.amount)
