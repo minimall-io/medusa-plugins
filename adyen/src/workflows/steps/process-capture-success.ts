@@ -25,7 +25,7 @@ const generateNewDataPayment = (
   notification: NotificationRequestItem,
   payment: PaymentDTO,
 ): PaymentDTO => {
-  const { pspReference, success, merchantReference } = notification
+  const { pspReference, success } = notification
   const { data } = payment
   const status = success === SuccessEnum.True ? 'success' : 'failed'
 
@@ -43,7 +43,7 @@ const generateNewDataPayment = (
     return { id: payment.id, data: newData } as PaymentDTO
   }
 
-  const message = { ...notification, status, reference: merchantReference }
+  const message = { ...notification, status }
   const newData = { ...data, message } as PaymentDTO['data']
   return { id: payment.id, data: newData } as PaymentDTO
 }
@@ -75,16 +75,15 @@ const restoreOriginalDataPayment = (
 }
 
 const generateCapturesToDelete = (
-  originalPayment: PaymentDTO,
+  oldPayment: PaymentDTO,
   newPayment: PaymentDTO,
 ): string[] => {
-  const originalCaptures = originalPayment.captures || []
+  const oldCaptures = oldPayment.captures || []
   const newCaptures = newPayment.captures || []
-  const originalCaptureIds = new Set(
-    originalCaptures.map<string>((capture) => capture.id),
-  )
+  const oldCaptureIds = oldCaptures.map<string>((capture) => capture.id)
+  const oldCaptureIdsSet = new Set(oldCaptureIds)
   const newCaptureIds = newCaptures.map<string>((capture) => capture.id)
-  return newCaptureIds.filter((id) => !originalCaptureIds.has(id))
+  return newCaptureIds.filter((id) => !oldCaptureIdsSet.has(id))
 }
 
 const processCaptureSuccessStepInvoke = async (

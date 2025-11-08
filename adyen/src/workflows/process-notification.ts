@@ -1,15 +1,24 @@
 import { Types } from '@adyen/api-library'
+import { PaymentDTO } from '@medusajs/framework/types'
 import {
-  WorkflowResponse,
+  createHook,
   createWorkflow,
+  transform,
   when,
+  WorkflowData,
+  WorkflowResponse,
 } from '@medusajs/framework/workflows-sdk'
 
-import { errorTestStep, processCaptureSuccessStep } from './steps'
+import { processCaptureSuccessStep } from './steps'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 const EventCodeEnum = Types.notification.NotificationRequestItem.EventCodeEnum
 const SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
+
+interface ConsolidatedData {
+  notification: NotificationRequestItem
+  captureSuccess: WorkflowData<PaymentDTO> | undefined
+}
 
 export const processNotificationWorkflowId = 'process-notification-workflow'
 
@@ -25,20 +34,32 @@ const isCatureNotSuccess = ({
 }: NotificationRequestItem): boolean =>
   eventCode === EventCodeEnum.Capture && success === SuccessEnum.False
 
-const processNotificationWorkflowFunction = (
-  input: NotificationRequestItem,
-): WorkflowResponse<unknown, any[]> => {
-  when('is-capture-success', input, isCaptureSuccess).then(() => {
-    processCaptureSuccessStep(input)
-    errorTestStep()
-  })
-
-  return new WorkflowResponse(undefined)
-}
-
 const processNotificationWorkflow = createWorkflow(
   processNotificationWorkflowId,
-  processNotificationWorkflowFunction,
+  (input: WorkflowData<NotificationRequestItem>) => {
+    const validateNotification = createHook('validateNotification', { input })
+
+    const captureSuccess = when(
+      'capture-success',
+      input,
+      isCaptureSuccess,
+    ).then(() => {
+      return processCaptureSuccessStep(input)
+    })
+
+    const results = transform<ConsolidatedData, ConsolidatedData>(
+      { notification: input, captureSuccess },
+      (data) => ({ ...data }),
+    )
+
+    const notificationProcessed = createHook('notificationProcessed', {
+      results,
+    })
+
+    return new WorkflowResponse(results, {
+      hooks: [validateNotification, notificationProcessed],
+    })
+  },
 )
 
 export default processNotificationWorkflow
