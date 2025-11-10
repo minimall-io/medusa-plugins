@@ -1,1 +1,1 @@
-export { default as processNotificationWorkflow } from './process-notification'
+export * from './process-notification'
