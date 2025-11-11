@@ -66,12 +66,12 @@ const restoreOriginalDataPayment = (
   if (notificationCapture) {
     const newCaptures = [...captures]
     const newData = { ...data, captures: newCaptures } as PaymentDTO['data']
-    return { ...payment, data: newData } as PaymentDTO
+    return { id: payment.id, data: newData } as PaymentDTO
   }
 
   const newCaptures = [...otherCaptures]
   const newData = { ...data, captures: newCaptures } as PaymentDTO['data']
-  return { ...payment, data: newData } as PaymentDTO
+  return { id: payment.id, data: newData } as PaymentDTO
 }
 
 const generateCapturesToDelete = (
