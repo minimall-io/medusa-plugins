@@ -10,7 +10,7 @@ import {
   when,
 } from '@medusajs/framework/workflows-sdk'
 
-import { processCaptureSuccessStep } from './steps'
+import { errorTestStep, processCaptureSuccessStep } from './steps'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 const EventCodeEnum = Types.notification.NotificationRequestItem.EventCodeEnum
@@ -18,12 +18,17 @@ const SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
 
 type Hooks = [
   Hook<'validateNotification', WorkflowData<NotificationRequestItem>, unknown>,
-  Hook<'notificationProcessed', WorkflowData<ConsolidatedData>, unknown>,
+  Hook<'notificationProcessed', WorkflowData<WorkflowOutput>, unknown>,
 ]
 
-export interface ConsolidatedData {
+interface TransformInput {
   notification: NotificationRequestItem
   captureSuccess: WorkflowData<PaymentDTO> | undefined
+}
+
+export interface WorkflowOutput {
+  notification: NotificationRequestItem
+  payment: WorkflowData<PaymentDTO> | undefined
 }
 
 export const processNotificationWorkflowId = 'process-notification-workflow'
@@ -50,17 +55,23 @@ export const processNotificationWorkflow = createWorkflow(
       input,
       isCaptureSuccess,
     ).then(() => {
-      return processCaptureSuccessStep(input)
+      const result = processCaptureSuccessStep(input)
+      errorTestStep('processCaptureSuccessStep failed')
+      return result
     })
 
-    const results = transform<ConsolidatedData, ConsolidatedData>(
+    const results = transform<TransformInput, WorkflowOutput>(
       { notification: input, captureSuccess },
-      (data) => ({ ...data }),
+      (data) => {
+        const { notification, captureSuccess } = data
+        const payment = captureSuccess! // TODO expand this this expression to include other notification types.
+        return { notification, payment }
+      },
     )
 
     const notificationProcessed = createHook('notificationProcessed', results)
 
-    return new WorkflowResponse<ConsolidatedData, Hooks>(results, {
+    return new WorkflowResponse<WorkflowOutput, Hooks>(results, {
       hooks: [validateNotification, notificationProcessed],
     })
   },
