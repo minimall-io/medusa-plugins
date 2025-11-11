@@ -1,10 +1,10 @@
 import { MedusaError } from '@medusajs/framework/utils'
 
-import { StepResponse, createStep } from '@medusajs/framework/workflows-sdk'
+import { createStep } from '@medusajs/framework/workflows-sdk'
 
 export const errorTestStepId = 'error-test-step'
 
-const errorTestStepInvoke = (message: string): Promise<StepResponse<undefined, undefined>> => {
+const errorTestStepInvoke = (message: string) => {
   throw new MedusaError(
     MedusaError.Types.NOT_ALLOWED,
     message,
