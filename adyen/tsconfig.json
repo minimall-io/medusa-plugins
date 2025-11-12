@@ -1,5 +1,22 @@
 {
   "compilerOptions": {
+    "allowJs": false,
+    "removeComments": true,
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "incremental": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedSideEffectImports": false,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
     "target": "ES2021",
     "esModuleInterop": true,
     "module": "Node16",
@@ -22,10 +39,7 @@
   "ts-node": {
     "swc": true
   },
-  "include": [
-    "**/*",
-    ".medusa/types/*"
-  ],
+  "include": ["**/*", ".medusa/types/*"],
   "exclude": [
     "node_modules",
     ".medusa/server",
