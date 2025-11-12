@@ -1,5 +1,5 @@
 import { Types } from '@adyen/api-library'
-import {
+import type {
   IPaymentModuleService,
   MedusaContainer,
   PaymentCustomerDTO,
@@ -9,7 +9,7 @@ import { MedusaError, Modules } from '@medusajs/framework/utils'
 import { medusaIntegrationTestRunner } from '@medusajs/test-utils'
 import {
   processNotificationWorkflow,
-  WorkflowOutput,
+  type WorkflowOutput,
 } from '../../src/workflows'
 import {
   getAmount,
@@ -51,7 +51,7 @@ medusaIntegrationTestRunner({
         paymentService = container.resolve(Modules.PAYMENT)
         const currency_code = getCurrencyCode()
         const amount = getAmount()
-        collectionInput = { currency_code, amount }
+        collectionInput = { amount, currency_code }
         provider_id = getProviderId()
         customer = getCustomer()
         encryptedCardDetails = getCardDetails()
@@ -69,23 +69,23 @@ medusaIntegrationTestRunner({
           const session = await paymentService.createPaymentSession(
             collection.id,
             {
-              provider_id,
-              currency_code: collection.currency_code,
               amount: collection.amount,
               context: {},
+              currency_code: collection.currency_code,
               data: { request: {} },
+              provider_id,
             },
           )
 
           await paymentService.updatePaymentSession({
-            id: session.id,
-            currency_code: collection.currency_code,
             amount: collection.amount,
+            currency_code: collection.currency_code,
             data: {
               request: {
                 paymentMethod: encryptedCardDetails,
               },
             },
+            id: session.id,
           })
 
           await paymentService.authorizePaymentSession(session.id, {})
@@ -201,23 +201,23 @@ medusaIntegrationTestRunner({
           const session = await paymentService.createPaymentSession(
             collection.id,
             {
-              provider_id,
-              currency_code: collection.currency_code,
               amount: collection.amount,
               context: {},
+              currency_code: collection.currency_code,
               data: { request: {} },
+              provider_id,
             },
           )
 
           await paymentService.updatePaymentSession({
-            id: session.id,
-            currency_code: collection.currency_code,
             amount: collection.amount,
+            currency_code: collection.currency_code,
             data: {
               request: {
                 paymentMethod: encryptedCardDetails,
               },
             },
+            id: session.id,
           })
 
           await paymentService.authorizePaymentSession(session.id, {})
@@ -265,11 +265,10 @@ medusaIntegrationTestRunner({
           expect(errors).toEqual([
             {
               action: 'error-test-step',
-              handlerType: 'invoke',
               error: expect.objectContaining({
-                message:
-                  'processCaptureSuccessStep failed',
+                message: 'processCaptureSuccessStep failed',
               }),
+              handlerType: 'invoke',
             },
           ])
           expect(updatedPayment.captures!.length).toBe(0)
@@ -322,11 +321,10 @@ medusaIntegrationTestRunner({
           expect(errors).toEqual([
             {
               action: 'error-test-step',
-              handlerType: 'invoke',
               error: expect.objectContaining({
-                message:
-                  'processCaptureSuccessStep failed',
+                message: 'processCaptureSuccessStep failed',
               }),
+              handlerType: 'invoke',
             },
           ])
           expect(originalPayment.captures!.length).toBe(1)

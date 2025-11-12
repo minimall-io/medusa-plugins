@@ -1,5 +1,5 @@
-import { Types } from '@adyen/api-library'
-import {
+import type { Types } from '@adyen/api-library'
+import type {
   AccountHolderDTO,
   IPaymentModuleService,
   MedusaContainer,
@@ -37,7 +37,7 @@ medusaIntegrationTestRunner({
         paymentService = container.resolve(Modules.PAYMENT)
         const currency_code = getCurrencyCode()
         const amount = getAmount()
-        collectionInput = { currency_code, amount }
+        collectionInput = { amount, currency_code }
         provider_id = getProviderId()
         customer = getCustomer()
         encryptedCardDetails = getCardDetails()
@@ -123,11 +123,11 @@ medusaIntegrationTestRunner({
             account_holder: { data: accountHolder.data },
           } as PaymentProviderContext
           await paymentService.createPaymentSession(collection.id, {
-            provider_id,
-            currency_code: collection.currency_code,
             amount: collection.amount,
             context,
+            currency_code: collection.currency_code,
             data: { request: {} },
+            provider_id,
           })
 
           const [session] = await paymentService.listPaymentSessions({
@@ -143,11 +143,11 @@ medusaIntegrationTestRunner({
         it('returns amount and paymentMethods data properties when initiatePayment is called without account holder context', async () => {
           const context = {}
           await paymentService.createPaymentSession(collection.id, {
-            provider_id,
-            currency_code: collection.currency_code,
             amount: collection.amount,
             context,
+            currency_code: collection.currency_code,
             data: { request: {} },
+            provider_id,
           })
 
           const [session] = await paymentService.listPaymentSessions({
@@ -171,10 +171,10 @@ medusaIntegrationTestRunner({
           collection = collections[0]
 
           session = await paymentService.createPaymentSession(collection.id, {
-            provider_id,
-            currency_code: collection.currency_code,
             amount: collection.amount,
+            currency_code: collection.currency_code,
             data: { request: {} },
+            provider_id,
           })
           await delay(1000)
         })
@@ -185,15 +185,15 @@ medusaIntegrationTestRunner({
           // trying to update the amount to half of the original amount
           const alteredValue = Number(collection.amount) / 2
           const alteredAmount = {
-            value: alteredValue,
             currency: collection.currency_code,
+            value: alteredValue,
           }
 
           await paymentService.updatePaymentSession({
-            id: session.id,
-            currency_code: collection.currency_code,
             amount: collection.amount,
+            currency_code: collection.currency_code,
             data: { amount: alteredAmount, newProperty: 'newProperty' },
+            id: session.id,
           })
 
           const [updatedSession] = await paymentService.listPaymentSessions({
@@ -225,10 +225,10 @@ medusaIntegrationTestRunner({
 
           sessionWithoutAccountHolder =
             await paymentService.createPaymentSession(collection.id, {
-              provider_id,
-              currency_code: collection.currency_code,
               amount: collection.amount,
+              currency_code: collection.currency_code,
               data: { request: {} },
+              provider_id,
             })
 
           const context = {
@@ -237,11 +237,11 @@ medusaIntegrationTestRunner({
           sessionWithAccountHolder = await paymentService.createPaymentSession(
             collection.id,
             {
-              provider_id,
-              currency_code: collection.currency_code,
               amount: collection.amount,
               context,
+              currency_code: collection.currency_code,
               data: { request: {} },
+              provider_id,
             },
           )
           await delay(1000)
@@ -249,14 +249,14 @@ medusaIntegrationTestRunner({
 
         it('returns authorization data property when authorizePayment is called using account holder context', async () => {
           await paymentService.updatePaymentSession({
-            id: sessionWithAccountHolder.id,
-            currency_code: collection.currency_code,
             amount: collection.amount,
+            currency_code: collection.currency_code,
             data: {
               request: {
                 paymentMethod: encryptedCardDetails,
               },
             },
+            id: sessionWithAccountHolder.id,
           })
 
           await paymentService.authorizePaymentSession(
@@ -278,15 +278,15 @@ medusaIntegrationTestRunner({
 
         it('returns authorization data property with saved payment method when authorizePayment is called with account holder context and storePaymentMethod is true', async () => {
           await paymentService.updatePaymentSession({
-            id: sessionWithAccountHolder.id,
-            currency_code: collection.currency_code,
             amount: collection.amount,
+            currency_code: collection.currency_code,
             data: {
               request: {
                 paymentMethod: encryptedCardDetails,
                 storePaymentMethod: true,
               },
             },
+            id: sessionWithAccountHolder.id,
           })
 
           await paymentService.authorizePaymentSession(
@@ -314,9 +314,8 @@ medusaIntegrationTestRunner({
 
         it('returns authorization data property with saved payment method when authorizePayment is called with shopper data in the request and storePaymentMethod is true', async () => {
           await paymentService.updatePaymentSession({
-            id: sessionWithoutAccountHolder.id,
-            currency_code: collection.currency_code,
             amount: collection.amount,
+            currency_code: collection.currency_code,
             data: {
               request: {
                 ...accountHolder.data,
@@ -324,6 +323,7 @@ medusaIntegrationTestRunner({
                 storePaymentMethod: true,
               },
             },
+            id: sessionWithoutAccountHolder.id,
           })
 
           await paymentService.authorizePaymentSession(
@@ -351,16 +351,16 @@ medusaIntegrationTestRunner({
 
         it('returns authorization data property with saved payment method when authorizePayment is called with account holder context preference and storePaymentMethod is true', async () => {
           await paymentService.updatePaymentSession({
-            id: sessionWithAccountHolder.id,
-            currency_code: collection.currency_code,
             amount: collection.amount,
+            currency_code: collection.currency_code,
             data: {
               request: {
-                shopperReference: 'random_shopper_reference',
                 paymentMethod: encryptedCardDetails,
+                shopperReference: 'random_shopper_reference',
                 storePaymentMethod: true,
               },
             },
+            id: sessionWithAccountHolder.id,
           })
 
           await paymentService.authorizePaymentSession(
@@ -388,14 +388,14 @@ medusaIntegrationTestRunner({
 
         it('returns authorization data property when authorizePayment is called', async () => {
           await paymentService.updatePaymentSession({
-            id: sessionWithoutAccountHolder.id,
-            currency_code: collection.currency_code,
             amount: collection.amount,
+            currency_code: collection.currency_code,
             data: {
               request: {
                 paymentMethod: encryptedCardDetails,
               },
             },
+            id: sessionWithoutAccountHolder.id,
           })
 
           await paymentService.authorizePaymentSession(
@@ -428,23 +428,23 @@ medusaIntegrationTestRunner({
           collection = collections[0]
 
           session = await paymentService.createPaymentSession(collection.id, {
-            provider_id,
-            currency_code: collection.currency_code,
             amount: collection.amount,
             context: {},
+            currency_code: collection.currency_code,
             data: { request: {} },
+            provider_id,
           })
 
           await paymentService.updatePaymentSession({
-            id: session.id,
-            currency_code: collection.currency_code,
             amount: collection.amount,
+            currency_code: collection.currency_code,
             data: {
               request: {
                 paymentMethod: encryptedCardDetails,
                 storePaymentMethod: true,
               },
             },
+            id: session.id,
           })
 
           payment = await paymentService.authorizePaymentSession(session.id, {})
@@ -501,13 +501,13 @@ medusaIntegrationTestRunner({
            * Therefore, we need to refund the remaining amount manually.
            */
           await paymentService.refundPayment({
-            payment_id: payment.id,
             amount: ten,
+            payment_id: payment.id,
           })
 
           await paymentService.refundPayment({
-            payment_id: payment.id,
             amount: remainingAmount,
+            payment_id: payment.id,
           })
 
           const [refundedPayment] = await paymentService.listPayments({

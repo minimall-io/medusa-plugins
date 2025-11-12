@@ -3,8 +3,8 @@ import { PaymentProviderContextSchema } from './core'
 import { getValidator } from './helpers'
 
 const ContextSchema = PaymentProviderContextSchema.partial({
-  idempotency_key: true,
   account_holder: true,
+  idempotency_key: true,
 })
 
 const InputSchema = z.object({

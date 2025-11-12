@@ -59,7 +59,7 @@ export const processNotificationWorkflow = createWorkflow(
     })
 
     const results = transform<TransformInput, WorkflowOutput>(
-      { notification: input, captureSuccess },
+      { captureSuccess, notification: input },
       (data) => {
         const { notification, captureSuccess } = data
         const payment = captureSuccess! // TODO expand this this expression to include other notification types.

@@ -8,8 +8,8 @@ import {
 } from '.'
 
 export const FundRecipientSchema = z.object({
-  IBAN: z.string().optional(),
   billingAddress: AddressSchema.optional().nullable(),
+  IBAN: z.string().optional(),
   paymentMethod: CardDetailsSchema.optional().nullable(),
   shopperEmail: z.string().optional(),
   shopperName: NameSchema.optional().nullable(),

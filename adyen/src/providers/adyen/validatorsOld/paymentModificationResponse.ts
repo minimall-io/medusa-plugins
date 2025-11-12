@@ -1,12 +1,12 @@
-import { z } from 'zod'
+import type { z } from 'zod'
 import { PaymentModificationSchema, PaymentModificationsSchema } from './core'
 import { getValidator } from './helpers'
 
 const CancellationSchema = PaymentModificationSchema.pick({
+  id: true,
   pspReference: true,
   reference: true,
   status: true,
-  id: true,
 })
 
 export type Cancellation = z.infer<typeof CancellationSchema>

@@ -1,5 +1,5 @@
 import { Types } from '@adyen/api-library'
-import { AddressDTO, PaymentCustomerDTO } from '@medusajs/framework/types'
+import type { AddressDTO, PaymentCustomerDTO } from '@medusajs/framework/types'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 type EventCodeEnum = Types.notification.NotificationRequestItem.EventCodeEnum
@@ -43,13 +43,13 @@ export const getCustomer = (
   const phone = customerPhone || suffix.slice(0, 10)
   const billing_address = customerBillingAddress || { country_code: 'US' }
   return {
-    id,
-    email,
-    phone,
-    first_name,
-    last_name,
-    company_name,
     billing_address,
+    company_name,
+    email,
+    first_name,
+    id,
+    last_name,
+    phone,
   }
 }
 
@@ -62,12 +62,12 @@ export const getCardDetails = (
   holderName: string = 'John Doe',
 ): CardDetails => {
   const encryptedCardDetails = {
-    type: TypeEnum.Scheme,
     encryptedCardNumber: `test_${cardNumber}`,
     encryptedExpiryMonth: `test_${expiryMonth}`,
     encryptedExpiryYear: `test_${expiryYear}`,
     encryptedSecurityCode: `test_${securityCode}`,
     holderName: holderName,
+    type: TypeEnum.Scheme,
   }
 
   // const unencryptedCardDetails = {
@@ -80,12 +80,12 @@ export const getCardDetails = (
   // }
 
   const unencryptedCardDetails = {
-    type: TypeEnum.Scheme,
-    number: cardNumber,
+    cvc: securityCode,
     expiryMonth: expiryMonth,
     expiryYear: expiryYear,
-    cvc: securityCode,
     holderName: holderName,
+    number: cardNumber,
+    type: TypeEnum.Scheme,
   }
 
   return encrypted ? encryptedCardDetails : unencryptedCardDetails
@@ -101,16 +101,16 @@ export const getNotificationRequestItem = (
 ): NotificationRequestItem => {
   const eventDate = new Date().toISOString()
   const amount = {
-    value,
     currency,
+    value,
   }
   return {
-    merchantAccountCode: adyenProviderId!,
-    eventDate,
     amount,
     eventCode,
-    pspReference,
+    eventDate,
+    merchantAccountCode: adyenProviderId!,
     merchantReference,
+    pspReference,
     success,
   }
 }

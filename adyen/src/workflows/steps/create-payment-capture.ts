@@ -1,9 +1,9 @@
-import { CreateCaptureDTO, PaymentDTO } from '@medusajs/framework/types'
+import type { CreateCaptureDTO, PaymentDTO } from '@medusajs/framework/types'
 import { Modules } from '@medusajs/framework/utils'
 import {
-  StepExecutionContext,
-  StepResponse,
   createStep,
+  type StepExecutionContext,
+  StepResponse,
 } from '@medusajs/framework/workflows-sdk'
 
 export const createPaymentCaptureStepId = 'create-payment-capture-step'

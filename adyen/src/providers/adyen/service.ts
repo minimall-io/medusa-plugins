@@ -1,6 +1,6 @@
-import { CheckoutAPI, Client, Types, hmacValidator } from '@adyen/api-library'
+import { CheckoutAPI, Client, hmacValidator, Types } from '@adyen/api-library'
 import { EnvironmentEnum } from '@adyen/api-library/lib/src/config'
-import {
+import type {
   AuthorizePaymentInput,
   AuthorizePaymentOutput,
   BigNumberInput,
@@ -42,8 +42,8 @@ import {
 import { getMinorUnit } from '../../utils'
 
 import {
-  Options,
-  PaymentModification,
+  type Options,
+  type PaymentModification,
   validateOptions,
   validatePaymentModification,
 } from './validators'
@@ -206,8 +206,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
     const methods = response.storedPaymentMethods || []
     const output = methods.map((method, index) => ({
-      id: method.id || index.toString(),
       data: method as Record<string, unknown>,
+      id: method.id || index.toString(),
     }))
     this.log('listPaymentMethods/output', output)
     return output
@@ -224,9 +224,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const idempotencyKey = shopperReference
     const request: Types.checkout.StoredPaymentMethodRequest = {
       ...inputData.request,
-      shopperReference,
-      recurringProcessingModel,
       merchantAccount,
+      recurringProcessingModel,
+      shopperReference,
     }
 
     const response = await this.checkout.RecurringApi.storedPaymentMethods(
@@ -268,9 +268,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
     const data = {
       amount,
-      shopper,
       paymentMethods: response,
       request: undefined,
+      shopper,
     }
     const output = { data, id: sessionId }
     this.log('initiatePayment/output', output)
@@ -324,11 +324,11 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       ...inputData.request,
       ...shopper,
       amount,
-      reference,
-      shopperInteraction,
-      recurringProcessingModel,
-      returnUrl,
       merchantAccount,
+      recurringProcessingModel,
+      reference,
+      returnUrl,
+      shopperInteraction,
     }
 
     const response = await this.checkout.PaymentsApi.payments(request, {
@@ -337,8 +337,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
     const status = this.getSessionStatus(response.resultCode)
     const data = {
-      reference,
       authorization: response,
+      reference,
       request: undefined,
     }
     const output = { data, status }
@@ -361,8 +361,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     if (message) {
       const cancellation = validatePaymentModification({
         ...message,
-        reference,
         id,
+        reference,
       })
       this.log('cancelPayment/cancellation', cancellation)
       const data = {
@@ -417,8 +417,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     if (message) {
       const newCapture = validatePaymentModification({
         ...message,
-        reference,
         id,
+        reference,
       })
       this.log('capturePayment/newCapture', newCapture)
       const captures = [...existingCaptures, newCapture]
@@ -433,8 +433,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     }
 
     const request: Types.checkout.PaymentCaptureRequest = {
-      merchantAccount,
       amount,
+      merchantAccount,
       reference,
     }
 
@@ -471,15 +471,15 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     if (message) {
       const newRefund = validatePaymentModification({
         ...message,
-        reference,
         id,
+        reference,
       })
       this.log('refundPayment/newRefund', newRefund)
       const refunds = [...existingRefunds, newRefund]
       const data = {
         ...input.data,
-        refunds,
         message: undefined,
+        refunds,
       }
       const output = { data }
       this.log('refundPayment/output', output)
@@ -487,9 +487,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     }
 
     const request: Types.checkout.PaymentRefundRequest = {
+      amount,
       merchantAccount,
       reference,
-      amount,
     }
 
     const response = await this.checkout.ModificationsApi.refundCapturedPayment(
@@ -530,14 +530,14 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       firstName && lastName ? { firstName, lastName } : undefined
     const company = companyName ? { name: companyName } : undefined
     const data = {
-      shopperReference,
-      shopperEmail,
-      telephoneNumber,
-      shopperName,
       company,
       countryCode,
+      shopperEmail,
+      shopperName,
+      shopperReference,
+      telephoneNumber,
     }
-    const output = { id, data }
+    const output = { data, id }
     this.log('createAccountHolder/output', output)
     return output
   }
@@ -593,10 +593,10 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       }
     })
     const data = {
-      providerIdentifier,
-      validNotifications,
-      session_id: '',
       amount: 0,
+      providerIdentifier,
+      session_id: '',
+      validNotifications,
     }
     const output = { action: PaymentActions.NOT_SUPPORTED, data }
     this.log('getWebhookActionAndData/output', output)

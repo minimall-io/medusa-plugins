@@ -1,6 +1,4 @@
-import crypto from 'crypto'
-
-import {
+import type {
   AuthorizePaymentInput,
   AuthorizePaymentOutput,
   CancelPaymentInput,
@@ -37,6 +35,7 @@ import {
   PaymentActions,
   PaymentSessionStatus,
 } from '@medusajs/framework/utils'
+import crypto from 'crypto'
 
 export class SystemProviderService extends AbstractPaymentProvider {
   static identifier = 'system'

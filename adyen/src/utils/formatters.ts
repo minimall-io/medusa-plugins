@@ -1,4 +1,4 @@
-import { BigNumberInput } from '@medusajs/framework/types'
+import type { BigNumberInput } from '@medusajs/framework/types'
 import { BigNumber, MathBN } from '@medusajs/framework/utils'
 import { CURRENCY_MULTIPLIERS } from './constants'
 
@@ -9,7 +9,7 @@ const getCurrencyMultiplier = (currency: string): number => {
   // we may have to throw an error for unsupported currency.
   const defaultMultiplier = CURRENCY_MULTIPLIERS.DEFAULT
   const power = multiplier !== undefined ? multiplier : defaultMultiplier
-  return Math.pow(10, power)
+  return 10 ** power
 }
 
 /**

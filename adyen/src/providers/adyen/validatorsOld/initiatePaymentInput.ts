@@ -8,8 +8,8 @@ import { getValidator } from './helpers'
 
 const DataSchema = z.object({
   reference: z.string(),
-  session_id: z.string(),
   request: PaymentMethodsRequestSchema.optional(),
+  session_id: z.string(),
 })
 
 const ContextSchema = PaymentProviderContextSchema.partial().extend({
@@ -17,10 +17,10 @@ const ContextSchema = PaymentProviderContextSchema.partial().extend({
 })
 
 const InputSchema = z.object({
-  data: DataSchema.partial().optional(),
-  context: ContextSchema.optional(),
   amount: z.any(),
+  context: ContextSchema.optional(),
   currency_code: z.string(),
+  data: DataSchema.partial().optional(),
 })
 
 const ValidatedInputSchema = InputSchema.extend({

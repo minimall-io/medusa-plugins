@@ -8,8 +8,8 @@ const DataSchema = z.object({
 })
 
 const InputSchema = z.object({
-  data: DataSchema,
   context: PaymentProviderContextSchema.partial().optional(),
+  data: DataSchema,
 })
 
 export type GetPaymentStatusInput = z.infer<typeof InputSchema>

@@ -1,7 +1,7 @@
-import { MedusaRequest, MedusaResponse } from '@medusajs/framework/http'
+import type { MedusaRequest, MedusaResponse } from '@medusajs/framework/http'
 import { MedusaError, Modules } from '@medusajs/framework/utils'
-import { z } from 'zod'
-import { CreatePaymentMethodsSchema } from './validators'
+import type { z } from 'zod'
+import type { CreatePaymentMethodsSchema } from './validators'
 
 type CreatePaymentMethods = z.infer<typeof CreatePaymentMethodsSchema>
 
@@ -29,7 +29,6 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   }
 
   const paymentMethods = await paymentService.listPaymentMethods({
-    provider_id: accountHolder.provider_id,
     context: {
       account_holder: {
         data: {
@@ -37,6 +36,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
         },
       },
     },
+    provider_id: accountHolder.provider_id,
   })
 
   res.json({
@@ -73,8 +73,6 @@ export const POST = async (
 
   const paymentMethods = await paymentService.createPaymentMethods([
     {
-      provider_id: accountHolder.provider_id,
-      data,
       context: {
         account_holder: {
           data: {
@@ -82,6 +80,8 @@ export const POST = async (
           },
         },
       },
+      data,
+      provider_id: accountHolder.provider_id,
     },
   ])
 

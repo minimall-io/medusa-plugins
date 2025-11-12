@@ -1,11 +1,11 @@
 import { Types } from '@adyen/api-library'
-import { PaymentDTO } from '@medusajs/framework/types'
+import type { PaymentDTO } from '@medusajs/framework/types'
 import { ContainerRegistrationKeys, Modules } from '@medusajs/framework/utils'
 
 import {
-  StepExecutionContext,
-  StepResponse,
   createStep,
+  type StepExecutionContext,
+  StepResponse,
 } from '@medusajs/framework/workflows-sdk'
 
 import { getWholeUnit } from '../../utils'
@@ -40,12 +40,12 @@ const generateNewDataPayment = (
     )
     const newCaptures = [...otherCaptures, { ...captureToUpdate, status }]
     const newData = { ...data, captures: newCaptures } as PaymentDTO['data']
-    return { id: payment.id, data: newData } as PaymentDTO
+    return { data: newData, id: payment.id } as PaymentDTO
   }
 
   const message = { ...notification, status }
   const newData = { ...data, message } as PaymentDTO['data']
-  return { id: payment.id, data: newData } as PaymentDTO
+  return { data: newData, id: payment.id } as PaymentDTO
 }
 
 const restoreOriginalDataPayment = (
@@ -66,12 +66,12 @@ const restoreOriginalDataPayment = (
   if (notificationCapture) {
     const newCaptures = [...captures]
     const newData = { ...data, captures: newCaptures } as PaymentDTO['data']
-    return { id: payment.id, data: newData } as PaymentDTO
+    return { data: newData, id: payment.id } as PaymentDTO
   }
 
   const newCaptures = [...otherCaptures]
   const newData = { ...data, captures: newCaptures } as PaymentDTO['data']
-  return { id: payment.id, data: newData } as PaymentDTO
+  return { data: newData, id: payment.id } as PaymentDTO
 }
 
 const generateCapturesToDelete = (
@@ -107,9 +107,9 @@ const processCaptureSuccessStepInvoke = async (
 
   if (updatedPayment.data?.message && amount?.value && amount?.currency) {
     const capture = {
-      payment_id: updatedPayment.id,
       amount: getWholeUnit(amount.value, amount.currency),
       captured_by: merchantAccountCode,
+      payment_id: updatedPayment.id,
     }
     await paymentService.capturePayment(capture)
   }

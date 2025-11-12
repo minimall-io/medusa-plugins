@@ -1,10 +1,10 @@
-import { Types } from '@adyen/api-library'
-import { PaymentDTO } from '@medusajs/framework/types'
+import type { Types } from '@adyen/api-library'
+import type { PaymentDTO } from '@medusajs/framework/types'
 import { Modules } from '@medusajs/framework/utils'
 import {
-  StepExecutionContext,
-  StepResponse,
   createStep,
+  type StepExecutionContext,
+  StepResponse,
 } from '@medusajs/framework/workflows-sdk'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem

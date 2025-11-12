@@ -7,8 +7,8 @@ const DataSchema = z.object({
 })
 
 const InputSchema = z.object({
-  data: DataSchema,
   context: PaymentProviderContextSchema.partial().optional(),
+  data: DataSchema,
 })
 
 export type CancelPaymentInput = z.infer<typeof InputSchema>

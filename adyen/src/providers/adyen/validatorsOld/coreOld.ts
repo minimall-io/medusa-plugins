@@ -312,8 +312,8 @@ export const FundOriginSchema = z.object({
 })
 
 export const FundRecipientSchema = z.object({
-  IBAN: z.string().optional(),
   billingAddress: AddressSchema.optional().nullable(),
+  IBAN: z.string().optional(),
   paymentMethod: CardDetailsSchema.optional().nullable(),
   shopperEmail: z.string().optional(),
   shopperName: NameSchema.optional().nullable(),
@@ -527,8 +527,8 @@ export const CheckoutSessionSchema = z.object({
   riskData: RiskDataSchema.optional().nullable(),
   sessionData: z.string().optional(),
   shopperEmail: z.string().optional(),
-  shopperIP: z.string().optional(),
   shopperInteraction: ShopperInteractionEnumSchema.optional(),
+  shopperIP: z.string().optional(),
   shopperLocale: z.string().optional(),
   shopperName: NameSchema.optional().nullable(),
   shopperReference: z.string().optional(),
@@ -571,10 +571,10 @@ export const AuthorizationSchema = z.object({
 })
 
 export const SessionsResponseSchema = z.object({
-  sessionId: z.string(),
-  sessionData: z.string(),
-  sessionResult: z.string(),
   resultCode: PaymentResponseResultCodeEnumSchema,
+  sessionData: z.string(),
+  sessionId: z.string(),
+  sessionResult: z.string(),
 })
 
 export const PaymentMethodToStoreSchema = z.object({
@@ -602,54 +602,54 @@ export const StoredPaymentMethodRequestSchema = z.object({
 })
 
 export const AddressDTOSchema = z.object({
-  id: z.string().optional(),
   address_1: z.string(),
   address_2: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
   company: z.string().optional().nullable(),
   country_code: z.string(),
-  city: z.string().optional().nullable(),
+  created_at: StringDateUnionSchema.optional(),
+  deleted_at: StringDateUnionSchema.optional().nullable(),
+  id: z.string().optional(),
+  metadata: UnknownRecordSchema.optional().nullable(),
   phone: z.string().optional().nullable(),
   postal_code: z.string().optional().nullable(),
   province: z.string().optional().nullable(),
-  metadata: UnknownRecordSchema.optional().nullable(),
-  created_at: StringDateUnionSchema.optional(),
   updated_at: StringDateUnionSchema.optional(),
-  deleted_at: StringDateUnionSchema.optional().nullable(),
 })
 
 export const PaymentCustomerDTOSchema = z.object({
-  id: z.string(),
-  email: z.string(),
+  billing_address: AddressDTOSchema.partial().optional().nullable(),
   company_name: z.string().optional().nullable(),
+  email: z.string(),
   first_name: z.string().optional().nullable(),
+  id: z.string(),
   last_name: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
-  billing_address: AddressDTOSchema.partial().optional().nullable(),
 })
 
 export const AccountHolderDTOSchema = z.object({
-  id: z.string(),
-  provider_id: z.string(),
-  external_id: z.string(),
-  email: z.string().nullable(),
-  data: UnknownRecordSchema,
   created_at: StringDateUnionSchema.optional().nullable(),
-  updated_at: StringDateUnionSchema.optional().nullable(),
+  data: UnknownRecordSchema,
+  email: z.string().nullable(),
+  external_id: z.string(),
+  id: z.string(),
   metadata: UnknownRecordSchema.optional().nullable(),
+  provider_id: z.string(),
+  updated_at: StringDateUnionSchema.optional().nullable(),
 })
 
 export const PaymentProviderContextSchema = z.object({
-  idempotency_key: z.string(),
-  customer: PaymentCustomerDTOSchema,
   account_holder: AccountHolderDTOSchema,
+  customer: PaymentCustomerDTOSchema,
+  idempotency_key: z.string(),
 })
 
 export const PaymentModificationSchema = z.object({
+  amount: AmountSchema,
+  id: z.string(),
   pspReference: z.string(),
   reference: z.string(),
   status: z.string(),
-  amount: AmountSchema,
-  id: z.string(),
 })
 
 export const PaymentModificationsSchema = z.array(PaymentModificationSchema)

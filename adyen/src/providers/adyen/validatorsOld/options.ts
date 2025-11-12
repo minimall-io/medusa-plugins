@@ -9,13 +9,13 @@ import { getValidator } from './helpers'
 
 export const OptionsSchema = z.object({
   apiKey: z.string(),
-  hmacKey: z.string(),
-  merchantAccount: z.string(),
-  liveEndpointUrlPrefix: z.string(),
-  returnUrlPrefix: z.string(),
   environment: EnvironmentEnumSchema.optional(),
-  shopperInteraction: ShopperInteractionEnumSchema,
+  hmacKey: z.string(),
+  liveEndpointUrlPrefix: z.string(),
+  merchantAccount: z.string(),
   recurringProcessingModel: RecurringProcessingModelEnumSchema,
+  returnUrlPrefix: z.string(),
+  shopperInteraction: ShopperInteractionEnumSchema,
   storePaymentMethodMode: StorePaymentMethodModeEnumSchema,
 })
 

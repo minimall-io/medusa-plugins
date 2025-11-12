@@ -32,13 +32,13 @@ export const RecurringProcessingModelEnumSchema = z.nativeEnum(
 
 export const OptionsSchema = z.object({
   apiKey: z.string(),
-  hmacKey: z.string(),
-  merchantAccount: z.string(),
-  liveEndpointUrlPrefix: z.string(),
-  returnUrlPrefix: z.string(),
   environment: EnvironmentEnumSchema.optional(),
-  shopperInteraction: ShopperInteractionEnumSchema,
+  hmacKey: z.string(),
+  liveEndpointUrlPrefix: z.string(),
+  merchantAccount: z.string(),
   recurringProcessingModel: RecurringProcessingModelEnumSchema,
+  returnUrlPrefix: z.string(),
+  shopperInteraction: ShopperInteractionEnumSchema,
 })
 
 export const AmountSchema = z.object({
@@ -47,11 +47,11 @@ export const AmountSchema = z.object({
 })
 
 export const PaymentModificationSchema = z.object({
-  pspReference: z.string(),
-  status: z.string(),
-  reference: z.string(),
-  id: z.string().optional(),
   amount: AmountSchema.optional(),
+  id: z.string().optional(),
+  pspReference: z.string(),
+  reference: z.string(),
+  status: z.string(),
 })
 
 export type Options = z.infer<typeof OptionsSchema>

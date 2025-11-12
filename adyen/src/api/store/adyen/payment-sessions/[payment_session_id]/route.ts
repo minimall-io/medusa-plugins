@@ -1,8 +1,8 @@
-import { MedusaRequest, MedusaResponse } from '@medusajs/framework/http'
+import type { MedusaRequest, MedusaResponse } from '@medusajs/framework/http'
 import { MedusaError, Modules } from '@medusajs/framework/utils'
-import { z } from 'zod'
+import type { z } from 'zod'
 
-import { UpdatePaymentSessionSchema } from './validators'
+import type { UpdatePaymentSessionSchema } from './validators'
 
 type UpdatePaymentSession = z.infer<typeof UpdatePaymentSessionSchema>
 

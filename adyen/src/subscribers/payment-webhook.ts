@@ -1,5 +1,5 @@
-import { Types } from '@adyen/api-library'
-import {
+import type { Types } from '@adyen/api-library'
+import type {
   IPaymentModuleService,
   ProviderWebhookPayload,
   WebhookActionResult,
@@ -9,7 +9,7 @@ import {
   PaymentActions,
   PaymentWebhookEvents,
 } from '@medusajs/framework/utils'
-import { SubscriberArgs, SubscriberConfig } from '@medusajs/medusa/types'
+import type { SubscriberArgs, SubscriberConfig } from '@medusajs/medusa/types'
 
 import { processNotificationWorkflow } from '../workflows'
 
@@ -72,8 +72,8 @@ export default async function paymentWebhookhandler({
 }
 
 export const config: SubscriberConfig = {
-  event: PaymentWebhookEvents.WebhookReceived,
   context: {
     subscriberId: 'adyen-payment-webhook-handler',
   },
+  event: PaymentWebhookEvents.WebhookReceived,
 }

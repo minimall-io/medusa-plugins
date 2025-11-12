@@ -1,23 +1,24 @@
 import { loadEnv } from '@medusajs/framework/utils'
+
 loadEnv('test', process.cwd())
 
 const config = {
+  moduleFileExtensions: ['js', 'ts', 'json'],
+  modulePathIgnorePatterns: ['dist/'],
+  setupFiles: ['./integration-tests/setup.js'],
+  testEnvironment: 'node',
+  testMatch: [] as string[],
   transform: {
     '^.+\\.[jt]s$': [
       '@swc/jest',
       {
         jsc: {
-          parser: { syntax: 'typescript', decorators: true },
+          parser: { decorators: true, syntax: 'typescript' },
           target: 'es2021',
         },
       },
     ],
   },
-  testEnvironment: 'node',
-  moduleFileExtensions: ['js', 'ts', 'json'],
-  modulePathIgnorePatterns: ['dist/'],
-  setupFiles: ['./integration-tests/setup.js'],
-  testMatch: [] as string[],
 }
 
 if (process.env.TEST_TYPE === 'integration:http') {

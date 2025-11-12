@@ -5,7 +5,6 @@
  * https://docs.adyen.com/development-resources/currency-codes/
  */
 export const CURRENCY_MULTIPLIERS: Record<string, number> = {
-  DEFAULT: 2,
   AED: 2,
   ALL: 2,
   AMD: 2,
@@ -37,6 +36,7 @@ export const CURRENCY_MULTIPLIERS: Record<string, number> = {
   CUP: 2,
   CVE: 0, // (differs from standard)
   CZK: 2,
+  DEFAULT: 2,
   DJF: 0,
   DKK: 2,
   DOP: 2,
@@ -138,8 +138,8 @@ export const CURRENCY_MULTIPLIERS: Record<string, number> = {
   VUV: 0,
   WST: 2,
   XAF: 0,
-  XCG: 2,
   XCD: 2,
+  XCG: 2,
   XOF: 0,
   XPF: 0,
   YER: 2,

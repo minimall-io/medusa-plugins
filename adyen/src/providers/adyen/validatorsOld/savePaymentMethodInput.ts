@@ -21,8 +21,8 @@ const ContextSchema = PaymentProviderContextSchema.partial().extend({
 })
 
 const InputSchema = z.object({
-  data: DataSchema,
   context: ContextSchema,
+  data: DataSchema,
 })
 
 export type SavePaymentMethodInput = z.infer<typeof InputSchema>
