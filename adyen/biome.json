@@ -7,7 +7,15 @@
     "attributePosition": "multiline"
   },
   "linter": {
-    "enabled": true
+    "enabled": true,
+    "rules": {
+      "correctness": {
+        "noUnusedImports": {
+          "level": "warn",
+          "fix": "safe"
+        }
+      }
+    }
   },
   "assist": {
     "enabled": true
