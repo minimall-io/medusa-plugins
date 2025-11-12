@@ -1,16 +1,16 @@
 import { Types } from '@adyen/api-library'
-import { PaymentDTO } from '@medusajs/framework/types'
+import type { PaymentDTO } from '@medusajs/framework/types'
 import {
-  Hook,
-  WorkflowData,
-  WorkflowResponse,
   createHook,
   createWorkflow,
+  type Hook,
   transform,
+  type WorkflowData,
+  WorkflowResponse,
   when,
 } from '@medusajs/framework/workflows-sdk'
 
-import { errorTestStep, processCaptureSuccessStep } from './steps'
+import { processCaptureSuccessStep } from './steps'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 const EventCodeEnum = Types.notification.NotificationRequestItem.EventCodeEnum
@@ -55,9 +55,7 @@ export const processNotificationWorkflow = createWorkflow(
       input,
       isCaptureSuccess,
     ).then(() => {
-      const result = processCaptureSuccessStep(input)
-      errorTestStep('processCaptureSuccessStep failed')
-      return result
+      return processCaptureSuccessStep(input)
     })
 
     const results = transform<TransformInput, WorkflowOutput>(
