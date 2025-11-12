@@ -10,6 +10,13 @@
     },
     "enabled": true
   },
+  "files": {
+    "includes": [
+      "src/**/*.{ts,json}",
+      "integration-tests/**/*.{ts,json}",
+      "*.{ts,json}"
+    ]
+  },
   "formatter": {
     "attributePosition": "multiline",
     "enabled": true,
