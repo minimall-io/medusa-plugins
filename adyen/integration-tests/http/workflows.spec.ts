@@ -6,7 +6,9 @@ import type {
   PaymentDTO,
 } from '@medusajs/framework/types'
 import { MedusaError, Modules } from '@medusajs/framework/utils'
+import { WorkflowManager } from '@medusajs/orchestration'
 import { medusaIntegrationTestRunner } from '@medusajs/test-utils'
+import { OrchestrationUtils } from '@medusajs/utils'
 import { processNotificationWorkflow } from '../../src/workflows'
 import {
   getAmount,
@@ -176,19 +178,50 @@ medusaIntegrationTestRunner({
 
         describe('Compensation', () => {
           let payment: PaymentDTO
-          beforeAll(() => {
-            processNotificationWorkflow.hooks.notificationProcessed(
-              (input: NotificationRequestItem) => {
-                console.log(
-                  'processNotificationWorkflow/input',
-                  JSON.stringify(input, null, 2),
-                )
-                throw new MedusaError(
-                  MedusaError.Types.NOT_ALLOWED,
-                  'processCaptureSuccessStep failed',
-                )
-              },
+          beforeAll(async () => {
+            const workflowDef = WorkflowManager.getWorkflow(
+              'process-notification-workflow',
             )
+
+            if (!workflowDef) {
+              throw new Error('Workflow not found in WorkflowManager')
+            }
+
+            const hookHandler = (input: NotificationRequestItem) => {
+              console.log(
+                'processNotificationWorkflow/hooks/notificationProcessed/input',
+                JSON.stringify(input, null, 2),
+              )
+              throw new MedusaError(
+                MedusaError.Types.NOT_ALLOWED,
+                'processNotificationWorkflow/hooks/notificationProcessed/error',
+              )
+            }
+
+            processNotificationWorkflow.hooks.notificationProcessed(hookHandler)
+
+            const handler = {
+              compensate: undefined,
+              invoke: async (stepArguments: any) => {
+                let input = stepArguments.payload
+
+                if (
+                  input?.__type ===
+                  OrchestrationUtils.SymbolWorkflowWorkflowData
+                ) {
+                  input = input.output
+                }
+
+                await hookHandler(input)
+
+                return {
+                  __type: OrchestrationUtils.SymbolWorkflowWorkflowData,
+                  output: undefined,
+                }
+              },
+            }
+
+            workflowDef.handlers_.set('notificationProcessed', handler)
           })
 
           beforeEach(async () => {
