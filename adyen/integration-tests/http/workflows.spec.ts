@@ -179,6 +179,12 @@ medusaIntegrationTestRunner({
         describe('Compensation', () => {
           let payment: PaymentDTO
           beforeAll(async () => {
+            /**
+             * There's a bug in the createWorkflow function that prevents
+             * custom workflow hooks from being registered inside integration tests.
+             *
+             * Refer to the BUGS.md file for the details of how to fix it.
+             */
             const workflowDef = WorkflowManager.getWorkflow(
               'process-notification-workflow',
             )
