@@ -14,10 +14,6 @@ const SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 type PaymentCaptureResponse = Types.checkout.PaymentCaptureResponse
 type PaymentCaptureResponses = PaymentCaptureResponse[]
-interface CompensateInput {
-  notification: NotificationRequestItem
-  payment: PaymentDTO
-}
 
 export const processCaptureSuccessStepId = 'process-capture-success-step'
 
@@ -25,7 +21,12 @@ const generateNewDataPayment = (
   notification: NotificationRequestItem,
   payment: PaymentDTO,
 ): PaymentDTO => {
-  const { pspReference, success } = notification
+  const {
+    pspReference,
+    success,
+    merchantReference: reference,
+    amount,
+  } = notification
   const { data } = payment
   const status = success === SuccessEnum.True ? 'success' : 'failed'
 
@@ -43,35 +44,17 @@ const generateNewDataPayment = (
     return { data: newData, id: payment.id } as PaymentDTO
   }
 
-  const message = { ...notification, status }
+  const message = { amount, pspReference, reference, status }
   const newData = { ...data, message } as PaymentDTO['data']
   return { data: newData, id: payment.id } as PaymentDTO
 }
 
-const restoreOriginalDataPayment = (
-  notification: NotificationRequestItem,
-  payment: PaymentDTO,
-): PaymentDTO => {
-  const { pspReference } = notification
-  const { data } = payment
-
+const restoreOriginalDataPayment = (payment: PaymentDTO): PaymentDTO => {
+  const { data, id } = payment
   const captures = (data?.captures as PaymentCaptureResponses) || []
-  const otherCaptures = captures.filter(
-    (capture) => capture.pspReference !== pspReference,
-  )
-  const notificationCapture = captures.find(
-    (capture) => capture.pspReference === pspReference,
-  )
-
-  if (notificationCapture) {
-    const newCaptures = [...captures]
-    const newData = { ...data, captures: newCaptures } as PaymentDTO['data']
-    return { data: newData, id: payment.id } as PaymentDTO
-  }
-
-  const newCaptures = [...otherCaptures]
+  const newCaptures = [...captures]
   const newData = { ...data, captures: newCaptures } as PaymentDTO['data']
-  return { data: newData, id: payment.id } as PaymentDTO
+  return { data: newData, id } as PaymentDTO
 }
 
 const generateCapturesToDelete = (
@@ -89,7 +72,7 @@ const generateCapturesToDelete = (
 const processCaptureSuccessStepInvoke = async (
   notification: NotificationRequestItem,
   { container }: StepExecutionContext,
-): Promise<StepResponse<PaymentDTO, CompensateInput>> => {
+): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
   const { merchantReference, amount, merchantAccountCode } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -128,14 +111,11 @@ const processCaptureSuccessStepInvoke = async (
     `processCaptureSuccessStepInvoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
 
-  return new StepResponse<PaymentDTO, CompensateInput>(newPayment, {
-    notification,
-    payment: originalPayment,
-  })
+  return new StepResponse<PaymentDTO, PaymentDTO>(newPayment, originalPayment)
 }
 
 const processCaptureSuccessStepCompensate = async (
-  { notification, payment }: CompensateInput,
+  payment: PaymentDTO,
   { container }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
   const paymentService = container.resolve(Modules.PAYMENT)
@@ -146,7 +126,7 @@ const processCaptureSuccessStepCompensate = async (
   })
   const capturesToDelete = generateCapturesToDelete(payment, newPayment)
   await paymentService.deleteCaptures(capturesToDelete)
-  const processedPayment = restoreOriginalDataPayment(notification, payment)
+  const processedPayment = restoreOriginalDataPayment(payment)
   const updatedPayment = await paymentService.updatePayment(processedPayment)
 
   logging.debug(
