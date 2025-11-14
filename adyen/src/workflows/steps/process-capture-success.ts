@@ -27,7 +27,7 @@ const generateNewDataPayment = (
     merchantReference: reference,
     amount,
   } = notification
-  const { data } = payment
+  const { data, id } = payment
   const status = success === SuccessEnum.True ? 'success' : 'failed'
 
   const captures = (data?.captures as PaymentCaptureResponses) || []
@@ -41,12 +41,12 @@ const generateNewDataPayment = (
     )
     const newCaptures = [...otherCaptures, { ...captureToUpdate, status }]
     const newData = { ...data, captures: newCaptures } as PaymentDTO['data']
-    return { data: newData, id: payment.id } as PaymentDTO
+    return { data: newData, id } as PaymentDTO
   }
 
-  const message = { amount, pspReference, reference, status }
-  const newData = { ...data, message } as PaymentDTO['data']
-  return { data: newData, id: payment.id } as PaymentDTO
+  const captureToAdd = { amount, pspReference, reference, status }
+  const newData = { ...data, message: captureToAdd } as PaymentDTO['data']
+  return { data: newData, id } as PaymentDTO
 }
 
 const restoreOriginalDataPayment = (payment: PaymentDTO): PaymentDTO => {
@@ -71,7 +71,7 @@ const generateCapturesToDelete = (
 
 const processCaptureSuccessStepInvoke = async (
   notification: NotificationRequestItem,
-  { container }: StepExecutionContext,
+  { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
   const { merchantReference, amount, merchantAccountCode } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
@@ -85,6 +85,10 @@ const processCaptureSuccessStepInvoke = async (
       relations: ['captures'],
     },
   )
+  logging.debug(
+    `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
+  )
+
   const processedPayment = generateNewDataPayment(notification, originalPayment)
   const updatedPayment = await paymentService.updatePayment(processedPayment)
 
@@ -100,15 +104,8 @@ const processCaptureSuccessStepInvoke = async (
   const newPayment = await paymentService.retrievePayment(originalPayment.id, {
     relations: ['captures'],
   })
-
   logging.debug(
-    `processCaptureSuccessStepInvoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
-  )
-  logging.debug(
-    `processCaptureSuccessStepInvoke/processedPayment ${JSON.stringify(processedPayment, null, 2)}`,
-  )
-  logging.debug(
-    `processCaptureSuccessStepInvoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
+    `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
 
   return new StepResponse<PaymentDTO, PaymentDTO>(newPayment, originalPayment)
@@ -116,32 +113,38 @@ const processCaptureSuccessStepInvoke = async (
 
 const processCaptureSuccessStepCompensate = async (
   payment: PaymentDTO,
-  { container }: StepExecutionContext,
+  { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
+  logging.debug(
+    `${workflowId}/${stepName}/compensate/payment ${JSON.stringify(payment, null, 2)}`,
+  )
 
   const newPayment = await paymentService.retrievePayment(payment.id, {
     relations: ['captures'],
   })
+  logging.debug(
+    `${workflowId}/${stepName}/compensate/newPayment ${JSON.stringify(newPayment, null, 2)}`,
+  )
+
   const capturesToDelete = generateCapturesToDelete(payment, newPayment)
+  logging.debug(
+    `${workflowId}/${stepName}/compensate/capturesToDelete ${JSON.stringify(capturesToDelete, null, 2)}`,
+  )
+
   await paymentService.deleteCaptures(capturesToDelete)
   const processedPayment = restoreOriginalDataPayment(payment)
-  const updatedPayment = await paymentService.updatePayment(processedPayment)
+  await paymentService.updatePayment(processedPayment)
 
+  const restoredPayment = await paymentService.retrievePayment(payment.id, {
+    relations: ['captures'],
+  })
   logging.debug(
-    `processCaptureSuccessStepCompensate/payment ${JSON.stringify(payment, null, 2)}`,
+    `${workflowId}/${stepName}/compensate/restoredPayment ${JSON.stringify(restoredPayment, null, 2)}`,
   )
-  logging.debug(
-    `processCaptureSuccessStepCompensate/newPayment ${JSON.stringify(newPayment, null, 2)}`,
-  )
-  logging.debug(
-    `processCaptureSuccessStepCompensate/capturesToDelete ${JSON.stringify(capturesToDelete, null, 2)}`,
-  )
-  logging.debug(
-    `processCaptureSuccessStepCompensate/updatedPayment ${JSON.stringify(updatedPayment, null, 2)}`,
-  )
-  return new StepResponse<PaymentDTO>(updatedPayment)
+
+  return new StepResponse<PaymentDTO>(restoredPayment)
 }
 
 const processCaptureSuccessStep = createStep(
