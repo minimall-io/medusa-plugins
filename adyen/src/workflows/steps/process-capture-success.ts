@@ -8,12 +8,11 @@ import {
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
 
-import { getWholeUnit } from '../../utils'
+import { getWholeUnit, type PaymentModification } from '../../utils'
 
 const SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
 type NotificationRequestItem = Types.notification.NotificationRequestItem
-type PaymentCaptureResponse = Types.checkout.PaymentCaptureResponse
-type PaymentCaptureResponses = PaymentCaptureResponse[]
+type PaymentModifications = PaymentModification[]
 
 export const processCaptureSuccessStepId = 'process-capture-success-step'
 
@@ -30,7 +29,7 @@ const generateNewDataPayment = (
   const { data, id } = payment
   const status = success === SuccessEnum.True ? 'success' : 'failed'
 
-  const captures = (data?.captures as PaymentCaptureResponses) || []
+  const captures = (data?.captures as PaymentModifications) || []
   const captureToUpdate = captures.find(
     (capture) => capture.pspReference === pspReference,
   )
@@ -51,7 +50,7 @@ const generateNewDataPayment = (
 
 const restoreOriginalDataPayment = (payment: PaymentDTO): PaymentDTO => {
   const { data, id } = payment
-  const captures = (data?.captures as PaymentCaptureResponses) || []
+  const captures = (data?.captures as PaymentModifications) || []
   const newCaptures = [...captures]
   const newData = { ...data, captures: newCaptures } as PaymentDTO['data']
   return { data: newData, id } as PaymentDTO
