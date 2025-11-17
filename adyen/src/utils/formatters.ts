@@ -1,6 +1,9 @@
-import type { BigNumberInput } from '@medusajs/framework/types'
+import type { BigNumberInput, PaymentDTO } from '@medusajs/framework/types'
 import { BigNumber, MathBN } from '@medusajs/framework/utils'
+import { cloneDeep } from 'lodash'
 import { CURRENCY_MULTIPLIERS } from './constants'
+
+import type { PaymentModification, PaymentModificationData } from './types'
 
 const getCurrencyMultiplier = (currency: string): number => {
   const currencyCode = currency.toUpperCase()
@@ -12,13 +15,6 @@ const getCurrencyMultiplier = (currency: string): number => {
   return 10 ** power
 }
 
-/**
- * Converts an amount to the format required by Adyen based on currency.
- * https://docs.adyen.com/development-resources/currency-codes
- * @param {BigNumberInput} amount - The amount to be converted.
- * @param {string} currency - The currency code (e.g., 'USD', 'JOD').
- * @returns {number} - The converted amount in the smallest currency unit.
- */
 export const getMinorUnit = (
   amount: BigNumberInput,
   currency: string,
@@ -46,4 +42,50 @@ export const getWholeUnit = (
   const multiplier = getCurrencyMultiplier(currency)
   const standardAmount = new BigNumber(MathBN.div(amount, multiplier))
   return standardAmount.numeric
+}
+
+export const managePaymentData = (data: PaymentDTO['data']) => {
+  const paymentModificationData = cloneDeep(data) as PaymentModificationData
+  const captures = paymentModificationData?.captures || []
+
+  const getData = (): PaymentDTO['data'] => {
+    return paymentModificationData as PaymentDTO['data']
+  }
+
+  const updateData = (
+    newData: Partial<PaymentModificationData>,
+  ): PaymentDTO['data'] => {
+    return { ...paymentModificationData, ...newData } as PaymentDTO['data']
+  }
+
+  const listCaptures = (): PaymentModification[] => captures
+
+  const getCapture = (pspReference: string): PaymentModification | undefined =>
+    captures.find((capture) => capture.pspReference === pspReference)
+
+  const updateCapture = (
+    newCapture: PaymentModification,
+  ): PaymentDTO['data'] => {
+    const otherCaptures = captures.filter(
+      (capture) => capture.pspReference !== newCapture.pspReference,
+    )
+    const newCaptures = [...otherCaptures, newCapture]
+    return { ...data, captures: newCaptures } as PaymentDTO['data']
+  }
+
+  const deleteCapture = (pspReference: string): PaymentDTO['data'] => {
+    const otherCaptures = captures.filter(
+      (capture) => capture.pspReference !== pspReference,
+    )
+    return { ...data, captures: otherCaptures } as PaymentDTO['data']
+  }
+
+  return {
+    deleteCapture,
+    getCapture,
+    getData,
+    listCaptures,
+    updateCapture,
+    updateData,
+  }
 }
