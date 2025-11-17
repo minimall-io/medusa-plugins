@@ -326,6 +326,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
     const status = this.getSessionStatus(response.resultCode)
     const data = {
+      amount,
       authorization: response,
       reference,
       request: undefined,
@@ -348,7 +349,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const pspReference = authorization.pspReference!
 
     if (webhook) {
-      const output = { data: { ...inputData, webhook: undefined } }
+      const output = { data: { ...input.data, webhook: undefined } }
       this.log('cancelPayment/output', output)
       return output
     }
@@ -393,7 +394,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const existingCaptures = inputData.captures || []
 
     if (webhook) {
-      const output = { data: { ...inputData, webhook: undefined } }
+      const output = { data: { ...input.data, webhook: undefined } }
       this.log('capturePayment/output', output)
       return output
     }
@@ -435,7 +436,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const existingRefunds = inputData.refunds || []
 
     if (webhook) {
-      const output = { data: { ...inputData, webhook: undefined } }
+      const output = { data: { ...input.data, webhook: undefined } }
       this.log('refundPayment/output', output)
       return output
     }
