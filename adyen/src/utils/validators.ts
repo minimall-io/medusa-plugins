@@ -1,7 +1,15 @@
 import { MedusaError } from '@medusajs/framework/utils'
 import { z } from 'zod'
-import { OptionsSchema, PaymentModificationSchema } from './schemas'
-import type { Options, PaymentModification } from './types'
+import {
+  OptionsSchema,
+  PaymentModificationDataSchema,
+  PaymentModificationSchema,
+} from './schemas'
+import type {
+  Options,
+  PaymentModification,
+  PaymentModificationData,
+} from './types'
 
 export const getValidator =
   <T>(schema: z.ZodSchema) =>
@@ -24,3 +32,5 @@ export const validateOptions = getValidator<Options>(OptionsSchema)
 export const validatePaymentModification = getValidator<PaymentModification>(
   PaymentModificationSchema,
 )
+export const validatePaymentModificationData =
+  getValidator<PaymentModificationData>(PaymentModificationDataSchema)

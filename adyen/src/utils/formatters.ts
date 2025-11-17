@@ -1,9 +1,9 @@
 import type { BigNumberInput, PaymentDTO } from '@medusajs/framework/types'
 import { BigNumber, MathBN } from '@medusajs/framework/utils'
-import { cloneDeep } from 'lodash'
+import { cloneDeep, filter, find } from 'lodash'
 import { CURRENCY_MULTIPLIERS } from './constants'
-
 import type { PaymentModification, PaymentModificationData } from './types'
+import { validatePaymentModificationData } from './validators'
 
 const getCurrencyMultiplier = (currency: string): number => {
   const currencyCode = currency.toUpperCase()
@@ -45,7 +45,9 @@ export const getWholeUnit = (
 }
 
 export const managePaymentData = (data: PaymentDTO['data']) => {
-  const paymentModificationData = cloneDeep(data) as PaymentModificationData
+  const paymentModificationData = validatePaymentModificationData(
+    cloneDeep(data),
+  )
   const captures = paymentModificationData?.captures || []
 
   const getData = (): PaymentDTO['data'] => {
@@ -61,23 +63,32 @@ export const managePaymentData = (data: PaymentDTO['data']) => {
   const listCaptures = (): PaymentModification[] => captures
 
   const getCapture = (pspReference: string): PaymentModification | undefined =>
-    captures.find((capture) => capture.pspReference === pspReference)
+    find(captures, { pspReference })
 
   const updateCapture = (
     newCapture: PaymentModification,
   ): PaymentDTO['data'] => {
-    const otherCaptures = captures.filter(
-      (capture) => capture.pspReference !== newCapture.pspReference,
+    const { pspReference } = newCapture
+    const otherCaptures = filter(
+      captures,
+      (capture) => capture.pspReference !== pspReference,
     )
     const newCaptures = [...otherCaptures, newCapture]
-    return { ...data, captures: newCaptures } as PaymentDTO['data']
+    return {
+      ...paymentModificationData,
+      captures: newCaptures,
+    } as PaymentDTO['data']
   }
 
   const deleteCapture = (pspReference: string): PaymentDTO['data'] => {
-    const otherCaptures = captures.filter(
+    const otherCaptures = filter(
+      captures,
       (capture) => capture.pspReference !== pspReference,
     )
-    return { ...data, captures: otherCaptures } as PaymentDTO['data']
+    return {
+      ...paymentModificationData,
+      captures: otherCaptures,
+    } as PaymentDTO['data']
   }
 
   return {
