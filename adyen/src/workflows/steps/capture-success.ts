@@ -124,6 +124,7 @@ const captureSuccessStepCompensate = async (
     captures: listCaptures(),
   } as PaymentDTO['data']
   const paymentToUpdate = {
+    captured_at: originalPayment.captured_at,
     data: dataToUpdate,
     id: originalPayment.id,
   } as PaymentDTO

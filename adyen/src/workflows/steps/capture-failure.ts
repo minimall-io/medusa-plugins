@@ -111,6 +111,7 @@ const captureFailureStepCompensate = async (
     )
     const dataCaptureToAdd = { ...dataCapture, id: restoredPaymentCapture.id }
     const paymentToUpdate = {
+      captured_at: originalPayment.captured_at,
       data: updateCapture(dataCaptureToAdd),
       id: originalPayment.id,
     }
