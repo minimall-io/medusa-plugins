@@ -39,14 +39,13 @@ import {
   PaymentActions,
 } from '@medusajs/framework/utils'
 
-import { getMinorUnit } from '../../utils'
-
 import {
+  getMinorUnit,
   type Options,
-  type PaymentModification,
+  type PaymentModificationData,
   validateOptions,
   validatePaymentModification,
-} from './validators'
+} from '../../utils'
 
 interface Shopper
   extends Pick<
@@ -71,16 +70,6 @@ interface AuthorizePaymentInputData {
   amount: Types.checkout.Amount
   request: Types.checkout.PaymentRequest
   shopper?: Shopper
-}
-
-interface PaymentModificationData {
-  reference: string
-  amount: Types.checkout.Amount
-  authorization: Types.checkout.PaymentResponse
-  cancellation?: PaymentModification
-  captures?: PaymentModification[]
-  refunds?: PaymentModification[]
-  message?: Types.notification.NotificationRequestItem
 }
 
 type ProviderWebhookPayloadData = Types.notification.Notification
@@ -352,25 +341,14 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('cancelPayment/input', input)
     const { merchantAccount } = this.options_
     const inputData = input.data as unknown as PaymentModificationData
-    const { authorization, message, reference } = inputData
+    const { authorization, webhook, reference } = inputData
     const paymentId = input.context?.idempotency_key
     const id = paymentId
     const idempotencyKey = paymentId
     const pspReference = authorization.pspReference!
 
-    if (message) {
-      const cancellation = validatePaymentModification({
-        ...message,
-        id,
-        reference,
-      })
-      this.log('cancelPayment/cancellation', cancellation)
-      const data = {
-        ...input.data,
-        cancellation,
-        message: undefined,
-      }
-      const output = { data }
+    if (webhook) {
+      const output = { data: { ...inputData, webhook: undefined } }
       this.log('cancelPayment/output', output)
       return output
     }
@@ -406,7 +384,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('capturePayment/input', input)
     const { merchantAccount } = this.options_
     const inputData = input.data as unknown as PaymentModificationData
-    const { authorization, message, reference } = inputData
+    const { authorization, webhook, reference } = inputData
     const captureId = input.context?.idempotency_key
     const id = captureId
     const idempotencyKey = captureId
@@ -414,20 +392,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const amount = authorization.amount!
     const existingCaptures = inputData.captures || []
 
-    if (message) {
-      const newCapture = validatePaymentModification({
-        ...message,
-        id,
-        reference,
-      })
-      this.log('capturePayment/newCapture', newCapture)
-      const captures = [...existingCaptures, newCapture]
-      const data = {
-        ...input.data,
-        captures,
-        message: undefined,
-      }
-      const output = { data }
+    if (webhook) {
+      const output = { data: { ...inputData, webhook: undefined } }
       this.log('capturePayment/output', output)
       return output
     }
@@ -459,7 +425,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('refundPayment/input', input)
     const { merchantAccount } = this.options_
     const inputData = input.data as unknown as PaymentModificationData
-    const { authorization, message, reference } = inputData
+    const { authorization, webhook, reference } = inputData
     const refundId = input.context?.idempotency_key
     const id = refundId
     const idempotencyKey = refundId
@@ -468,20 +434,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const pspReference = authorization.pspReference!
     const existingRefunds = inputData.refunds || []
 
-    if (message) {
-      const newRefund = validatePaymentModification({
-        ...message,
-        id,
-        reference,
-      })
-      this.log('refundPayment/newRefund', newRefund)
-      const refunds = [...existingRefunds, newRefund]
-      const data = {
-        ...input.data,
-        message: undefined,
-        refunds,
-      }
-      const output = { data }
+    if (webhook) {
+      const output = { data: { ...inputData, webhook: undefined } }
       this.log('refundPayment/output', output)
       return output
     }
