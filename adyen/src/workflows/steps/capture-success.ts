@@ -113,16 +113,9 @@ const captureSuccessStepCompensate = async (
   const newPaymentCaptures = await paymentService.listCaptures({
     payment_id: originalPayment.id,
   })
-  logging.debug(
-    `${workflowId}/${stepName}/compensate/newPaymentCaptures ${JSON.stringify(newPaymentCaptures, null, 2)}`,
-  )
-
   const paymentCapturesToDelete: string[] = map(
     differenceBy(newPaymentCaptures, originalPayment.captures, 'id'),
     'id',
-  )
-  logging.debug(
-    `${workflowId}/${stepName}/compensate/paymentCapturesToDelete ${JSON.stringify(paymentCapturesToDelete, null, 2)}`,
   )
 
   await paymentService.deleteCaptures(paymentCapturesToDelete)
