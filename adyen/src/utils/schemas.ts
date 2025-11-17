@@ -38,10 +38,13 @@ export const PaymentModificationSchema = z.object({
 
 export const PaymentModificationDataSchema = z.object({
   amount: AmountSchema,
-  authorization: PaymentModificationSchema,
+  authorization: PaymentModificationSchema.pick({
+    amount: true,
+    pspReference: true,
+  }),
   cancellation: PaymentModificationSchema.optional(),
-  captures: PaymentModificationSchema.array(),
+  captures: z.array(PaymentModificationSchema).optional(),
   reference: z.string(),
-  refunds: PaymentModificationSchema.array(),
+  refunds: z.array(PaymentModificationSchema).optional(),
   webhook: z.boolean().optional(),
 })
