@@ -8,25 +8,12 @@ import {
 } from '@medusajs/framework/workflows-sdk'
 import { differenceBy, map } from 'lodash'
 
-import {
-  getWholeUnit,
-  managePaymentData,
-  type PaymentModification,
-} from '../../utils'
+import { getWholeUnit, managePaymentData } from '../../utils'
 
 const SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
 type NotificationRequestItem = Types.notification.NotificationRequestItem
-type PaymentModifications = PaymentModification[]
 
 export const processCaptureSuccessStepId = 'process-capture-success-step'
-
-const restoreOriginalDataPayment = (payment: PaymentDTO): PaymentDTO => {
-  const { data, id } = payment
-  const captures = (data?.captures as PaymentModifications) || []
-  const newCaptures = [...captures]
-  const newData = { ...data, captures: newCaptures } as PaymentDTO['data']
-  return { data: newData, id } as PaymentDTO
-}
 
 const processCaptureSuccessStepInvoke = async (
   notification: NotificationRequestItem,
