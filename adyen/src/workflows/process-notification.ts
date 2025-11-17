@@ -8,7 +8,7 @@ import {
   when,
 } from '@medusajs/framework/workflows-sdk'
 
-import { processCaptureFailureStep, processCaptureSuccessStep } from './steps'
+import { captureFailureStep, captureSuccessStep } from './steps'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 const EventCodeEnum = Types.notification.NotificationRequestItem.EventCodeEnum
@@ -72,11 +72,11 @@ export const processNotificationWorkflow = createWorkflow(
     // })
 
     when('capture-success', input, isCaptureSuccess).then(() => {
-      processCaptureSuccessStep(input)
+      captureSuccessStep(input)
     })
 
     when('capture-failure', input, isCatureNotSuccess).then(() => {
-      processCaptureFailureStep(input)
+      captureFailureStep(input)
     })
 
     const notificationProcessed = createHook('notificationProcessed', input)

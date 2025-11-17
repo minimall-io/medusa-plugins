@@ -13,9 +13,9 @@ import { getWholeUnit, managePaymentData } from '../../utils'
 const SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 
-export const processCaptureSuccessStepId = 'process-capture-success-step'
+export const captureSuccessStepId = 'capture-success-step'
 
-const processCaptureSuccessStepInvoke = async (
+const captureSuccessStepInvoke = async (
   notification: NotificationRequestItem,
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
@@ -102,7 +102,7 @@ const processCaptureSuccessStepInvoke = async (
   return new StepResponse<PaymentDTO, PaymentDTO>(newPayment, originalPayment)
 }
 
-const processCaptureSuccessStepCompensate = async (
+const captureSuccessStepCompensate = async (
   payment: PaymentDTO,
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
@@ -143,10 +143,10 @@ const processCaptureSuccessStepCompensate = async (
   return new StepResponse<PaymentDTO>(restoredPayment)
 }
 
-const processCaptureSuccessStep = createStep(
-  processCaptureSuccessStepId,
-  processCaptureSuccessStepInvoke,
-  processCaptureSuccessStepCompensate,
+const captureSuccessStep = createStep(
+  captureSuccessStepId,
+  captureSuccessStepInvoke,
+  captureSuccessStepCompensate,
 )
 
-export default processCaptureSuccessStep
+export default captureSuccessStep
