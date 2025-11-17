@@ -57,8 +57,8 @@ medusaIntegrationTestRunner({
         encryptedCardDetails = getCardDetails()
       })
 
-      xdescribe('Test processing success capture notification', () => {
-        describe('Invocation', () => {
+      describe('Workflow completion', () => {
+        describe('Test processing success capture notification', () => {
           let payment: PaymentDTO
 
           beforeEach(async () => {
@@ -195,59 +195,190 @@ medusaIntegrationTestRunner({
           })
         })
 
-        describe('Compensation', () => {
+        describe('Test processing failed capture notification', () => {
           let payment: PaymentDTO
-          beforeAll(async () => {
-            /**
-             * There's a bug in the createWorkflow function that prevents
-             * custom workflow hooks from being registered inside integration tests.
-             *
-             * Refer to the BUGS.md file for the details of how to fix it.
-             */
-            const workflowDef = WorkflowManager.getWorkflow(
-              'process-notification-workflow',
+
+          beforeEach(async () => {
+            const collections = await paymentService.createPaymentCollections([
+              collectionInput,
+            ])
+            const collection = collections[0]
+
+            const session = await paymentService.createPaymentSession(
+              collection.id,
+              {
+                amount: collection.amount,
+                context: {},
+                currency_code: collection.currency_code,
+                data: { request: {} },
+                provider_id,
+              },
             )
 
-            if (!workflowDef) {
-              throw new Error('Workflow not found in WorkflowManager')
-            }
-
-            const hookHandler = (input: NotificationRequestItem) => {
-              console.log(
-                'processNotificationWorkflow/hooks/notificationProcessed/input',
-                JSON.stringify(input, null, 2),
-              )
-              throw new MedusaError(
-                MedusaError.Types.NOT_ALLOWED,
-                'processNotificationWorkflow/hooks/notificationProcessed/error',
-              )
-            }
-
-            processNotificationWorkflow.hooks.notificationProcessed(hookHandler)
-
-            const handler = {
-              compensate: undefined,
-              invoke: async (stepArguments: any) => {
-                let input = stepArguments.payload
-
-                if (
-                  input?.__type ===
-                  OrchestrationUtils.SymbolWorkflowWorkflowData
-                ) {
-                  input = input.output
-                }
-
-                await hookHandler(input)
-
-                return {
-                  __type: OrchestrationUtils.SymbolWorkflowWorkflowData,
-                  output: undefined,
-                }
+            await paymentService.updatePaymentSession({
+              amount: collection.amount,
+              currency_code: collection.currency_code,
+              data: {
+                request: {
+                  paymentMethod: encryptedCardDetails,
+                },
               },
-            }
+              id: session.id,
+            })
 
-            workflowDef.handlers_.set('notificationProcessed', handler)
+            await paymentService.authorizePaymentSession(session.id, {})
+
+            const [authorizedPayment] = await paymentService.listPayments(
+              {
+                payment_session_id: session.id,
+              },
+              {
+                relations: ['payment_session', 'captures'],
+              },
+            )
+
+            payment = authorizedPayment
+            await delay(1000)
           })
+
+          it('preserves the captures data property after a failed capture notification is processed without prior direct capture', async () => {
+            const pspReference = 'pspReference'
+            const reference = payment.payment_session!.id
+            const amount = payment.amount as number
+            const currency = payment.currency_code.toUpperCase()
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.Capture,
+              SuccessEnum.False,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            await workflow.run({
+              input: notification,
+            })
+
+            const [updatedPayment] = await paymentService.listPayments(
+              {
+                id: payment.id,
+              },
+              {
+                relations: ['captures'],
+              },
+            )
+            const updatedCaptures = updatedPayment.data!
+              .captures as PaymentModification[]
+
+            expect(updatedPayment.captures).toHaveLength(0)
+            expect(updatedCaptures).toHaveLength(0)
+          })
+
+          it('removes a payment capture from the captures data property after a failed capture notification is processed with prior direct capture', async () => {
+            await paymentService.capturePayment({ payment_id: payment.id })
+
+            const [originalPayment] = await paymentService.listPayments(
+              {
+                id: payment.id,
+              },
+              {
+                relations: ['captures'],
+              },
+            )
+
+            const originalCaptures = originalPayment.data!
+              .captures as PaymentModification[]
+            const originalCapture = originalCaptures[0]
+
+            const notification = getNotificationRequestItem(
+              originalCapture.pspReference,
+              originalCapture.reference,
+              originalCapture.amount.value,
+              originalCapture.amount.currency,
+              EventCodeEnum.Capture,
+              SuccessEnum.False,
+            )
+            const workflow = processNotificationWorkflow(container)
+            await workflow.run({
+              input: notification,
+            })
+
+            const [updatedPayment] = await paymentService.listPayments(
+              {
+                id: payment.id,
+              },
+              {
+                relations: ['captures'],
+              },
+            )
+
+            const updatedCaptures = updatedPayment.data!
+              .captures as PaymentModification[]
+
+            expect(originalCaptures).toHaveLength(1)
+            expect(updatedCaptures).toHaveLength(0)
+            expect(originalPayment.captures).toHaveLength(1)
+            expect(updatedPayment.captures).toHaveLength(0)
+          })
+        })
+      })
+
+      describe('Workflow errors', () => {
+        beforeAll(async () => {
+          /**
+           * There's a bug in the createWorkflow function that prevents
+           * custom workflow hooks from being registered inside integration tests.
+           *
+           * Refer to the BUGS.md file for the details of how to fix it.
+           */
+          const workflowDef = WorkflowManager.getWorkflow(
+            'process-notification-workflow',
+          )
+
+          if (!workflowDef) {
+            throw new Error('Workflow not found in WorkflowManager')
+          }
+
+          const hookHandler = (input: NotificationRequestItem) => {
+            console.log(
+              'processNotificationWorkflow/hooks/notificationProcessed/input',
+              JSON.stringify(input, null, 2),
+            )
+            throw new MedusaError(
+              MedusaError.Types.NOT_ALLOWED,
+              'processNotificationWorkflow/hooks/notificationProcessed/error',
+            )
+          }
+
+          processNotificationWorkflow.hooks.notificationProcessed(hookHandler)
+
+          const handler = {
+            compensate: undefined,
+            invoke: async (stepArguments: any) => {
+              let input = stepArguments.payload
+
+              if (
+                input?.__type === OrchestrationUtils.SymbolWorkflowWorkflowData
+              ) {
+                input = input.output
+              }
+
+              await hookHandler(input)
+
+              return {
+                __type: OrchestrationUtils.SymbolWorkflowWorkflowData,
+                output: undefined,
+              }
+            },
+          }
+
+          workflowDef.handlers_.set('notificationProcessed', handler)
+        })
+
+        describe('Test processing success capture notification', () => {
+          let payment: PaymentDTO
 
           beforeEach(async () => {
             const collections = await paymentService.createPaymentCollections([
@@ -400,191 +531,9 @@ medusaIntegrationTestRunner({
             expect(updatedCapture.status).toBe('received')
           })
         })
-      })
 
-      describe('Test processing failed capture notification', () => {
-        describe('Invocation', () => {
+        describe('Test processing failed capture notification', () => {
           let payment: PaymentDTO
-
-          beforeEach(async () => {
-            const collections = await paymentService.createPaymentCollections([
-              collectionInput,
-            ])
-            const collection = collections[0]
-
-            const session = await paymentService.createPaymentSession(
-              collection.id,
-              {
-                amount: collection.amount,
-                context: {},
-                currency_code: collection.currency_code,
-                data: { request: {} },
-                provider_id,
-              },
-            )
-
-            await paymentService.updatePaymentSession({
-              amount: collection.amount,
-              currency_code: collection.currency_code,
-              data: {
-                request: {
-                  paymentMethod: encryptedCardDetails,
-                },
-              },
-              id: session.id,
-            })
-
-            await paymentService.authorizePaymentSession(session.id, {})
-
-            const [authorizedPayment] = await paymentService.listPayments(
-              {
-                payment_session_id: session.id,
-              },
-              {
-                relations: ['payment_session', 'captures'],
-              },
-            )
-
-            payment = authorizedPayment
-            await delay(1000)
-          })
-
-          it('preserves the captures data property after a failed capture notification is processed without prior direct capture', async () => {
-            const pspReference = 'pspReference'
-            const reference = payment.payment_session!.id
-            const amount = payment.amount as number
-            const currency = payment.currency_code.toUpperCase()
-
-            const notification = getNotificationRequestItem(
-              pspReference,
-              reference,
-              amount,
-              currency,
-              EventCodeEnum.Capture,
-              SuccessEnum.False,
-            )
-
-            const workflow = processNotificationWorkflow(container)
-            await workflow.run({
-              input: notification,
-            })
-
-            const [updatedPayment] = await paymentService.listPayments(
-              {
-                id: payment.id,
-              },
-              {
-                relations: ['captures'],
-              },
-            )
-            const updatedCaptures = updatedPayment.data!
-              .captures as PaymentModification[]
-
-            expect(updatedPayment.captures).toHaveLength(0)
-            expect(updatedCaptures).toHaveLength(0)
-          })
-
-          it('removes a payment capture from the captures data property after a failed capture notification is processed with prior direct capture', async () => {
-            await paymentService.capturePayment({ payment_id: payment.id })
-
-            const [originalPayment] = await paymentService.listPayments(
-              {
-                id: payment.id,
-              },
-              {
-                relations: ['captures'],
-              },
-            )
-
-            const originalCaptures = originalPayment.data!
-              .captures as PaymentModification[]
-            const originalCapture = originalCaptures[0]
-
-            const notification = getNotificationRequestItem(
-              originalCapture.pspReference,
-              originalCapture.reference,
-              originalCapture.amount.value,
-              originalCapture.amount.currency,
-              EventCodeEnum.Capture,
-              SuccessEnum.False,
-            )
-            const workflow = processNotificationWorkflow(container)
-            await workflow.run({
-              input: notification,
-            })
-
-            const [updatedPayment] = await paymentService.listPayments(
-              {
-                id: payment.id,
-              },
-              {
-                relations: ['captures'],
-              },
-            )
-
-            const updatedCaptures = updatedPayment.data!
-              .captures as PaymentModification[]
-
-            expect(originalCaptures).toHaveLength(1)
-            expect(updatedCaptures).toHaveLength(0)
-            expect(originalPayment.captures).toHaveLength(1)
-            expect(updatedPayment.captures).toHaveLength(0)
-          })
-        })
-
-        describe('Compensation', () => {
-          let payment: PaymentDTO
-          beforeAll(async () => {
-            /**
-             * There's a bug in the createWorkflow function that prevents
-             * custom workflow hooks from being registered inside integration tests.
-             *
-             * Refer to the BUGS.md file for the details of how to fix it.
-             */
-            const workflowDef = WorkflowManager.getWorkflow(
-              'process-notification-workflow',
-            )
-
-            if (!workflowDef) {
-              throw new Error('Workflow not found in WorkflowManager')
-            }
-
-            const hookHandler = (input: NotificationRequestItem) => {
-              console.log(
-                'processNotificationWorkflow/hooks/notificationProcessed/input',
-                JSON.stringify(input, null, 2),
-              )
-              throw new MedusaError(
-                MedusaError.Types.NOT_ALLOWED,
-                'processNotificationWorkflow/hooks/notificationProcessed/error',
-              )
-            }
-
-            processNotificationWorkflow.hooks.notificationProcessed(hookHandler)
-
-            const handler = {
-              compensate: undefined,
-              invoke: async (stepArguments: any) => {
-                let input = stepArguments.payload
-
-                if (
-                  input?.__type ===
-                  OrchestrationUtils.SymbolWorkflowWorkflowData
-                ) {
-                  input = input.output
-                }
-
-                await hookHandler(input)
-
-                return {
-                  __type: OrchestrationUtils.SymbolWorkflowWorkflowData,
-                  output: undefined,
-                }
-              },
-            }
-
-            workflowDef.handlers_.set('notificationProcessed', handler)
-          })
 
           beforeEach(async () => {
             const collections = await paymentService.createPaymentCollections([
@@ -676,7 +625,7 @@ medusaIntegrationTestRunner({
             expect(updatedCaptures).toHaveLength(0)
           })
 
-          fit('restores initial payment state after a failed capture notification processing fails with prior direct capture', async () => {
+          it('restores initial payment state after a failed capture notification processing fails with prior direct capture', async () => {
             await paymentService.capturePayment({ payment_id: payment.id })
 
             const [originalPayment] = await paymentService.listPayments(
@@ -719,15 +668,6 @@ medusaIntegrationTestRunner({
               .captures as PaymentModification[]
             const updatedCapture = updatedCaptures[0]
 
-            console.log(
-              'originalPayment',
-              JSON.stringify(originalPayment, null, 2),
-            )
-            console.log(
-              'updatedPayment',
-              JSON.stringify(updatedPayment, null, 2),
-            )
-
             expect(errors).toEqual([
               {
                 action: 'notificationProcessed',
@@ -738,10 +678,10 @@ medusaIntegrationTestRunner({
                 handlerType: 'invoke',
               },
             ])
-            expect(originalPayment.captures).toHaveLength(0)
-            expect(updatedPayment.captures).toHaveLength(0)
-            expect(originalCaptures).toHaveLength(0)
-            expect(updatedCaptures).toHaveLength(0)
+            expect(originalPayment.captures).toHaveLength(1)
+            expect(updatedPayment.captures).toHaveLength(1)
+            expect(originalCaptures).toHaveLength(1)
+            expect(updatedCaptures).toHaveLength(1)
             expect(originalCapture.status).toBe('received')
             expect(updatedCapture.status).toBe('received')
           })
