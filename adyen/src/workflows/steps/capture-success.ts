@@ -46,50 +46,46 @@ const captureSuccessStepInvoke = async (
     originalPayment.data,
   )
 
-  const captureToUpdate = getCapture(pspReference)
+  const dataCapture = getCapture(pspReference)
 
-  if (captureToUpdate) {
-    const newData = updateCapture({ ...captureToUpdate, status })
-    const newPayment = {
-      data: newData,
+  if (dataCapture) {
+    const paymentToUpdate = {
+      data: updateCapture({ ...dataCapture, status }),
       id: originalPayment.id,
     }
-    await paymentService.updatePayment(newPayment)
+    await paymentService.updatePayment(paymentToUpdate)
   } else if (amount.value !== undefined && amount.currency !== undefined) {
-    const webhookData = updateData({ webhook: true })
     const webhookPayment = {
-      data: webhookData,
+      data: updateData({ webhook: true }),
       id: originalPayment.id,
     }
     await paymentService.updatePayment(webhookPayment)
-    const capture = {
+    const paymentCaptureToCreate = {
       amount: getWholeUnit(amount.value, amount.currency),
       captured_by: merchantAccountCode,
       payment_id: originalPayment.id,
     }
-    await paymentService.capturePayment(capture)
-    const updatedCaptures = await paymentService.listCaptures({
+    await paymentService.capturePayment(paymentCaptureToCreate)
+    const newPaymentCaptures = await paymentService.listCaptures({
       payment_id: originalPayment.id,
     })
-    const newCaptures = differenceBy(
-      updatedCaptures,
+    const [newPaymentCapture] = differenceBy(
+      newPaymentCaptures,
       originalPayment.captures,
       'id',
     )
-    const newCapture = newCaptures[0]
-    const captureToAdd = {
+    const newDataCapture = {
       amount: { currency: amount.currency, value: amount.value },
-      id: newCapture.id,
+      id: newPaymentCapture.id,
       pspReference,
       reference,
       status,
     }
-    const newData = updateCapture(captureToAdd)
-    const newPayment = {
-      data: newData,
+    const paymentToUpdate = {
+      data: updateCapture(newDataCapture),
       id: originalPayment.id,
     }
-    await paymentService.updatePayment(newPayment)
+    await paymentService.updatePayment(paymentToUpdate)
   }
 
   const newPayment = await paymentService.retrievePayment(originalPayment.id, {
@@ -103,39 +99,49 @@ const captureSuccessStepInvoke = async (
 }
 
 const captureSuccessStepCompensate = async (
-  payment: PaymentDTO,
+  originalPayment: PaymentDTO,
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
   logging.debug(
-    `${workflowId}/${stepName}/compensate/payment ${JSON.stringify(payment, null, 2)}`,
+    `${workflowId}/${stepName}/compensate/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
 
-  const { data, id, captures } = payment
+  const { listCaptures } = managePaymentData(originalPayment.data)
 
-  const { listCaptures } = managePaymentData(data)
-
-  const newCaptures = await paymentService.listCaptures({
-    payment_id: id,
+  const newPaymentCaptures = await paymentService.listCaptures({
+    payment_id: originalPayment.id,
   })
   logging.debug(
-    `${workflowId}/${stepName}/compensate/newCaptures ${JSON.stringify(newCaptures, null, 2)}`,
+    `${workflowId}/${stepName}/compensate/newPaymentCaptures ${JSON.stringify(newPaymentCaptures, null, 2)}`,
   )
 
-  const capturesToDelete = map(differenceBy(newCaptures, captures, 'id'), 'id')
+  const paymentCapturesToDelete = map(
+    differenceBy(newPaymentCaptures, originalPayment.captures, 'id'),
+    'id',
+  )
   logging.debug(
-    `${workflowId}/${stepName}/compensate/capturesToDelete ${JSON.stringify(capturesToDelete, null, 2)}`,
+    `${workflowId}/${stepName}/compensate/paymentCapturesToDelete ${JSON.stringify(paymentCapturesToDelete, null, 2)}`,
   )
 
-  await paymentService.deleteCaptures(capturesToDelete)
-  const newData = { ...data, captures: listCaptures() } as PaymentDTO['data']
-  const processedPayment = { data: newData, id } as PaymentDTO
-  await paymentService.updatePayment(processedPayment)
+  await paymentService.deleteCaptures(paymentCapturesToDelete)
+  const dataToUpdate = {
+    ...originalPayment.data,
+    captures: listCaptures(),
+  } as PaymentDTO['data']
+  const paymentToUpdate = {
+    data: dataToUpdate,
+    id: originalPayment.id,
+  } as PaymentDTO
+  await paymentService.updatePayment(paymentToUpdate)
 
-  const restoredPayment = await paymentService.retrievePayment(payment.id, {
-    relations: ['captures'],
-  })
+  const restoredPayment = await paymentService.retrievePayment(
+    originalPayment.id,
+    {
+      relations: ['captures'],
+    },
+  )
   logging.debug(
     `${workflowId}/${stepName}/compensate/restoredPayment ${JSON.stringify(restoredPayment, null, 2)}`,
   )
