@@ -1,71 +1,24 @@
 import type { Types } from '@adyen/api-library'
-import type { CaptureDTO, PaymentDTO } from '@medusajs/framework/types'
+import type { PaymentDTO } from '@medusajs/framework/types'
 import { ContainerRegistrationKeys, Modules } from '@medusajs/framework/utils'
-
 import {
   createStep,
   type StepExecutionContext,
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
+import { differenceBy, find } from 'lodash'
 
-import type { PaymentModification } from '../../utils'
+import { managePaymentData, type PaymentModification } from '../../utils'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
-type PaymentModifications = PaymentModification[]
 
 export const processCaptureFailureStepId = 'process-capture-failure-step'
-
-const getCaptureIdToDelete = (
-  notification: NotificationRequestItem,
-  payment: PaymentDTO,
-): string | undefined => {
-  const { pspReference } = notification
-  const { data } = payment
-  const captures = (data?.captures as PaymentModifications) || []
-  const captureToDelete = captures.find(
-    (capture) => capture.pspReference === pspReference,
-  )
-  return captureToDelete?.id
-}
-
-const generateNewDataPayment = (
-  notification: NotificationRequestItem,
-  payment: PaymentDTO,
-): PaymentDTO => {
-  const { pspReference } = notification
-  const { data, id } = payment
-  const captures = (data?.captures as PaymentModifications) || []
-  const newCaptures = captures.filter(
-    (capture) => capture.pspReference !== pspReference,
-  )
-  const newData = { ...data, captures: newCaptures } as PaymentDTO['data']
-  return { data: newData, id } as PaymentDTO
-}
-
-const restoreOriginalDataPayment = (payment: PaymentDTO): PaymentDTO => {
-  const { data, id } = payment
-  const captures = (data?.captures as PaymentModifications) || []
-  const newCaptures = [...captures]
-  const newData = { ...data, captures: newCaptures } as PaymentDTO['data']
-  return { data: newData, id } as PaymentDTO
-}
-
-const generateCapturesToRestore = (
-  oldPayment: PaymentDTO,
-  newPayment: PaymentDTO,
-): CaptureDTO[] => {
-  const oldCaptures = oldPayment.captures || []
-  const newCaptures = newPayment.captures || []
-  const newCaptureIds = newCaptures.map<string>((capture) => capture.id)
-  const newCaptureIdsSet = new Set(newCaptureIds)
-  return oldCaptures.filter((capture) => !newCaptureIdsSet.has(capture.id))
-}
 
 const processCaptureFailureStepInvoke = async (
   notification: NotificationRequestItem,
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
-  const { merchantReference } = notification
+  const { merchantReference, pspReference } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
@@ -81,11 +34,17 @@ const processCaptureFailureStepInvoke = async (
     `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
 
-  const processedPayment = generateNewDataPayment(notification, originalPayment)
-  const captureIdToDelete = getCaptureIdToDelete(notification, originalPayment)
-  await paymentService.updatePayment(processedPayment)
-  if (captureIdToDelete) {
-    await paymentService.deleteCaptures([captureIdToDelete])
+  const { getCapture, deleteCapture } = managePaymentData(originalPayment.data)
+
+  const dataCapture = getCapture(pspReference)
+  const paymentToUpdate = {
+    captured_at: undefined,
+    data: deleteCapture(pspReference),
+    id: originalPayment.id,
+  } as PaymentDTO
+  await paymentService.updatePayment(paymentToUpdate)
+  if (dataCapture?.id) {
+    await paymentService.deleteCaptures([dataCapture.id])
   }
 
   const newPayment = await paymentService.retrievePayment(originalPayment.id, {
@@ -99,41 +58,71 @@ const processCaptureFailureStepInvoke = async (
 }
 
 const processCaptureFailureStepCompensate = async (
-  payment: PaymentDTO,
+  originalPayment: PaymentDTO,
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
   logging.debug(
-    `${workflowId}/${stepName}/compensate/payment ${JSON.stringify(payment, null, 2)}`,
+    `${workflowId}/${stepName}/compensate/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
 
-  const newPayment = await paymentService.retrievePayment(payment.id, {
+  const newPayment = await paymentService.retrievePayment(originalPayment.id, {
     relations: ['captures'],
   })
   logging.debug(
     `${workflowId}/${stepName}/compensate/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
 
-  const capturesToRestore = generateCapturesToRestore(payment, newPayment)
-  logging.debug(
-    `${workflowId}/${stepName}/compensate/capturesToRestore ${JSON.stringify(capturesToRestore, null, 2)}`,
-  )
+  const {
+    listCaptures: originalListCaptures,
+    updateData,
+    updateCapture,
+  } = managePaymentData(originalPayment.data)
+  const { listCaptures: newListCaptures } = managePaymentData(newPayment.data)
 
-  const promises = capturesToRestore.map((capture) =>
-    paymentService.capturePayment({
-      amount: capture.amount,
-      captured_by: capture.created_by,
-      payment_id: payment.id,
-    }),
+  const [dataCapture]: PaymentModification[] = differenceBy(
+    originalListCaptures(),
+    newListCaptures(),
+    'id',
   )
-  await Promise.all(promises)
-  const processedPayment = restoreOriginalDataPayment(payment)
-  await paymentService.updatePayment(processedPayment)
+  if (dataCapture) {
+    const originalPaymentCapture = find(originalPayment.captures, {
+      id: dataCapture.id,
+    })
+    const webhookPayment = {
+      data: updateData({ webhook: true }),
+      id: originalPayment.id,
+    }
+    await paymentService.updatePayment(webhookPayment)
+    const paymentCaptureToCreate = {
+      amount: originalPaymentCapture.amount,
+      captured_by: originalPaymentCapture.created_by,
+      payment_id: originalPayment.id,
+    }
+    await paymentService.capturePayment(paymentCaptureToCreate)
+    const restoredPaymentCaptures = await paymentService.listCaptures({
+      payment_id: originalPayment.id,
+    })
+    const [restoredPaymentCapture] = differenceBy(
+      restoredPaymentCaptures,
+      newPayment.captures,
+      'id',
+    )
+    const dataCaptureToAdd = { ...dataCapture, id: restoredPaymentCapture.id }
+    const paymentToUpdate = {
+      data: updateCapture(dataCaptureToAdd),
+      id: originalPayment.id,
+    }
+    await paymentService.updatePayment(paymentToUpdate)
+  }
 
-  const restoredPayment = await paymentService.retrievePayment(payment.id, {
-    relations: ['captures'],
-  })
+  const restoredPayment = await paymentService.retrievePayment(
+    originalPayment.id,
+    {
+      relations: ['captures'],
+    },
+  )
   logging.debug(
     `${workflowId}/${stepName}/compensate/restoredPayment ${JSON.stringify(restoredPayment, null, 2)}`,
   )
