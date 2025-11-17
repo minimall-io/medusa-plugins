@@ -1,5 +1,5 @@
 import { Types } from '@adyen/api-library'
-import type { PaymentDTO } from '@medusajs/framework/types'
+import type { CaptureDTO, PaymentDTO } from '@medusajs/framework/types'
 import { ContainerRegistrationKeys, Modules } from '@medusajs/framework/utils'
 import {
   createStep,
@@ -69,7 +69,7 @@ const captureSuccessStepInvoke = async (
     const newPaymentCaptures = await paymentService.listCaptures({
       payment_id: originalPayment.id,
     })
-    const [newPaymentCapture] = differenceBy(
+    const [newPaymentCapture]: CaptureDTO[] = differenceBy(
       newPaymentCaptures,
       originalPayment.captures,
       'id',
@@ -117,7 +117,7 @@ const captureSuccessStepCompensate = async (
     `${workflowId}/${stepName}/compensate/newPaymentCaptures ${JSON.stringify(newPaymentCaptures, null, 2)}`,
   )
 
-  const paymentCapturesToDelete = map(
+  const paymentCapturesToDelete: string[] = map(
     differenceBy(newPaymentCaptures, originalPayment.captures, 'id'),
     'id',
   )
