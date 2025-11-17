@@ -12,9 +12,9 @@ import { managePaymentData, type PaymentModification } from '../../utils'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 
-export const processCaptureFailureStepId = 'process-capture-failure-step'
+export const captureFailureStepId = 'capture-failure-step'
 
-const processCaptureFailureStepInvoke = async (
+const captureFailureStepInvoke = async (
   notification: NotificationRequestItem,
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
@@ -57,7 +57,7 @@ const processCaptureFailureStepInvoke = async (
   return new StepResponse<PaymentDTO, PaymentDTO>(newPayment, originalPayment)
 }
 
-const processCaptureFailureStepCompensate = async (
+const captureFailureStepCompensate = async (
   originalPayment: PaymentDTO,
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
@@ -130,10 +130,10 @@ const processCaptureFailureStepCompensate = async (
   return new StepResponse<PaymentDTO>(restoredPayment)
 }
 
-const processCaptureFailureStep = createStep(
-  processCaptureFailureStepId,
-  processCaptureFailureStepInvoke,
-  processCaptureFailureStepCompensate,
+const captureFailureStep = createStep(
+  captureFailureStepId,
+  captureFailureStepInvoke,
+  captureFailureStepCompensate,
 )
 
-export default processCaptureFailureStep
+export default captureFailureStep
