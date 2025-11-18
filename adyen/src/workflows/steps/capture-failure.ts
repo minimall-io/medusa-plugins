@@ -7,7 +7,6 @@ import {
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
 import { differenceBy, find } from 'lodash'
-
 import { managePaymentData, type PaymentModification } from '../../utils'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem

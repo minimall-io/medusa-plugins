@@ -1,4 +1,4 @@
-import { Types } from '@adyen/api-library'
+import type { Types } from '@adyen/api-library'
 import type { CaptureDTO, PaymentDTO } from '@medusajs/framework/types'
 import { ContainerRegistrationKeys, Modules } from '@medusajs/framework/utils'
 import {
@@ -7,10 +7,8 @@ import {
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
 import { differenceBy, map } from 'lodash'
-
 import { getWholeUnit, managePaymentData } from '../../utils'
 
-const SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 
 export const captureSuccessStepId = 'capture-success-step'
@@ -24,9 +22,8 @@ const captureSuccessStepInvoke = async (
     amount,
     merchantAccountCode,
     pspReference,
-    success,
   } = notification
-  const status = success === SuccessEnum.True ? 'success' : 'failed'
+  const status = 'success'
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 

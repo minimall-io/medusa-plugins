@@ -37,11 +37,12 @@ const isCaptureSuccess = ({
 }: NotificationRequestItem): boolean =>
   eventCode === EventCodeEnum.Capture && success === SuccessEnum.True
 
-const isCatureNotSuccess = ({
+const isCatureFailed = ({
   eventCode,
   success,
 }: NotificationRequestItem): boolean =>
-  eventCode === EventCodeEnum.Capture && success === SuccessEnum.False
+  (eventCode === EventCodeEnum.Capture && success === SuccessEnum.False) ||
+  (eventCode === EventCodeEnum.CaptureFailed && success === SuccessEnum.True)
 
 export const processNotificationWorkflow = createWorkflow(
   processNotificationWorkflowId,
@@ -75,7 +76,7 @@ export const processNotificationWorkflow = createWorkflow(
       captureSuccessStep(input)
     })
 
-    when('capture-failure', input, isCatureNotSuccess).then(() => {
+    when('capture-failure', input, isCatureFailed).then(() => {
       captureFailureStep(input)
     })
 
