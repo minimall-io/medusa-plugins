@@ -45,6 +45,7 @@ medusaIntegrationTestRunner({
       let provider_id: string
       let customer: PaymentCustomerDTO
       let encryptedCardDetails: Types.checkout.CardDetails
+      let payment: PaymentDTO
 
       beforeAll(async () => {
         container = getContainer()
@@ -57,53 +58,51 @@ medusaIntegrationTestRunner({
         encryptedCardDetails = getCardDetails()
       })
 
+      beforeEach(async () => {
+        const collections = await paymentService.createPaymentCollections([
+          collectionInput,
+        ])
+        const collection = collections[0]
+
+        const session = await paymentService.createPaymentSession(
+          collection.id,
+          {
+            amount: collection.amount,
+            context: {},
+            currency_code: collection.currency_code,
+            data: { request: {} },
+            provider_id,
+          },
+        )
+
+        await paymentService.updatePaymentSession({
+          amount: collection.amount,
+          currency_code: collection.currency_code,
+          data: {
+            request: {
+              paymentMethod: encryptedCardDetails,
+            },
+          },
+          id: session.id,
+        })
+
+        await paymentService.authorizePaymentSession(session.id, {})
+
+        const [authorizedPayment] = await paymentService.listPayments(
+          {
+            payment_session_id: session.id,
+          },
+          {
+            relations: ['payment_session', 'captures'],
+          },
+        )
+
+        payment = authorizedPayment
+        await delay(1000)
+      })
+
       describe('Workflow completion', () => {
         describe('Test processing success capture notification', () => {
-          let payment: PaymentDTO
-
-          beforeEach(async () => {
-            const collections = await paymentService.createPaymentCollections([
-              collectionInput,
-            ])
-            const collection = collections[0]
-
-            const session = await paymentService.createPaymentSession(
-              collection.id,
-              {
-                amount: collection.amount,
-                context: {},
-                currency_code: collection.currency_code,
-                data: { request: {} },
-                provider_id,
-              },
-            )
-
-            await paymentService.updatePaymentSession({
-              amount: collection.amount,
-              currency_code: collection.currency_code,
-              data: {
-                request: {
-                  paymentMethod: encryptedCardDetails,
-                },
-              },
-              id: session.id,
-            })
-
-            await paymentService.authorizePaymentSession(session.id, {})
-
-            const [authorizedPayment] = await paymentService.listPayments(
-              {
-                payment_session_id: session.id,
-              },
-              {
-                relations: ['payment_session', 'captures'],
-              },
-            )
-
-            payment = authorizedPayment
-            await delay(1000)
-          })
-
           it('adds a payment capture in the captures data property with success status after a success capture notification is processed without prior direct capture', async () => {
             const pspReference = 'pspReference'
             const reference = payment.payment_session!.id
@@ -196,51 +195,6 @@ medusaIntegrationTestRunner({
         })
 
         describe('Test processing failed capture notification', () => {
-          let payment: PaymentDTO
-
-          beforeEach(async () => {
-            const collections = await paymentService.createPaymentCollections([
-              collectionInput,
-            ])
-            const collection = collections[0]
-
-            const session = await paymentService.createPaymentSession(
-              collection.id,
-              {
-                amount: collection.amount,
-                context: {},
-                currency_code: collection.currency_code,
-                data: { request: {} },
-                provider_id,
-              },
-            )
-
-            await paymentService.updatePaymentSession({
-              amount: collection.amount,
-              currency_code: collection.currency_code,
-              data: {
-                request: {
-                  paymentMethod: encryptedCardDetails,
-                },
-              },
-              id: session.id,
-            })
-
-            await paymentService.authorizePaymentSession(session.id, {})
-
-            const [authorizedPayment] = await paymentService.listPayments(
-              {
-                payment_session_id: session.id,
-              },
-              {
-                relations: ['payment_session', 'captures'],
-              },
-            )
-
-            payment = authorizedPayment
-            await delay(1000)
-          })
-
           it('preserves the captures data property after a failed capture notification is processed without prior direct capture', async () => {
             const pspReference = 'pspReference'
             const reference = payment.payment_session!.id
@@ -378,51 +332,6 @@ medusaIntegrationTestRunner({
         })
 
         describe('Test processing success capture notification', () => {
-          let payment: PaymentDTO
-
-          beforeEach(async () => {
-            const collections = await paymentService.createPaymentCollections([
-              collectionInput,
-            ])
-            const collection = collections[0]
-
-            const session = await paymentService.createPaymentSession(
-              collection.id,
-              {
-                amount: collection.amount,
-                context: {},
-                currency_code: collection.currency_code,
-                data: { request: {} },
-                provider_id,
-              },
-            )
-
-            await paymentService.updatePaymentSession({
-              amount: collection.amount,
-              currency_code: collection.currency_code,
-              data: {
-                request: {
-                  paymentMethod: encryptedCardDetails,
-                },
-              },
-              id: session.id,
-            })
-
-            await paymentService.authorizePaymentSession(session.id, {})
-
-            const [authorizedPayment] = await paymentService.listPayments(
-              {
-                payment_session_id: session.id,
-              },
-              {
-                relations: ['payment_session', 'captures'],
-              },
-            )
-
-            payment = authorizedPayment
-            await delay(1000)
-          })
-
           it('preserves the original data property after a success capture notification processing fails without prior direct capture', async () => {
             const pspReference = 'pspReference'
             const reference = payment.payment_session!.id
@@ -533,51 +442,6 @@ medusaIntegrationTestRunner({
         })
 
         describe('Test processing failed capture notification', () => {
-          let payment: PaymentDTO
-
-          beforeEach(async () => {
-            const collections = await paymentService.createPaymentCollections([
-              collectionInput,
-            ])
-            const collection = collections[0]
-
-            const session = await paymentService.createPaymentSession(
-              collection.id,
-              {
-                amount: collection.amount,
-                context: {},
-                currency_code: collection.currency_code,
-                data: { request: {} },
-                provider_id,
-              },
-            )
-
-            await paymentService.updatePaymentSession({
-              amount: collection.amount,
-              currency_code: collection.currency_code,
-              data: {
-                request: {
-                  paymentMethod: encryptedCardDetails,
-                },
-              },
-              id: session.id,
-            })
-
-            await paymentService.authorizePaymentSession(session.id, {})
-
-            const [authorizedPayment] = await paymentService.listPayments(
-              {
-                payment_session_id: session.id,
-              },
-              {
-                relations: ['payment_session', 'captures'],
-              },
-            )
-
-            payment = authorizedPayment
-            await delay(1000)
-          })
-
           it('preserves the original data property after a failed capture notification processing fails without prior direct capture', async () => {
             const pspReference = 'pspReference'
             const reference = payment.payment_session!.id
