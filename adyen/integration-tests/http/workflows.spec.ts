@@ -101,7 +101,7 @@ medusaIntegrationTestRunner({
         await delay(1000)
       })
 
-      describe('Workflow completion', () => {
+      describe('Without Errors', () => {
         describe('Test processing success capture notification', () => {
           it('adds a payment capture in the captures data property with success status after a success capture notification is processed without prior direct capture', async () => {
             const pspReference = 'pspReference'
@@ -279,7 +279,7 @@ medusaIntegrationTestRunner({
         })
       })
 
-      describe('Workflow errors', () => {
+      describe('With Errors', () => {
         beforeAll(async () => {
           /**
            * There's a bug in the createWorkflow function that prevents
