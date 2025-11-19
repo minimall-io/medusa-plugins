@@ -3,7 +3,11 @@ import { BigNumber, MathBN } from '@medusajs/framework/utils'
 import { cloneDeep, filter, find } from 'lodash'
 import { CURRENCY_MULTIPLIERS } from './constants'
 import type { PaymentModification, PaymentModificationData } from './types'
-import { validatePaymentModificationData } from './validators'
+import {
+  validatePartialPaymentModificationData,
+  validatePaymentModification,
+  validatePaymentModificationData,
+} from './validators'
 
 const getCurrencyMultiplier = (currency: string): number => {
   const currencyCode = currency.toUpperCase()
@@ -49,6 +53,7 @@ export const managePaymentData = (data: PaymentDTO['data']) => {
     cloneDeep(data),
   )
   const captures = paymentModificationData?.captures || []
+  const cancellation = paymentModificationData?.cancellation
 
   const getData = (): PaymentDTO['data'] => {
     return paymentModificationData as PaymentDTO['data']
@@ -57,7 +62,20 @@ export const managePaymentData = (data: PaymentDTO['data']) => {
   const updateData = (
     newData: Partial<PaymentModificationData>,
   ): PaymentDTO['data'] => {
-    return { ...paymentModificationData, ...newData } as PaymentDTO['data']
+    const validData = validatePartialPaymentModificationData(newData)
+    return { ...paymentModificationData, ...validData } as PaymentDTO['data']
+  }
+
+  const getCancellation = (): PaymentModification | undefined => cancellation
+
+  const updateCancellation = (
+    newCancellation: PaymentModification,
+  ): PaymentDTO['data'] => {
+    const validCancellation = validatePaymentModification(newCancellation)
+    return {
+      ...paymentModificationData,
+      cancellation: validCancellation,
+    } as PaymentDTO['data']
   }
 
   const listCaptures = (): PaymentModification[] => captures
@@ -68,12 +86,13 @@ export const managePaymentData = (data: PaymentDTO['data']) => {
   const updateCapture = (
     newCapture: PaymentModification,
   ): PaymentDTO['data'] => {
-    const { pspReference } = newCapture
+    const validCapture = validatePaymentModification(newCapture)
+    const { pspReference } = validCapture
     const otherCaptures = filter(
       captures,
       (capture) => capture.pspReference !== pspReference,
     )
-    const newCaptures = [...otherCaptures, newCapture]
+    const newCaptures = [...otherCaptures, validCapture]
     return {
       ...paymentModificationData,
       captures: newCaptures,
@@ -93,9 +112,11 @@ export const managePaymentData = (data: PaymentDTO['data']) => {
 
   return {
     deleteCapture,
+    getCancellation,
     getCapture,
     getData,
     listCaptures,
+    updateCancellation,
     updateCapture,
     updateData,
   }

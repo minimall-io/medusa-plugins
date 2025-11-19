@@ -34,3 +34,7 @@ export const validatePaymentModification = getValidator<PaymentModification>(
 )
 export const validatePaymentModificationData =
   getValidator<PaymentModificationData>(PaymentModificationDataSchema)
+
+export const validatePartialPaymentModificationData = getValidator<
+  Partial<PaymentModificationData>
+>(PaymentModificationDataSchema.partial())
