@@ -78,6 +78,13 @@ export const managePaymentData = (data: PaymentDTO['data']) => {
     } as PaymentDTO['data']
   }
 
+  const deleteCancellation = (): PaymentDTO['data'] => {
+    return {
+      ...paymentModificationData,
+      cancellation: undefined,
+    } as PaymentDTO['data']
+  }
+
   const listCaptures = (): PaymentModification[] => captures
 
   const getCapture = (pspReference: string): PaymentModification | undefined =>
@@ -111,6 +118,7 @@ export const managePaymentData = (data: PaymentDTO['data']) => {
   }
 
   return {
+    deleteCancellation,
     deleteCapture,
     getCancellation,
     getCapture,
