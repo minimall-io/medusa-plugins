@@ -102,6 +102,47 @@ medusaIntegrationTestRunner({
       })
 
       describe('Without Errors', () => {
+        describe('Test processing success cancellation notification', () => {
+          it('updates the cancellation data property with notification data and the payment with new canceled_at date after a success cancellation notification is processed without prior direct cancellation', async () => {
+            const pspReference = 'pspReference'
+            const reference = payment.payment_session!.id
+            const amount = payment.amount as number
+            const currency = payment.currency_code.toUpperCase()
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.Cancellation,
+              SuccessEnum.True,
+            )
+
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            await workflow.run({
+              input: notification,
+            })
+
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
+            const updatedCancellation = updatedPayment.data!
+              .cancellation as PaymentModification
+
+            expect(originalPayment.canceled_at).not.toBeDefined()
+            expect(updatedPayment.canceled_at).toBeDefined()
+            expect(updatedCancellation.pspReference).toBe(pspReference)
+            expect(updatedCancellation.reference).toBe(reference)
+            expect(updatedCancellation.amount.value).toBe(amount)
+            expect(updatedCancellation.amount.currency).toBe(currency)
+            expect(updatedCancellation.status).toBe('success')
+          })
+        })
+
         describe('Test processing success capture notification', () => {
           it('adds a payment capture in the captures data property with success status after a success capture notification is processed without prior direct capture', async () => {
             const pspReference = 'pspReference'
@@ -123,10 +164,8 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const [updatedPayment] = await paymentService.listPayments(
-              {
-                id: payment.id,
-              },
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
               {
                 relations: ['captures'],
               },
@@ -147,10 +186,8 @@ medusaIntegrationTestRunner({
           it('updates a payment capture in the captures data property with success status after a success capture notification is processed with prior direct capture', async () => {
             await paymentService.capturePayment({ payment_id: payment.id })
 
-            const [originalPayment] = await paymentService.listPayments(
-              {
-                id: payment.id,
-              },
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
               {
                 relations: ['captures'],
               },
@@ -173,10 +210,8 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const [updatedPayment] = await paymentService.listPayments(
-              {
-                id: payment.id,
-              },
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
               {
                 relations: ['captures'],
               },
@@ -215,10 +250,8 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const [updatedPayment] = await paymentService.listPayments(
-              {
-                id: payment.id,
-              },
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
               {
                 relations: ['captures'],
               },
@@ -233,10 +266,8 @@ medusaIntegrationTestRunner({
           it('removes a payment capture from the captures data property after a failed capture notification is processed with prior direct capture', async () => {
             await paymentService.capturePayment({ payment_id: payment.id })
 
-            const [originalPayment] = await paymentService.listPayments(
-              {
-                id: payment.id,
-              },
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
               {
                 relations: ['captures'],
               },
@@ -259,10 +290,8 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const [updatedPayment] = await paymentService.listPayments(
-              {
-                id: payment.id,
-              },
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
               {
                 relations: ['captures'],
               },
@@ -353,10 +382,8 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const [updatedPayment] = await paymentService.listPayments(
-              {
-                id: payment.id,
-              },
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
               {
                 relations: ['captures'],
               },
@@ -382,10 +409,8 @@ medusaIntegrationTestRunner({
           it('restores initial payment state after a success capture notification processing fails with prior direct capture', async () => {
             await paymentService.capturePayment({ payment_id: payment.id })
 
-            const [originalPayment] = await paymentService.listPayments(
-              {
-                id: payment.id,
-              },
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
               {
                 relations: ['captures'],
               },
@@ -410,10 +435,8 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const [updatedPayment] = await paymentService.listPayments(
-              {
-                id: payment.id,
-              },
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
               {
                 relations: ['captures'],
               },
@@ -463,10 +486,8 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const [updatedPayment] = await paymentService.listPayments(
-              {
-                id: payment.id,
-              },
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
               {
                 relations: ['captures'],
               },
@@ -492,10 +513,8 @@ medusaIntegrationTestRunner({
           it('restores initial payment state after a failed capture notification processing fails with prior direct capture', async () => {
             await paymentService.capturePayment({ payment_id: payment.id })
 
-            const [originalPayment] = await paymentService.listPayments(
-              {
-                id: payment.id,
-              },
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
               {
                 relations: ['captures'],
               },
@@ -520,10 +539,8 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const [updatedPayment] = await paymentService.listPayments(
-              {
-                id: payment.id,
-              },
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
               {
                 relations: ['captures'],
               },
