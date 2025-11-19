@@ -133,13 +133,127 @@ medusaIntegrationTestRunner({
             const updatedCancellation = updatedPayment.data!
               .cancellation as PaymentModification
 
-            expect(originalPayment.canceled_at).not.toBeDefined()
+            expect(originalPayment.canceled_at).toBeNull()
             expect(updatedPayment.canceled_at).toBeDefined()
             expect(updatedCancellation.pspReference).toBe(pspReference)
             expect(updatedCancellation.reference).toBe(reference)
             expect(updatedCancellation.amount.value).toBe(amount)
             expect(updatedCancellation.amount.currency).toBe(currency)
             expect(updatedCancellation.status).toBe('success')
+          })
+
+          it('updates the cancellation data property with notification data after a success cancellation notification is processed with prior direct cancellation', async () => {
+            await paymentService.cancelPayment(payment.id)
+
+            const pspReference = 'pspReference'
+            const reference = payment.payment_session!.id
+            const amount = payment.amount as number
+            const currency = payment.currency_code.toUpperCase()
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.Cancellation,
+              SuccessEnum.True,
+            )
+
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            await workflow.run({
+              input: notification,
+            })
+
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
+            const updatedCancellation = updatedPayment.data!
+              .cancellation as PaymentModification
+
+            expect(originalPayment.canceled_at).toBeDefined()
+            expect(updatedPayment.canceled_at).toBeDefined()
+            expect(updatedPayment.canceled_at).toEqual(
+              originalPayment.canceled_at,
+            )
+            expect(updatedCancellation.status).toBe('success')
+          })
+        })
+
+        describe('Test processing failed cancellation notification', () => {
+          it('updates the cancellation data property with notification data after a failed cancellation notification is processed without prior direct cancellation', async () => {
+            const pspReference = 'pspReference'
+            const reference = payment.payment_session!.id
+            const amount = payment.amount as number
+            const currency = payment.currency_code.toUpperCase()
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.Cancellation,
+              SuccessEnum.False,
+            )
+
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            await workflow.run({
+              input: notification,
+            })
+
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
+            const updatedCancellation = updatedPayment.data!
+              .cancellation as PaymentModification
+
+            expect(originalPayment.canceled_at).toBeNull()
+            expect(updatedPayment.canceled_at).toBeNull()
+            expect(updatedCancellation).not.toBeDefined()
+          })
+
+          it('updates the cancellation data property with notification data after a success cancellation notification is processed with prior direct cancellation', async () => {
+            await paymentService.cancelPayment(payment.id)
+
+            const pspReference = 'pspReference'
+            const reference = payment.payment_session!.id
+            const amount = payment.amount as number
+            const currency = payment.currency_code.toUpperCase()
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.Cancellation,
+              SuccessEnum.False,
+            )
+
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            await workflow.run({
+              input: notification,
+            })
+
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
+            const updatedCancellation = updatedPayment.data!
+              .cancellation as PaymentModification
+
+            expect(originalPayment.canceled_at).toBeDefined()
+            expect(updatedPayment.canceled_at).toBeNull()
+            expect(updatedCancellation).not.toBeDefined()
           })
         })
 
@@ -358,6 +472,204 @@ medusaIntegrationTestRunner({
           }
 
           workflowDef.handlers_.set('notificationProcessed', handler)
+        })
+
+        describe('Test processing success cancellation notification', () => {
+          it('preserves the original data property after a success cancellation notification processing fails without prior direct cancellation', async () => {
+            const pspReference = 'pspReference'
+            const reference = payment.payment_session!.id
+            const amount = payment.amount as number
+            const currency = payment.currency_code.toUpperCase()
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.Cancellation,
+              SuccessEnum.True,
+            )
+
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            const { errors } = await workflow.run({
+              input: notification,
+              throwOnError: false,
+            })
+
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
+            const updatedCancellation = updatedPayment.data!
+              .cancellation as PaymentModification
+
+            expect(errors).toEqual([
+              {
+                action: 'notificationProcessed',
+                error: expect.objectContaining({
+                  message:
+                    'processNotificationWorkflow/hooks/notificationProcessed/error',
+                }),
+                handlerType: 'invoke',
+              },
+            ])
+            expect(originalPayment.canceled_at).toBeNull()
+            expect(updatedPayment.canceled_at).toBeNull()
+            expect(updatedCancellation).not.toBeDefined()
+          })
+
+          it('restores initial payment state after a success cancellation notification processing fails with prior direct cancellation', async () => {
+            await paymentService.cancelPayment(payment.id)
+
+            const pspReference = 'pspReference'
+            const reference = payment.payment_session!.id
+            const amount = payment.amount as number
+            const currency = payment.currency_code.toUpperCase()
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.Cancellation,
+              SuccessEnum.True,
+            )
+
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            const { errors } = await workflow.run({
+              input: notification,
+              throwOnError: false,
+            })
+
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
+            const updatedCancellation = updatedPayment.data!
+              .cancellation as PaymentModification
+
+            expect(errors).toEqual([
+              {
+                action: 'notificationProcessed',
+                error: expect.objectContaining({
+                  message:
+                    'processNotificationWorkflow/hooks/notificationProcessed/error',
+                }),
+                handlerType: 'invoke',
+              },
+            ])
+            expect(originalPayment.canceled_at).toBeDefined()
+            expect(updatedPayment.canceled_at).toBeDefined()
+            expect(updatedPayment.canceled_at).toEqual(
+              originalPayment.canceled_at,
+            )
+            expect(updatedCancellation).not.toBeDefined()
+          })
+        })
+
+        describe('Test processing failed cancellation notification', () => {
+          it('preserves the original data property after a failed cancellation notification processing fails without prior direct cancellation', async () => {
+            const pspReference = 'pspReference'
+            const reference = payment.payment_session!.id
+            const amount = payment.amount as number
+            const currency = payment.currency_code.toUpperCase()
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.Cancellation,
+              SuccessEnum.False,
+            )
+
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            const { errors } = await workflow.run({
+              input: notification,
+              throwOnError: false,
+            })
+
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
+            const updatedCancellation = updatedPayment.data!
+              .cancellation as PaymentModification
+
+            expect(errors).toEqual([
+              {
+                action: 'notificationProcessed',
+                error: expect.objectContaining({
+                  message:
+                    'processNotificationWorkflow/hooks/notificationProcessed/error',
+                }),
+                handlerType: 'invoke',
+              },
+            ])
+            expect(originalPayment.canceled_at).toBeNull()
+            expect(updatedPayment.canceled_at).toBeNull()
+            expect(updatedCancellation).not.toBeDefined()
+          })
+
+          it('restores initial payment state after a failed cancellation notification processing fails with prior direct cancellation', async () => {
+            await paymentService.cancelPayment(payment.id)
+
+            const pspReference = 'pspReference'
+            const reference = payment.payment_session!.id
+            const amount = payment.amount as number
+            const currency = payment.currency_code.toUpperCase()
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.Cancellation,
+              SuccessEnum.False,
+            )
+
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            const { errors } = await workflow.run({
+              input: notification,
+              throwOnError: false,
+            })
+
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
+            const updatedCancellation = updatedPayment.data!
+              .cancellation as PaymentModification
+
+            expect(errors).toEqual([
+              {
+                action: 'notificationProcessed',
+                error: expect.objectContaining({
+                  message:
+                    'processNotificationWorkflow/hooks/notificationProcessed/error',
+                }),
+                handlerType: 'invoke',
+              },
+            ])
+            expect(originalPayment.canceled_at).toBeDefined()
+            expect(updatedPayment.canceled_at).toBeDefined()
+            expect(updatedPayment.canceled_at).toEqual(
+              originalPayment.canceled_at,
+            )
+            expect(updatedCancellation).not.toBeDefined()
+          })
         })
 
         describe('Test processing success capture notification', () => {
