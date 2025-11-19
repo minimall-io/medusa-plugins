@@ -40,7 +40,7 @@ const captureFailureStepInvoke = async (
     captured_at: undefined,
     data: deleteCapture(pspReference),
     id: originalPayment.id,
-  } as PaymentDTO
+  }
   await paymentService.updatePayment(paymentToUpdate)
   if (dataCapture?.id) {
     await paymentService.deleteCaptures([dataCapture.id])

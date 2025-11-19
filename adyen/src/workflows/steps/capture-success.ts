@@ -19,7 +19,7 @@ const captureSuccessStepInvoke = async (
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
   const {
     merchantReference: reference,
-    amount,
+    amount: { value, currency },
     merchantAccountCode,
     pspReference,
   } = notification
@@ -51,14 +51,14 @@ const captureSuccessStepInvoke = async (
       id: originalPayment.id,
     }
     await paymentService.updatePayment(paymentToUpdate)
-  } else if (amount.value !== undefined && amount.currency !== undefined) {
+  } else if (value !== undefined && currency !== undefined) {
     const webhookPayment = {
       data: updateData({ webhook: true }),
       id: originalPayment.id,
     }
     await paymentService.updatePayment(webhookPayment)
     const paymentCaptureToCreate = {
-      amount: getWholeUnit(amount.value, amount.currency),
+      amount: getWholeUnit(value, currency),
       captured_by: merchantAccountCode,
       payment_id: originalPayment.id,
     }
@@ -72,7 +72,7 @@ const captureSuccessStepInvoke = async (
       'id',
     )
     const newDataCapture = {
-      amount: { currency: amount.currency, value: amount.value },
+      amount: { currency, value },
       id: newPaymentCapture.id,
       pspReference,
       reference,
@@ -124,7 +124,7 @@ const captureSuccessStepCompensate = async (
     captured_at: originalPayment.captured_at,
     data: dataToUpdate,
     id: originalPayment.id,
-  } as PaymentDTO
+  }
   await paymentService.updatePayment(paymentToUpdate)
 
   const restoredPayment = await paymentService.retrievePayment(
