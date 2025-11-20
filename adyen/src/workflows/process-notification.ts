@@ -13,6 +13,8 @@ import {
   cancellationSuccessStep,
   captureFailureStep,
   captureSuccessStep,
+  refundFailureStep,
+  refundSuccessStep,
 } from './steps'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
@@ -67,6 +69,20 @@ const isCatureFailed = ({
   (eventCode === EventCodeEnum.Capture && success === SuccessEnum.False) ||
   (eventCode === EventCodeEnum.CaptureFailed && success === SuccessEnum.True)
 
+const isRefundSuccess = ({
+  eventCode,
+  success,
+}: NotificationRequestItem): boolean =>
+  eventCode === EventCodeEnum.Refund && success === SuccessEnum.True
+
+const isRefundFailed = ({
+  eventCode,
+  success,
+}: NotificationRequestItem): boolean =>
+  (eventCode === EventCodeEnum.Refund && success === SuccessEnum.False) ||
+  (eventCode === EventCodeEnum.RefundFailed && success === SuccessEnum.True) ||
+  (eventCode === EventCodeEnum.RefundedReversed && success === SuccessEnum.True)
+
 export const processNotificationWorkflow = createWorkflow(
   processNotificationWorkflowId,
   (input: WorkflowData<NotificationRequestItem>) => {
@@ -86,6 +102,14 @@ export const processNotificationWorkflow = createWorkflow(
 
     when('capture-failure', input, isCatureFailed).then(() => {
       captureFailureStep(input)
+    })
+
+    when('refund-success', input, isRefundSuccess).then(() => {
+      refundSuccessStep(input)
+    })
+
+    when('refund-failure', input, isRefundFailed).then(() => {
+      refundFailureStep(input)
     })
 
     const notificationProcessed = createHook('notificationProcessed', input)
