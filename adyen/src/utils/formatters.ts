@@ -53,6 +53,7 @@ export const managePaymentData = (data: PaymentDTO['data']) => {
     cloneDeep(data),
   )
   const captures = paymentModificationData?.captures || []
+  const refunds = paymentModificationData?.refunds || []
   const cancellation = paymentModificationData?.cancellation
 
   const getData = (): PaymentDTO['data'] => {
@@ -117,15 +118,49 @@ export const managePaymentData = (data: PaymentDTO['data']) => {
     } as PaymentDTO['data']
   }
 
+  const listRefunds = (): PaymentModification[] => refunds
+
+  const getRefund = (pspReference: string): PaymentModification | undefined =>
+    find(refunds, { pspReference })
+
+  const updateRefund = (newRefund: PaymentModification): PaymentDTO['data'] => {
+    const validRefund = validatePaymentModification(newRefund)
+    const { pspReference } = validRefund
+    const otherRefunds = filter(
+      refunds,
+      (refund) => refund.pspReference !== pspReference,
+    )
+    const newRefunds = [...otherRefunds, validRefund]
+    return {
+      ...paymentModificationData,
+      refunds: newRefunds,
+    } as PaymentDTO['data']
+  }
+
+  const deleteRefund = (pspReference: string): PaymentDTO['data'] => {
+    const otherRefunds = filter(
+      refunds,
+      (refund) => refund.pspReference !== pspReference,
+    )
+    return {
+      ...paymentModificationData,
+      refunds: otherRefunds,
+    } as PaymentDTO['data']
+  }
+
   return {
     deleteCancellation,
     deleteCapture,
+    deleteRefund,
     getCancellation,
     getCapture,
     getData,
+    getRefund,
     listCaptures,
+    listRefunds,
     updateCancellation,
     updateCapture,
     updateData,
+    updateRefund,
   }
 }
