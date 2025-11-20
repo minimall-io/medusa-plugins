@@ -2,12 +2,8 @@ import type { BigNumberInput, PaymentDTO } from '@medusajs/framework/types'
 import { BigNumber, MathBN } from '@medusajs/framework/utils'
 import { cloneDeep, filter, find } from 'lodash'
 import { CURRENCY_MULTIPLIERS } from './constants'
-import type { PaymentModification, PaymentModificationData } from './types'
-import {
-  validatePartialPaymentModificationData,
-  validatePaymentModification,
-  validatePaymentModificationData,
-} from './validators'
+import type { Data, Event } from './types'
+import { validateData, validateEvent, validatePartialData } from './validators'
 
 const getCurrencyMultiplier = (currency: string): number => {
   const currencyCode = currency.toUpperCase()
@@ -48,119 +44,61 @@ export const getWholeUnit = (
   return standardAmount.numeric
 }
 
-export const managePaymentData = (data: PaymentDTO['data']) => {
-  const paymentModificationData = validatePaymentModificationData(
-    cloneDeep(data),
-  )
-  const captures = paymentModificationData?.captures || []
-  const refunds = paymentModificationData?.refunds || []
-  const cancellation = paymentModificationData?.cancellation
+export const PaymentDataManager = (data: PaymentDTO['data']) => {
+  let validData = validateData(cloneDeep(data))
 
-  const getData = (): PaymentDTO['data'] => {
-    return paymentModificationData as PaymentDTO['data']
+  const getData = (): Data => validData
+
+  const getEvents = (): Event[] => validData.events || []
+
+  const getAuthorization = (): Event =>
+    find(getEvents(), { name: 'AUTHORIZATION' })
+
+  const getEvent = (providerReference: string): Event | undefined =>
+    find(getEvents(), { providerReference })
+
+  const setData = (newData: Partial<Data>): void => {
+    const newValidData = validatePartialData(newData)
+    validData = { ...validData, ...newValidData }
   }
 
-  const updateData = (
-    newData: Partial<PaymentModificationData>,
-  ): PaymentDTO['data'] => {
-    const validData = validatePartialPaymentModificationData(newData)
-    return { ...paymentModificationData, ...validData } as PaymentDTO['data']
-  }
-
-  const getCancellation = (): PaymentModification | undefined => cancellation
-
-  const updateCancellation = (
-    newCancellation: PaymentModification,
-  ): PaymentDTO['data'] => {
-    const validCancellation = validatePaymentModification(newCancellation)
-    return {
-      ...paymentModificationData,
-      cancellation: validCancellation,
-    } as PaymentDTO['data']
-  }
-
-  const deleteCancellation = (): PaymentDTO['data'] => {
-    return {
-      ...paymentModificationData,
-      cancellation: undefined,
-    } as PaymentDTO['data']
-  }
-
-  const listCaptures = (): PaymentModification[] => captures
-
-  const getCapture = (pspReference: string): PaymentModification | undefined =>
-    find(captures, { pspReference })
-
-  const updateCapture = (
-    newCapture: PaymentModification,
-  ): PaymentDTO['data'] => {
-    const validCapture = validatePaymentModification(newCapture)
-    const { pspReference } = validCapture
-    const otherCaptures = filter(
-      captures,
-      (capture) => capture.pspReference !== pspReference,
+  const setAuthorization = (newAuthorization: Event): void => {
+    const authorization = validateEvent(newAuthorization)
+    const otherEvents = filter(
+      getEvents(),
+      (event: Event) => event.name !== 'AUTHORIZATION',
     )
-    const newCaptures = [...otherCaptures, validCapture]
-    return {
-      ...paymentModificationData,
-      captures: newCaptures,
-    } as PaymentDTO['data']
+    const events = [...otherEvents, authorization]
+    setData({ events })
   }
 
-  const deleteCapture = (pspReference: string): PaymentDTO['data'] => {
-    const otherCaptures = filter(
-      captures,
-      (capture) => capture.pspReference !== pspReference,
+  const setEvent = (newEvent: Event): void => {
+    const event = validateEvent(newEvent)
+    const { providerReference } = event
+    const otherEvents = filter(
+      getEvents(),
+      (event: Event) => event.providerReference !== providerReference,
     )
-    return {
-      ...paymentModificationData,
-      captures: otherCaptures,
-    } as PaymentDTO['data']
+    const events = [...otherEvents, event]
+    setData({ events })
   }
 
-  const listRefunds = (): PaymentModification[] => refunds
-
-  const getRefund = (pspReference: string): PaymentModification | undefined =>
-    find(refunds, { pspReference })
-
-  const updateRefund = (newRefund: PaymentModification): PaymentDTO['data'] => {
-    const validRefund = validatePaymentModification(newRefund)
-    const { pspReference } = validRefund
-    const otherRefunds = filter(
-      refunds,
-      (refund) => refund.pspReference !== pspReference,
+  const deleteEvent = (providerReference: string): void => {
+    const events = filter(
+      getEvents(),
+      (event: Event) => event.providerReference !== providerReference,
     )
-    const newRefunds = [...otherRefunds, validRefund]
-    return {
-      ...paymentModificationData,
-      refunds: newRefunds,
-    } as PaymentDTO['data']
-  }
-
-  const deleteRefund = (pspReference: string): PaymentDTO['data'] => {
-    const otherRefunds = filter(
-      refunds,
-      (refund) => refund.pspReference !== pspReference,
-    )
-    return {
-      ...paymentModificationData,
-      refunds: otherRefunds,
-    } as PaymentDTO['data']
+    setData({ events })
   }
 
   return {
-    deleteCancellation,
-    deleteCapture,
-    deleteRefund,
-    getCancellation,
-    getCapture,
+    deleteEvent,
+    getAuthorization,
     getData,
-    getRefund,
-    listCaptures,
-    listRefunds,
-    updateCancellation,
-    updateCapture,
-    updateData,
-    updateRefund,
+    getEvent,
+    getEvents,
+    setAuthorization,
+    setData,
+    setEvent,
   }
 }

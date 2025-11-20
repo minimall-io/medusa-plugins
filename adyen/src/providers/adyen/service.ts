@@ -42,10 +42,11 @@ import {
 import {
   getMinorUnit,
   type Options,
-  type PaymentModificationData,
+  PaymentDataManager,
   validateOptions,
-  validatePaymentModification,
 } from '../../utils'
+
+const EventCode = Types.notification.NotificationRequestItem.EventCodeEnum
 
 interface Shopper
   extends Pick<
@@ -303,11 +304,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       recurringProcessingModel,
       returnUrlPrefix: returnUrl,
     } = this.options_
+    const date = new Date().toISOString()
     const inputData = input.data as unknown as AuthorizePaymentInputData
     const shopper = inputData.shopper || {}
     const amount = inputData.amount
     const sessionId = input.context!.idempotency_key!
     const reference = sessionId
+    const dataManager = PaymentDataManager({ amount, reference })
     const idempotencyKey = sessionId
     const request: Types.checkout.PaymentRequest = {
       ...inputData.request,
@@ -325,12 +328,17 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     })
 
     const status = this.getSessionStatus(response.resultCode)
-    const data = {
-      amount,
-      authorization: response,
-      reference,
-      request: undefined,
-    }
+
+    dataManager.setAuthorization({
+      amount: response.amount || amount,
+      date,
+      merchantReference: response.merchantReference || reference,
+      name: EventCode.Authorisation,
+      providerReference: response.pspReference!,
+      status: 'success', // TODO: Handle other statuses
+    })
+
+    const data = dataManager.getData()
     const output = { data, status }
     this.log('authorizePayment/output', output)
     return output
@@ -341,15 +349,19 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<CancelPaymentOutput> {
     this.log('cancelPayment/input', input)
     const { merchantAccount } = this.options_
-    const inputData = input.data as unknown as PaymentModificationData
-    const { authorization, webhook, reference } = inputData
+    const date = new Date().toISOString()
+    const dataManager = PaymentDataManager(input.data)
+    const { reference, webhook, amount } = dataManager.getData()
+    const authorization = dataManager.getAuthorization()
     const paymentId = input.context?.idempotency_key
     const id = paymentId
     const idempotencyKey = paymentId
-    const pspReference = authorization.pspReference!
+    const pspReference = authorization.providerReference
 
     if (webhook) {
-      const output = { data: { ...input.data, webhook: undefined } }
+      dataManager.setData({ webhook: undefined })
+      const data = dataManager.getData()
+      const output = { data }
       this.log('cancelPayment/output', output)
       return output
     }
@@ -366,14 +378,17 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         { idempotencyKey },
       )
 
-    const cancellation = validatePaymentModification({
-      ...response,
+    dataManager.setEvent({
+      amount,
+      date,
       id,
+      merchantReference: response.reference || reference,
+      name: EventCode.Cancellation,
+      providerReference: response.pspReference,
+      status: 'requested',
     })
-    const data = {
-      ...input.data,
-      cancellation,
-    }
+
+    const data = dataManager.getData()
     const output = { data }
     this.log('cancelPayment/output', output)
     return output
@@ -384,17 +399,20 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<CapturePaymentOutput> {
     this.log('capturePayment/input', input)
     const { merchantAccount } = this.options_
-    const inputData = input.data as unknown as PaymentModificationData
-    const { authorization, webhook, reference } = inputData
+    const date = new Date().toISOString()
+    const dataManager = PaymentDataManager(input.data)
+    const { webhook, reference } = dataManager.getData()
+    const authorization = dataManager.getAuthorization()
     const captureId = input.context?.idempotency_key
     const id = captureId
     const idempotencyKey = captureId
-    const pspReference = authorization.pspReference!
-    const amount = authorization.amount!
-    const existingCaptures = inputData.captures || []
+    const pspReference = authorization.providerReference
+    const amount = authorization.amount
 
     if (webhook) {
-      const output = { data: { ...input.data, webhook: undefined } }
+      dataManager.setData({ webhook: undefined })
+      const data = dataManager.getData()
+      const output = { data }
       this.log('capturePayment/output', output)
       return output
     }
@@ -412,9 +430,16 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         { idempotencyKey },
       )
 
-    const newCapture = validatePaymentModification({ ...response, id })
-    const captures = [...existingCaptures, newCapture]
-    const data = { ...input.data, captures }
+    dataManager.setEvent({
+      amount,
+      date,
+      id,
+      merchantReference: response.reference || reference,
+      name: EventCode.Capture,
+      providerReference: response.pspReference,
+      status: 'requested',
+    })
+    const data = dataManager.getData()
     const output = { data }
     this.log('capturePayment/output', output)
     return output
@@ -425,18 +450,21 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<RefundPaymentOutput> {
     this.log('refundPayment/input', input)
     const { merchantAccount } = this.options_
-    const inputData = input.data as unknown as PaymentModificationData
-    const { authorization, webhook, reference } = inputData
+    const date = new Date().toISOString()
+    const dataManager = PaymentDataManager(input.data)
+    const { webhook, reference } = dataManager.getData()
+    const authorization = dataManager.getAuthorization()
     const refundId = input.context?.idempotency_key
     const id = refundId
     const idempotencyKey = refundId
-    const currency = authorization.amount!.currency
+    const currency = authorization.amount.currency
     const amount = this.getAmount(input.amount, currency)
-    const pspReference = authorization.pspReference!
-    const existingRefunds = inputData.refunds || []
+    const pspReference = authorization.providerReference
 
     if (webhook) {
-      const output = { data: { ...input.data, webhook: undefined } }
+      dataManager.setData({ webhook: undefined })
+      const data = dataManager.getData()
+      const output = { data }
       this.log('refundPayment/output', output)
       return output
     }
@@ -453,9 +481,16 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       { idempotencyKey },
     )
 
-    const newRefund = validatePaymentModification({ ...response, id })
-    const refunds = [...existingRefunds, newRefund]
-    const data = { ...input.data, refunds }
+    dataManager.setEvent({
+      amount,
+      date,
+      id,
+      merchantReference: response.reference || reference,
+      name: EventCode.Refund,
+      providerReference: response.pspReference,
+      status: 'requested',
+    })
+    const data = dataManager.getData()
     const output = { data }
     this.log('refundPayment/output', output)
     return output
@@ -516,7 +551,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const methods = response.storedPaymentMethods || []
 
     const promises = methods.map((method) => {
-      if (!method.id) return
+      if (!method.id) return Promise.resolve()
       const idempotencyKey = `${shopperReference}_${method.id}`
       return this.checkout.RecurringApi.deleteTokenForStoredPaymentDetails(
         method.id!,

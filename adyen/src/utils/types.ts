@@ -1,12 +1,6 @@
 import type { z } from 'zod'
-import type {
-  OptionsSchema,
-  PaymentModificationDataSchema,
-  PaymentModificationSchema,
-} from './schemas'
+import type { DataSchema, EventSchema, OptionsSchema } from './schemas'
 
+export type Data = z.infer<typeof DataSchema>
+export type Event = z.infer<typeof EventSchema>
 export type Options = z.infer<typeof OptionsSchema>
-export type PaymentModification = z.infer<typeof PaymentModificationSchema>
-export type PaymentModificationData = z.infer<
-  typeof PaymentModificationDataSchema
->

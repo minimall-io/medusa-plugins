@@ -28,23 +28,20 @@ export const AmountSchema = z.object({
   value: z.number(),
 })
 
-export const PaymentModificationSchema = z.object({
-  amount: AmountSchema.optional(),
+export const EventSchema = z.object({
+  amount: AmountSchema,
+  date: z.string(),
   id: z.string().optional(),
-  pspReference: z.string(),
-  reference: z.string(),
+  merchantReference: z.string(),
+  name: z.string(),
+  notes: z.string().optional(),
+  providerReference: z.string(),
   status: z.string(),
 })
 
-export const PaymentModificationDataSchema = z.object({
+export const DataSchema = z.object({
   amount: AmountSchema,
-  authorization: PaymentModificationSchema.pick({
-    amount: true,
-    pspReference: true,
-  }),
-  cancellation: PaymentModificationSchema.optional(),
-  captures: z.array(PaymentModificationSchema).optional(),
+  events: z.array(EventSchema).optional(),
   reference: z.string(),
-  refunds: z.array(PaymentModificationSchema).optional(),
   webhook: z.boolean().optional(),
 })
