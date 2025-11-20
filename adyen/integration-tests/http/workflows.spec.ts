@@ -1065,6 +1065,244 @@ medusaIntegrationTestRunner({
             expect(updatedCapture.status).toBe('received')
           })
         })
+
+        describe('Test processing success refund notification', () => {
+          it('preserves the original data property after a success refund notification processing fails without prior direct refund', async () => {
+            await paymentService.capturePayment({ payment_id: payment.id })
+
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
+              {
+                relations: ['refunds'],
+              },
+            )
+
+            const pspReference = 'pspReference'
+            const reference = payment.payment_session!.id
+            const amount = payment.amount as number
+            const currency = payment.currency_code.toUpperCase()
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.Refund,
+              SuccessEnum.True,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            const { errors } = await workflow.run({
+              input: notification,
+              throwOnError: false,
+            })
+
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
+              {
+                relations: ['refunds'],
+              },
+            )
+
+            const updatedRefunds = updatedPayment.data!
+              .refunds as PaymentModification[]
+
+            expect(errors).toEqual([
+              {
+                action: 'notificationProcessed',
+                error: expect.objectContaining({
+                  message:
+                    'processNotificationWorkflow/hooks/notificationProcessed/error',
+                }),
+                handlerType: 'invoke',
+              },
+            ])
+            expect(originalPayment.refunds).toHaveLength(0)
+            expect(updatedPayment.refunds).toHaveLength(0)
+            expect(updatedRefunds).toHaveLength(0)
+          })
+
+          it('restores initial payment state after a success refund notification processing fails with prior direct refund', async () => {
+            await paymentService.capturePayment({ payment_id: payment.id })
+            await paymentService.refundPayment({ payment_id: payment.id })
+
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
+              {
+                relations: ['refunds'],
+              },
+            )
+
+            const originalRefunds = originalPayment.data!
+              .refunds as PaymentModification[]
+            const originalRefund = originalRefunds[0]
+
+            const notification = getNotificationRequestItem(
+              originalRefund.pspReference,
+              originalRefund.reference,
+              originalRefund.amount.value,
+              originalRefund.amount.currency,
+              EventCodeEnum.Refund,
+              SuccessEnum.True,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            const { errors } = await workflow.run({
+              input: notification,
+              throwOnError: false,
+            })
+
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
+              {
+                relations: ['refunds'],
+              },
+            )
+            const updatedRefunds = updatedPayment.data!
+              .refunds as PaymentModification[]
+            const updatedRefund = updatedRefunds[0]
+
+            expect(errors).toEqual([
+              {
+                action: 'notificationProcessed',
+                error: expect.objectContaining({
+                  message:
+                    'processNotificationWorkflow/hooks/notificationProcessed/error',
+                }),
+                handlerType: 'invoke',
+              },
+            ])
+            expect(originalPayment.refunds).toHaveLength(1)
+            expect(updatedPayment.refunds).toHaveLength(1)
+            expect(originalRefunds).toHaveLength(1)
+            expect(updatedRefunds).toHaveLength(1)
+            expect(originalRefund.status).toBe('received')
+            expect(updatedRefund.status).toBe('received')
+          })
+        })
+
+        describe('Test processing failed refund notification', () => {
+          it('preserves the original data property after a failed refund notification processing fails without prior direct refund', async () => {
+            await paymentService.capturePayment({ payment_id: payment.id })
+
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
+              {
+                relations: ['refunds'],
+              },
+            )
+
+            const pspReference = 'pspReference'
+            const reference = payment.payment_session!.id
+            const amount = payment.amount as number
+            const currency = payment.currency_code.toUpperCase()
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.Refund,
+              SuccessEnum.False,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            const { errors } = await workflow.run({
+              input: notification,
+              throwOnError: false,
+            })
+
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
+              {
+                relations: ['refunds'],
+              },
+            )
+
+            const updatedRefunds = updatedPayment.data!
+              .refunds as PaymentModification[]
+
+            expect(errors).toEqual([
+              {
+                action: 'notificationProcessed',
+                error: expect.objectContaining({
+                  message:
+                    'processNotificationWorkflow/hooks/notificationProcessed/error',
+                }),
+                handlerType: 'invoke',
+              },
+            ])
+            expect(originalPayment.refunds).toHaveLength(0)
+            expect(updatedPayment.refunds).toHaveLength(0)
+            expect(updatedRefunds).toHaveLength(0)
+          })
+
+          it('restores initial payment state after a failed refund notification processing fails with prior direct refund', async () => {
+            await paymentService.capturePayment({ payment_id: payment.id })
+            await paymentService.refundPayment({ payment_id: payment.id })
+
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
+              {
+                relations: ['refunds'],
+              },
+            )
+
+            const originalRefunds = originalPayment.data!
+              .refunds as PaymentModification[]
+            const originalRefund = originalRefunds[0]
+
+            const notification = getNotificationRequestItem(
+              originalRefund.pspReference,
+              originalRefund.reference,
+              originalRefund.amount.value,
+              originalRefund.amount.currency,
+              EventCodeEnum.Refund,
+              SuccessEnum.False,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            const { errors } = await workflow.run({
+              input: notification,
+              throwOnError: false,
+            })
+
+            const updatedPayment = await paymentService.retrievePayment(
+              payment.id,
+              {
+                relations: ['refunds'],
+              },
+            )
+            const updatedRefunds = updatedPayment.data!
+              .refunds as PaymentModification[]
+            const updatedRefund = updatedRefunds[0]
+
+            console.log(
+              'originalPayment',
+              JSON.stringify(originalPayment, null, 2),
+            )
+            console.log(
+              'updatedPayment',
+              JSON.stringify(updatedPayment, null, 2),
+            )
+            expect(errors).toEqual([
+              {
+                action: 'notificationProcessed',
+                error: expect.objectContaining({
+                  message:
+                    'processNotificationWorkflow/hooks/notificationProcessed/error',
+                }),
+                handlerType: 'invoke',
+              },
+            ])
+            expect(originalPayment.refunds).toHaveLength(1)
+            expect(updatedPayment.refunds).toHaveLength(1)
+            expect(originalRefunds).toHaveLength(1)
+            expect(updatedRefunds).toHaveLength(1)
+            expect(originalRefund.status).toBe('received')
+            expect(updatedRefund.status).toBe('received')
+          })
+        })
       })
     })
   },
