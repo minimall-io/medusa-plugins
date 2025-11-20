@@ -1277,14 +1277,6 @@ medusaIntegrationTestRunner({
               .refunds as PaymentModification[]
             const updatedRefund = updatedRefunds[0]
 
-            console.log(
-              'originalPayment',
-              JSON.stringify(originalPayment, null, 2),
-            )
-            console.log(
-              'updatedPayment',
-              JSON.stringify(updatedPayment, null, 2),
-            )
             expect(errors).toEqual([
               {
                 action: 'notificationProcessed',
