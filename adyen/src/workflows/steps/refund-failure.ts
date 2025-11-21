@@ -62,7 +62,7 @@ const refundFailureStepInvoke = async (
   }
   await paymentService.updatePayment(paymentToUpdate)
   if (dataRefund?.id) {
-    await paymentService.deleteCaptures([dataRefund.id])
+    await paymentService.deleteRefunds([dataRefund.id])
   }
 
   const newPayment = await paymentService.retrievePayment(originalPayment.id, {
