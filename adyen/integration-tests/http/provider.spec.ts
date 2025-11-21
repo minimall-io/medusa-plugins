@@ -11,6 +11,7 @@ import type {
 } from '@medusajs/framework/types'
 import { Modules } from '@medusajs/framework/utils'
 import { medusaIntegrationTestRunner } from '@medusajs/test-utils'
+import { filter } from 'lodash'
 import {
   getAmount,
   getCardDetails,
@@ -269,11 +270,15 @@ medusaIntegrationTestRunner({
           })
 
           const { data } = payment
+          const authorisations = filter(data?.events, {
+            name: 'AUTHORISATION',
+          })
 
           expect(data).toHaveProperty('reference')
           expect(data?.reference).toBe(sessionWithAccountHolder.id)
           expect(data).toHaveProperty('events')
           expect(data?.events).toHaveLength(1)
+          expect(authorisations).toHaveLength(1)
           expect(data).not.toHaveProperty('request')
         })
 
@@ -300,11 +305,15 @@ medusaIntegrationTestRunner({
           })
 
           const { data } = payment
+          const authorisations = filter(data?.events, {
+            name: 'AUTHORISATION',
+          })
 
           expect(data).toHaveProperty('reference')
           expect(data?.reference).toBe(sessionWithAccountHolder.id)
           expect(data).toHaveProperty('events')
           expect(data?.events).toHaveLength(1)
+          expect(authorisations).toHaveLength(1)
           expect(data).not.toHaveProperty('request')
         })
 
@@ -332,11 +341,15 @@ medusaIntegrationTestRunner({
           })
 
           const { data } = payment
+          const authorisations = filter(data?.events, {
+            name: 'AUTHORISATION',
+          })
 
           expect(data).toHaveProperty('reference')
           expect(data?.reference).toBe(sessionWithoutAccountHolder.id)
           expect(data).toHaveProperty('events')
           expect(data?.events).toHaveLength(1)
+          expect(authorisations).toHaveLength(1)
           expect(data).not.toHaveProperty('request')
         })
 
@@ -364,11 +377,15 @@ medusaIntegrationTestRunner({
           })
 
           const { data } = payment
+          const authorisations = filter(data?.events, {
+            name: 'AUTHORISATION',
+          })
 
           expect(data).toHaveProperty('reference')
           expect(data?.reference).toBe(sessionWithAccountHolder.id)
           expect(data).toHaveProperty('events')
           expect(data?.events).toHaveLength(1)
+          expect(authorisations).toHaveLength(1)
           expect(data).not.toHaveProperty('request')
         })
 
@@ -394,11 +411,15 @@ medusaIntegrationTestRunner({
           })
 
           const { data } = payment
+          const authorisations = filter(data?.events, {
+            name: 'AUTHORISATION',
+          })
 
           expect(data).toHaveProperty('reference')
           expect(data?.reference).toBe(sessionWithoutAccountHolder.id)
           expect(data).toHaveProperty('events')
           expect(data?.events).toHaveLength(1)
+          expect(authorisations).toHaveLength(1)
           expect(data).not.toHaveProperty('request')
         })
       })
@@ -447,11 +468,15 @@ medusaIntegrationTestRunner({
           await paymentService.cancelPayment(payment.id)
 
           const newPayment = await paymentService.retrievePayment(payment.id)
+          const authorisations = filter(newPayment.data?.events, {
+            name: 'AUTHORISATION',
+          })
 
           expect(newPayment.canceled_at).not.toBeNull()
           expect(newPayment.data).toHaveProperty('amount')
           expect(newPayment.data).toHaveProperty('events')
           expect(newPayment.data?.events).toHaveLength(1)
+          expect(authorisations).toHaveLength(1)
           expect(newPayment.data).toHaveProperty('reference')
           expect(newPayment.data).not.toHaveProperty('request')
         })
@@ -467,9 +492,16 @@ medusaIntegrationTestRunner({
 
           const newPayment = await paymentService.retrievePayment(payment.id)
 
+          const authorisations = filter(newPayment.data?.events, {
+            name: 'AUTHORISATION',
+          })
+          const captures = filter(newPayment.data?.events, { name: 'CAPTURE' })
+
           expect(newPayment.data).toHaveProperty('amount')
           expect(newPayment.data).toHaveProperty('events')
           expect(newPayment.data?.events).toHaveLength(2)
+          expect(authorisations).toHaveLength(1)
+          expect(captures).toHaveLength(1)
           expect(newPayment.data).toHaveProperty('reference')
           expect(newPayment.data).not.toHaveProperty('request')
         })
@@ -501,9 +533,18 @@ medusaIntegrationTestRunner({
 
           const newPayment = await paymentService.retrievePayment(payment.id)
 
+          const authorisations = filter(newPayment.data?.events, {
+            name: 'AUTHORISATION',
+          })
+          const captures = filter(newPayment.data?.events, { name: 'CAPTURE' })
+          const refunds = filter(newPayment.data?.events, { name: 'REFUND' })
+
           expect(newPayment.data).toHaveProperty('amount')
           expect(newPayment.data).toHaveProperty('events')
           expect(newPayment.data?.events).toHaveLength(4)
+          expect(authorisations).toHaveLength(1)
+          expect(captures).toHaveLength(1)
+          expect(refunds).toHaveLength(2)
           expect(newPayment.data).toHaveProperty('reference')
           expect(newPayment.data).not.toHaveProperty('request')
         })
