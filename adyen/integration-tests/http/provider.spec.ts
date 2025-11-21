@@ -247,7 +247,7 @@ medusaIntegrationTestRunner({
           await delay(1000)
         })
 
-        it('returns authorization data property when authorizePayment is called using account holder context', async () => {
+        it('returns updated payment data property when authorizePayment is called using account holder context', async () => {
           await paymentService.updatePaymentSession({
             amount: collection.amount,
             currency_code: collection.currency_code,
@@ -271,12 +271,13 @@ medusaIntegrationTestRunner({
           const { data } = payment
 
           expect(data).toHaveProperty('reference')
-          expect(data!.reference).toBe(sessionWithAccountHolder.id)
-          expect(data).toHaveProperty('authorization')
+          expect(data?.reference).toBe(sessionWithAccountHolder.id)
+          expect(data).toHaveProperty('events')
+          expect(data?.events).toHaveLength(1)
           expect(data).not.toHaveProperty('request')
         })
 
-        it('returns authorization data property with saved payment method when authorizePayment is called with account holder context and storePaymentMethod is true', async () => {
+        it('returns updated payment data property with saved payment method when authorizePayment is called with account holder context and storePaymentMethod is true', async () => {
           await paymentService.updatePaymentSession({
             amount: collection.amount,
             currency_code: collection.currency_code,
@@ -299,20 +300,15 @@ medusaIntegrationTestRunner({
           })
 
           const { data } = payment
-          const authorization = data!
-            .authorization as Types.checkout.PaymentResponse
 
           expect(data).toHaveProperty('reference')
-          expect(data!.reference).toBe(sessionWithAccountHolder.id)
-          expect(data).toHaveProperty('authorization')
-          expect(authorization).toHaveProperty('additionalData')
-          expect(
-            authorization.additionalData!['tokenization.shopperReference'],
-          ).toEqual(accountHolder.data!.shopperReference)
+          expect(data?.reference).toBe(sessionWithAccountHolder.id)
+          expect(data).toHaveProperty('events')
+          expect(data?.events).toHaveLength(1)
           expect(data).not.toHaveProperty('request')
         })
 
-        it('returns authorization data property with saved payment method when authorizePayment is called with shopper data in the request and storePaymentMethod is true', async () => {
+        it('returns updated payment data property with saved payment method when authorizePayment is called with shopper data in the request and storePaymentMethod is true', async () => {
           await paymentService.updatePaymentSession({
             amount: collection.amount,
             currency_code: collection.currency_code,
@@ -336,20 +332,15 @@ medusaIntegrationTestRunner({
           })
 
           const { data } = payment
-          const authorization = data!
-            .authorization as Types.checkout.PaymentResponse
 
           expect(data).toHaveProperty('reference')
-          expect(data!.reference).toBe(sessionWithoutAccountHolder.id)
-          expect(data).toHaveProperty('authorization')
-          expect(authorization).toHaveProperty('additionalData')
-          expect(
-            authorization.additionalData!['tokenization.shopperReference'],
-          ).toEqual(accountHolder.data!.shopperReference)
+          expect(data?.reference).toBe(sessionWithoutAccountHolder.id)
+          expect(data).toHaveProperty('events')
+          expect(data?.events).toHaveLength(1)
           expect(data).not.toHaveProperty('request')
         })
 
-        it('returns authorization data property with saved payment method when authorizePayment is called with account holder context preference and storePaymentMethod is true', async () => {
+        it('returns updated payment data property with saved payment method when authorizePayment is called with account holder context preference and storePaymentMethod is true', async () => {
           await paymentService.updatePaymentSession({
             amount: collection.amount,
             currency_code: collection.currency_code,
@@ -373,20 +364,15 @@ medusaIntegrationTestRunner({
           })
 
           const { data } = payment
-          const authorization = data!
-            .authorization as Types.checkout.PaymentResponse
 
           expect(data).toHaveProperty('reference')
-          expect(data!.reference).toBe(sessionWithAccountHolder.id)
-          expect(data).toHaveProperty('authorization')
-          expect(authorization).toHaveProperty('additionalData')
-          expect(
-            authorization.additionalData!['tokenization.shopperReference'],
-          ).toEqual(accountHolder.data!.shopperReference)
+          expect(data?.reference).toBe(sessionWithAccountHolder.id)
+          expect(data).toHaveProperty('events')
+          expect(data?.events).toHaveLength(1)
           expect(data).not.toHaveProperty('request')
         })
 
-        it('returns authorization data property when authorizePayment is called', async () => {
+        it('returns updated payment data property when authorizePayment is called', async () => {
           await paymentService.updatePaymentSession({
             amount: collection.amount,
             currency_code: collection.currency_code,
@@ -410,8 +396,9 @@ medusaIntegrationTestRunner({
           const { data } = payment
 
           expect(data).toHaveProperty('reference')
-          expect(data!.reference).toBe(sessionWithoutAccountHolder.id)
-          expect(data).toHaveProperty('authorization')
+          expect(data?.reference).toBe(sessionWithoutAccountHolder.id)
+          expect(data).toHaveProperty('events')
+          expect(data?.events).toHaveLength(1)
           expect(data).not.toHaveProperty('request')
         })
       })
@@ -459,15 +446,17 @@ medusaIntegrationTestRunner({
            */
           await paymentService.cancelPayment(payment.id)
 
-          const [cancelledPayment] = await paymentService.listPayments({
-            payment_session_id: session.id,
-          })
-          console.log('cancelledPayment', JSON.stringify(cancelledPayment))
+          const newPayment = await paymentService.retrievePayment(payment.id)
 
-          expect(cancelledPayment.canceled_at).not.toBeNull()
+          expect(newPayment.canceled_at).not.toBeNull()
+          expect(newPayment.data).toHaveProperty('amount')
+          expect(newPayment.data).toHaveProperty('events')
+          expect(newPayment.data?.events).toHaveLength(1)
+          expect(newPayment.data).toHaveProperty('reference')
+          expect(newPayment.data).not.toHaveProperty('request')
         })
 
-        it('returns captures data property when capturePayment is called', async () => {
+        it('returns updated payment data property when capturePayment is called', async () => {
           /**
            * As of this writing, the payment module's capturePayment method,
            * although it accepts the amount parameter,
@@ -476,16 +465,16 @@ medusaIntegrationTestRunner({
            */
           await paymentService.capturePayment({ payment_id: payment.id })
 
-          const [capturedPayment] = await paymentService.listPayments({
-            payment_session_id: session.id,
-          })
+          const newPayment = await paymentService.retrievePayment(payment.id)
 
-          expect(capturedPayment.data).toHaveProperty('authorization')
-          expect(capturedPayment.data).toHaveProperty('captures')
-          expect(capturedPayment.data).not.toHaveProperty('request')
+          expect(newPayment.data).toHaveProperty('amount')
+          expect(newPayment.data).toHaveProperty('events')
+          expect(newPayment.data?.events).toHaveLength(2)
+          expect(newPayment.data).toHaveProperty('reference')
+          expect(newPayment.data).not.toHaveProperty('request')
         })
 
-        it('returns refunds data property when refundPayment is called', async () => {
+        it('returns updated payment data property when refundPayment is called', async () => {
           await paymentService.capturePayment({ payment_id: payment.id })
 
           const totalAmount = Number(collection.amount)
@@ -510,13 +499,13 @@ medusaIntegrationTestRunner({
             payment_id: payment.id,
           })
 
-          const [refundedPayment] = await paymentService.listPayments({
-            payment_session_id: session.id,
-          })
+          const newPayment = await paymentService.retrievePayment(payment.id)
 
-          expect(refundedPayment.data).toHaveProperty('authorization')
-          expect(refundedPayment.data).toHaveProperty('refunds')
-          expect(refundedPayment.data).not.toHaveProperty('request')
+          expect(newPayment.data).toHaveProperty('amount')
+          expect(newPayment.data).toHaveProperty('events')
+          expect(newPayment.data?.events).toHaveLength(4)
+          expect(newPayment.data).toHaveProperty('reference')
+          expect(newPayment.data).not.toHaveProperty('request')
         })
       })
     })

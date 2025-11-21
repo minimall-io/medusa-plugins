@@ -327,7 +327,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
     const status = this.getSessionStatus(response.resultCode)
 
-    dataManager.setAuthorization({
+    dataManager.setAuthorisation({
       amount: response.amount || amount,
       date,
       merchantReference: response.merchantReference || reference,
@@ -350,11 +350,11 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const date = new Date().toISOString()
     const dataManager = PaymentDataManager(input.data)
     const { reference, webhook, amount } = dataManager.getData()
-    const authorization = dataManager.getAuthorization()
+    const authorisation = dataManager.getAuthorisation()
     const paymentId = input.context?.idempotency_key
     const id = paymentId
     const idempotencyKey = paymentId
-    const pspReference = authorization.providerReference
+    const pspReference = authorisation.providerReference
 
     if (webhook) {
       dataManager.setData({ webhook: undefined })
@@ -400,12 +400,12 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const date = new Date().toISOString()
     const dataManager = PaymentDataManager(input.data)
     const { webhook, reference } = dataManager.getData()
-    const authorization = dataManager.getAuthorization()
+    const authorisation = dataManager.getAuthorisation()
     const captureId = input.context?.idempotency_key
     const id = captureId
     const idempotencyKey = captureId
-    const pspReference = authorization.providerReference
-    const amount = authorization.amount
+    const pspReference = authorisation.providerReference
+    const amount = authorisation.amount
 
     if (webhook) {
       dataManager.setData({ webhook: undefined })
@@ -451,13 +451,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const date = new Date().toISOString()
     const dataManager = PaymentDataManager(input.data)
     const { webhook, reference } = dataManager.getData()
-    const authorization = dataManager.getAuthorization()
+    const authorisation = dataManager.getAuthorisation()
     const refundId = input.context?.idempotency_key
     const id = refundId
     const idempotencyKey = refundId
-    const currency = authorization.amount.currency
+    const currency = authorisation.amount.currency
     const amount = this.getAmount(input.amount, currency)
-    const pspReference = authorization.providerReference
+    const pspReference = authorisation.providerReference
 
     if (webhook) {
       dataManager.setData({ webhook: undefined })

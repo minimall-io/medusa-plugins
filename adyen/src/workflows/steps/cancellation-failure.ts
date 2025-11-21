@@ -35,12 +35,12 @@ const cancellationFailureStepInvoke = async (
 
   const dataManager = PaymentDataManager(originalPayment.data)
 
-  const authorization = dataManager.getAuthorization()
+  const authorisation = dataManager.getAuthorisation()
 
   const amount =
     value !== undefined && currency !== undefined
       ? { currency, value }
-      : authorization.amount
+      : authorisation.amount
 
   dataManager.setEvent({
     amount,

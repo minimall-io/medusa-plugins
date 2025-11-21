@@ -51,8 +51,8 @@ export const PaymentDataManager = (data: PaymentDTO['data']) => {
 
   const getEvents = (): Event[] => validData.events || []
 
-  const getAuthorization = (): Event =>
-    find(getEvents(), { name: 'AUTHORIZATION' })
+  const getAuthorisation = (): Event =>
+    find(getEvents(), { name: 'AUTHORISATION' })
 
   const getCancellation = (): Event[] =>
     find(getEvents(), { name: 'CANCELLATION' })
@@ -69,13 +69,13 @@ export const PaymentDataManager = (data: PaymentDTO['data']) => {
     validData = { ...validData, ...newValidData }
   }
 
-  const setAuthorization = (newAuthorization: Event): void => {
-    const authorization = validateEvent(newAuthorization)
+  const setAuthorisation = (newAuthorisation: Event): void => {
+    const authorisation = validateEvent(newAuthorisation)
     const otherEvents = filter(
       getEvents(),
-      (event: Event) => event.name !== 'AUTHORIZATION',
+      (event: Event) => event.name !== 'AUTHORISATION',
     )
-    const events = [...otherEvents, authorization]
+    const events = [...otherEvents, authorisation]
     setData({ events })
   }
 
@@ -100,14 +100,14 @@ export const PaymentDataManager = (data: PaymentDTO['data']) => {
 
   return {
     deleteEvent,
-    getAuthorization,
+    getAuthorisation,
     getCancellation,
     getCaptures,
     getData,
     getEvent,
     getEvents,
     getRefunds,
-    setAuthorization,
+    setAuthorisation,
     setData,
     setEvent,
   }
