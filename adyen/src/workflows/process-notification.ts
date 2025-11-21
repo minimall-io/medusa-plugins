@@ -9,11 +9,11 @@ import {
 } from '@medusajs/framework/workflows-sdk'
 
 import {
-  cancellationFailureStep,
+  cancellationFailedStep,
   cancellationSuccessStep,
-  captureFailureStep,
+  captureFailedStep,
   captureSuccessStep,
-  refundFailureStep,
+  refundFailedStep,
   refundSuccessStep,
 } from './steps'
 
@@ -28,13 +28,13 @@ type Hooks = [
 
 export const processNotificationWorkflowId = 'process-notification-workflow'
 
-const isAuthorizationSuccess = ({
+const isAuthorisationSuccess = ({
   eventCode,
   success,
 }: NotificationRequestItem): boolean =>
   eventCode === EventCodeEnum.Authorisation && success === SuccessEnum.True
 
-const isAuthorizationFailed = ({
+const isAuthorisationFailed = ({
   eventCode,
   success,
 }: NotificationRequestItem): boolean =>
@@ -92,24 +92,24 @@ export const processNotificationWorkflow = createWorkflow(
       cancellationSuccessStep(input)
     })
 
-    when('cancellation-failure', input, isCancellationFailed).then(() => {
-      cancellationFailureStep(input)
+    when('cancellation-failed', input, isCancellationFailed).then(() => {
+      cancellationFailedStep(input)
     })
 
     when('capture-success', input, isCaptureSuccess).then(() => {
       captureSuccessStep(input)
     })
 
-    when('capture-failure', input, isCatureFailed).then(() => {
-      captureFailureStep(input)
+    when('capture-failed', input, isCatureFailed).then(() => {
+      captureFailedStep(input)
     })
 
     when('refund-success', input, isRefundSuccess).then(() => {
       refundSuccessStep(input)
     })
 
-    when('refund-failure', input, isRefundFailed).then(() => {
-      refundFailureStep(input)
+    when('refund-failed', input, isRefundFailed).then(() => {
+      refundFailedStep(input)
     })
 
     const notificationProcessed = createHook('notificationProcessed', input)

@@ -11,17 +11,17 @@ import { PaymentDataManager } from '../../utils'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 
-interface CaptureFailureStepCompensateInput {
+interface CaptureFailedStepCompensateInput {
   originalPayment: PaymentDTO
   notification: NotificationRequestItem
 }
 
-export const captureFailureStepId = 'capture-failure-step'
+export const captureFailedStepId = 'capture-failed-step'
 
-const captureFailureStepInvoke = async (
+const captureFailedStepInvoke = async (
   notification: NotificationRequestItem,
   { container, workflowId, stepName }: StepExecutionContext,
-): Promise<StepResponse<PaymentDTO, CaptureFailureStepCompensateInput>> => {
+): Promise<StepResponse<PaymentDTO, CaptureFailedStepCompensateInput>> => {
   const {
     merchantReference,
     pspReference: providerReference,
@@ -68,14 +68,14 @@ const captureFailureStepInvoke = async (
     `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
 
-  return new StepResponse<PaymentDTO, CaptureFailureStepCompensateInput>(
+  return new StepResponse<PaymentDTO, CaptureFailedStepCompensateInput>(
     newPayment,
     { notification, originalPayment },
   )
 }
 
-const captureFailureStepCompensate = async (
-  { originalPayment, notification }: CaptureFailureStepCompensateInput,
+const captureFailedStepCompensate = async (
+  { originalPayment, notification }: CaptureFailedStepCompensateInput,
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
   const { pspReference } = notification
@@ -150,10 +150,10 @@ const captureFailureStepCompensate = async (
   return new StepResponse<PaymentDTO>(restoredPayment)
 }
 
-const captureFailureStep = createStep(
-  captureFailureStepId,
-  captureFailureStepInvoke,
-  captureFailureStepCompensate,
+const captureFailedStep = createStep(
+  captureFailedStepId,
+  captureFailedStepInvoke,
+  captureFailedStepCompensate,
 )
 
-export default captureFailureStep
+export default captureFailedStep

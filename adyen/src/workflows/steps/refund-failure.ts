@@ -11,17 +11,17 @@ import { PaymentDataManager } from '../../utils'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 
-interface RefundFailureStepCompensateInput {
+interface RefundFailedStepCompensateInput {
   originalPayment: PaymentDTO
   notification: NotificationRequestItem
 }
 
-export const refundFailureStepId = 'refund-failure-step'
+export const refundFailedStepId = 'refund-failed-step'
 
-const refundFailureStepInvoke = async (
+const refundFailedStepInvoke = async (
   notification: NotificationRequestItem,
   { container, workflowId, stepName }: StepExecutionContext,
-): Promise<StepResponse<PaymentDTO, RefundFailureStepCompensateInput>> => {
+): Promise<StepResponse<PaymentDTO, RefundFailedStepCompensateInput>> => {
   const {
     merchantReference,
     pspReference: providerReference,
@@ -67,14 +67,14 @@ const refundFailureStepInvoke = async (
     `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
 
-  return new StepResponse<PaymentDTO, RefundFailureStepCompensateInput>(
+  return new StepResponse<PaymentDTO, RefundFailedStepCompensateInput>(
     newPayment,
     { notification, originalPayment },
   )
 }
 
-const refundFailureStepCompensate = async (
-  { originalPayment, notification }: RefundFailureStepCompensateInput,
+const refundFailedStepCompensate = async (
+  { originalPayment, notification }: RefundFailedStepCompensateInput,
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
   const { pspReference } = notification
@@ -149,10 +149,10 @@ const refundFailureStepCompensate = async (
   return new StepResponse<PaymentDTO>(restoredPayment)
 }
 
-const refundFailureStep = createStep(
-  refundFailureStepId,
-  refundFailureStepInvoke,
-  refundFailureStepCompensate,
+const refundFailedStep = createStep(
+  refundFailedStepId,
+  refundFailedStepInvoke,
+  refundFailedStepCompensate,
 )
 
-export default refundFailureStep
+export default refundFailedStep

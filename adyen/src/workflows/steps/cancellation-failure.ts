@@ -10,9 +10,9 @@ import { PaymentDataManager } from '../../utils'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 
-export const cancellationFailureStepId = 'cancellation-failure-step'
+export const cancellationFailedStepId = 'cancellation-failed-step'
 
-const cancellationFailureStepInvoke = async (
+const cancellationFailedStepInvoke = async (
   notification: NotificationRequestItem,
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
@@ -68,7 +68,7 @@ const cancellationFailureStepInvoke = async (
   return new StepResponse<PaymentDTO, PaymentDTO>(newPayment, originalPayment)
 }
 
-const cancellationFailureStepCompensate = async (
+const cancellationFailedStepCompensate = async (
   originalPayment: PaymentDTO,
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
@@ -97,10 +97,10 @@ const cancellationFailureStepCompensate = async (
   return new StepResponse<PaymentDTO>(restoredPayment)
 }
 
-const cancellationFailureStep = createStep(
-  cancellationFailureStepId,
-  cancellationFailureStepInvoke,
-  cancellationFailureStepCompensate,
+const cancellationFailedStep = createStep(
+  cancellationFailedStepId,
+  cancellationFailedStepInvoke,
+  cancellationFailedStepCompensate,
 )
 
-export default cancellationFailureStep
+export default cancellationFailedStep
