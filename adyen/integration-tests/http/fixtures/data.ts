@@ -4,7 +4,6 @@ import type { AddressDTO, PaymentCustomerDTO } from '@medusajs/framework/types'
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 type EventCodeEnum = Types.notification.NotificationRequestItem.EventCodeEnum
 type SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
-const SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
 type CardDetails = Types.checkout.CardDetails
 const TypeEnum = Types.checkout.CardDetails.TypeEnum
 
