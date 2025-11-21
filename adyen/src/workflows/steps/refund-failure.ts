@@ -7,7 +7,7 @@ import {
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
 import { differenceBy, find } from 'lodash'
-import { managePaymentData, type PaymentModification } from '../../utils'
+import { type Event, PaymentDataManager } from '../../utils'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 
@@ -17,7 +17,13 @@ const refundFailureStepInvoke = async (
   notification: NotificationRequestItem,
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
-  const { merchantReference, pspReference } = notification
+  const {
+    merchantReference,
+    amount: { value, currency },
+    pspReference: providerReference,
+    eventDate: date,
+  } = notification
+  const status = 'failed'
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
@@ -33,20 +39,34 @@ const refundFailureStepInvoke = async (
     `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
 
-  const { getRefund, deleteRefund } = managePaymentData(originalPayment.data)
+  const dataManager = PaymentDataManager(originalPayment.data)
 
-  const dataRefund = getRefund(pspReference)
+  const dataRefund = dataManager.getEvent(providerReference)
+
+  if (value !== undefined && currency !== undefined) {
+    dataManager.setEvent({
+      amount: { currency, value },
+      date,
+      id: dataRefund?.id,
+      merchantReference,
+      name: 'REFUND',
+      providerReference,
+      status,
+    })
+  }
+
   const paymentToUpdate = {
-    data: deleteRefund(pspReference),
+    captured_at: undefined,
+    data: dataManager.getData(),
     id: originalPayment.id,
   }
   await paymentService.updatePayment(paymentToUpdate)
   if (dataRefund?.id) {
-    await paymentService.deleteRefunds([dataRefund.id])
+    await paymentService.deleteCaptures([dataRefund.id])
   }
 
   const newPayment = await paymentService.retrievePayment(originalPayment.id, {
-    relations: ['refunds'],
+    relations: ['captures'],
   })
   logging.debug(
     `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
@@ -72,24 +92,21 @@ const refundFailureStepCompensate = async (
     `${workflowId}/${stepName}/compensate/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
 
-  const {
-    listRefunds: originalListRefunds,
-    updateData,
-    updateRefund,
-  } = managePaymentData(originalPayment.data)
-  const { listRefunds: newListRefunds } = managePaymentData(newPayment.data)
+  const originalDataManager = PaymentDataManager(originalPayment.data)
+  const newDataManager = PaymentDataManager(newPayment.data)
 
-  const [dataRefund]: PaymentModification[] = differenceBy(
-    originalListRefunds(),
-    newListRefunds(),
+  const [dataRefund]: Event[] = differenceBy(
+    originalDataManager.getRefunds(),
+    newDataManager.getRefunds(),
     'id',
   )
   if (dataRefund) {
     const originalPaymentRefunds = find(originalPayment.refunds, {
       id: dataRefund.id,
     })
+    originalDataManager.setData({ webhook: true })
     const webhookPayment = {
-      data: updateData({ webhook: true }),
+      data: originalDataManager.getData(),
       id: originalPayment.id,
     }
     await paymentService.updatePayment(webhookPayment)
@@ -107,9 +124,14 @@ const refundFailureStepCompensate = async (
       newPayment.refunds,
       'id',
     )
-    const dataRefundToAdd = { ...dataRefund, id: restoredPaymentRefund.id }
+    originalDataManager.setData({ webhook: false })
+    originalDataManager.setEvent({
+      ...dataRefund,
+      id: restoredPaymentRefund.id,
+    })
+
     const paymentToUpdate = {
-      data: updateRefund(dataRefundToAdd),
+      data: originalDataManager.getData(),
       id: originalPayment.id,
     }
     await paymentService.updatePayment(paymentToUpdate)

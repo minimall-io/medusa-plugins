@@ -1,5 +1,5 @@
 import type { Types } from '@adyen/api-library'
-import type { CaptureDTO, PaymentDTO } from '@medusajs/framework/types'
+import type { PaymentDTO, RefundDTO } from '@medusajs/framework/types'
 import { ContainerRegistrationKeys, Modules } from '@medusajs/framework/utils'
 import {
   createStep,
@@ -7,7 +7,7 @@ import {
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
 import { differenceBy, map } from 'lodash'
-import { getWholeUnit, managePaymentData } from '../../utils'
+import { getWholeUnit, PaymentDataManager } from '../../utils'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 
@@ -18,10 +18,11 @@ const refundSuccessStepInvoke = async (
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
   const {
-    merchantReference: reference,
+    merchantReference,
     amount: { value, currency },
+    pspReference: providerReference,
+    eventDate: date,
     merchantAccountCode,
-    pspReference,
   } = notification
   const status = 'success'
   const paymentService = container.resolve(Modules.PAYMENT)
@@ -29,7 +30,7 @@ const refundSuccessStepInvoke = async (
 
   const [originalPayment] = await paymentService.listPayments(
     {
-      payment_session_id: reference,
+      payment_session_id: merchantReference,
     },
     {
       relations: ['refunds'],
@@ -39,21 +40,21 @@ const refundSuccessStepInvoke = async (
     `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
 
-  const { getRefund, updateRefund, updateData } = managePaymentData(
-    originalPayment.data,
-  )
+  const dataManager = PaymentDataManager(originalPayment.data)
 
-  const dataRefund = getRefund(pspReference)
+  const dataRefund = dataManager.getEvent(providerReference)
 
   if (dataRefund) {
+    dataManager.setEvent({ ...dataRefund, date, status })
     const paymentToUpdate = {
-      data: updateRefund({ ...dataRefund, status }),
+      data: dataManager.getData(),
       id: originalPayment.id,
     }
     await paymentService.updatePayment(paymentToUpdate)
   } else if (value !== undefined && currency !== undefined) {
+    dataManager.setData({ webhook: true })
     const webhookPayment = {
-      data: updateData({ webhook: true }),
+      data: dataManager.getData(),
       id: originalPayment.id,
     }
     await paymentService.updatePayment(webhookPayment)
@@ -66,20 +67,24 @@ const refundSuccessStepInvoke = async (
     const newPaymentRefunds = await paymentService.listRefunds({
       payment_id: originalPayment.id,
     })
-    const [newPaymentRefund]: CaptureDTO[] = differenceBy(
+    const [newPaymentRefund]: RefundDTO[] = differenceBy(
       newPaymentRefunds,
       originalPayment.refunds,
       'id',
     )
-    const newDataRefund = {
+    dataManager.setEvent({
       amount: { currency, value },
+      date,
       id: newPaymentRefund.id,
-      pspReference,
-      reference,
+      merchantReference,
+      name: 'REFUND',
+      providerReference,
       status,
-    }
+    })
+    dataManager.setData({ webhook: false })
+
     const paymentToUpdate = {
-      data: updateRefund(newDataRefund),
+      data: dataManager.getData(),
       id: originalPayment.id,
     }
     await paymentService.updatePayment(paymentToUpdate)
@@ -105,7 +110,7 @@ const refundSuccessStepCompensate = async (
     `${workflowId}/${stepName}/compensate/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
 
-  const { listRefunds } = managePaymentData(originalPayment.data)
+  const dataManager = PaymentDataManager(originalPayment.data)
 
   const newPaymentRefunds = await paymentService.listRefunds({
     payment_id: originalPayment.id,
@@ -116,12 +121,8 @@ const refundSuccessStepCompensate = async (
   )
 
   await paymentService.deleteRefunds(paymentRefundsToDelete)
-  const dataToUpdate = {
-    ...originalPayment.data,
-    refunds: listRefunds(),
-  } as PaymentDTO['data']
   const paymentToUpdate = {
-    data: dataToUpdate,
+    data: dataManager.getData(),
     id: originalPayment.id,
   }
   await paymentService.updatePayment(paymentToUpdate)
