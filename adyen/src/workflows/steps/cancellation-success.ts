@@ -1,4 +1,4 @@
-import { Types } from '@adyen/api-library'
+import type { Types } from '@adyen/api-library'
 import type { PaymentDTO } from '@medusajs/framework/types'
 import { ContainerRegistrationKeys, Modules } from '@medusajs/framework/utils'
 import {
@@ -9,7 +9,6 @@ import {
 import { PaymentDataManager } from '../../utils'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
-const EventCode = Types.notification.NotificationRequestItem.EventCodeEnum
 
 export const cancellationSuccessStepId = 'cancellation-success-step'
 
@@ -48,7 +47,7 @@ const cancellationSuccessStepInvoke = async (
     date,
     id: originalPayment.id,
     merchantReference,
-    name: EventCode.Cancellation,
+    name: 'CANCELLATION',
     providerReference,
     status,
   })
