@@ -1,4 +1,4 @@
-import type { Types } from '@adyen/api-library'
+import { Types } from '@adyen/api-library'
 import type { PaymentDTO } from '@medusajs/framework/types'
 import { ContainerRegistrationKeys, Modules } from '@medusajs/framework/utils'
 import {
@@ -6,9 +6,10 @@ import {
   type StepExecutionContext,
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
-import { managePaymentData } from '../../utils'
+import { PaymentDataManager } from '../../utils'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
+const EventCode = Types.notification.NotificationRequestItem.EventCodeEnum
 
 export const cancellationSuccessStepId = 'cancellation-success-step'
 
@@ -17,39 +18,44 @@ const cancellationSuccessStepInvoke = async (
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
   const {
-    merchantReference: reference,
+    merchantReference,
     amount: { value, currency },
-    pspReference,
+    pspReference: providerReference,
+    eventDate: date,
   } = notification
   const status = 'success'
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
   const [originalPayment] = await paymentService.listPayments({
-    payment_session_id: reference,
+    payment_session_id: merchantReference,
   })
   logging.debug(
     `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
 
-  const { updateCancellation } = managePaymentData(originalPayment.data)
+  const dataManager = PaymentDataManager(originalPayment.data)
+
+  const authorization = dataManager.getAuthorization()
 
   const amount =
     value !== undefined && currency !== undefined
       ? { currency, value }
-      : undefined
+      : authorization.amount
 
-  const newDataCancellation = {
+  dataManager.setEvent({
     amount,
+    date,
     id: originalPayment.id,
-    pspReference,
-    reference,
+    merchantReference,
+    name: EventCode.Cancellation,
+    providerReference,
     status,
-  }
+  })
 
   const paymentToUpdate = {
-    canceled_at: originalPayment.canceled_at ?? new Date(),
-    data: updateCancellation(newDataCancellation),
+    canceled_at: originalPayment.canceled_at ?? date,
+    data: dataManager.getData(),
     id: originalPayment.id,
   }
 
@@ -73,15 +79,11 @@ const cancellationSuccessStepCompensate = async (
     `${workflowId}/${stepName}/compensate/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
 
-  const { getCancellation } = managePaymentData(originalPayment.data)
+  const dataManager = PaymentDataManager(originalPayment.data)
 
-  const dataToUpdate = {
-    ...originalPayment.data,
-    cancellation: getCancellation(),
-  } as PaymentDTO['data']
   const paymentToUpdate = {
     canceled_at: originalPayment.canceled_at,
-    data: dataToUpdate,
+    data: dataManager.getData(),
     id: originalPayment.id,
   }
   await paymentService.updatePayment(paymentToUpdate)
