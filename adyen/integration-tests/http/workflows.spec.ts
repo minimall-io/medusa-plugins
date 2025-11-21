@@ -20,16 +20,6 @@ import {
   getProviderId,
 } from './fixtures'
 
-interface PaymentModification {
-  pspReference: string
-  status: string
-  reference: string
-  amount: {
-    currency: string
-    value: number
-  }
-}
-
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 const EventCodeEnum = Types.notification.NotificationRequestItem.EventCodeEnum
 const SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
