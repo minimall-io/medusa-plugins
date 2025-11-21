@@ -54,6 +54,13 @@ export const PaymentDataManager = (data: PaymentDTO['data']) => {
   const getAuthorization = (): Event =>
     find(getEvents(), { name: 'AUTHORIZATION' })
 
+  const getCancellation = (): Event[] =>
+    find(getEvents(), { name: 'CANCELLATION' })
+
+  const getCaptures = (): Event[] => filter(getEvents(), { name: 'CAPTURE' })
+
+  const getRefunds = (): Event[] => filter(getEvents(), { name: 'REFUND' })
+
   const getEvent = (providerReference: string): Event | undefined =>
     find(getEvents(), { providerReference })
 
@@ -94,9 +101,12 @@ export const PaymentDataManager = (data: PaymentDTO['data']) => {
   return {
     deleteEvent,
     getAuthorization,
+    getCancellation,
+    getCaptures,
     getData,
     getEvent,
     getEvents,
+    getRefunds,
     setAuthorization,
     setData,
     setEvent,

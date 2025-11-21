@@ -33,7 +33,7 @@ export const EventSchema = z.object({
   date: z.string(),
   id: z.string().optional(),
   merchantReference: z.string(),
-  name: z.string(),
+  name: z.enum(['AUTHORISATION', 'CANCELLATION', 'CAPTURE', 'REFUND']),
   notes: z.string().optional(),
   providerReference: z.string(),
   status: z.string(),

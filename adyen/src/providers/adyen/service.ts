@@ -46,8 +46,6 @@ import {
   validateOptions,
 } from '../../utils'
 
-const EventCode = Types.notification.NotificationRequestItem.EventCodeEnum
-
 interface Shopper
   extends Pick<
     Types.checkout.PaymentRequest,
@@ -333,7 +331,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       amount: response.amount || amount,
       date,
       merchantReference: response.merchantReference || reference,
-      name: EventCode.Authorisation,
+      name: 'AUTHORISATION',
       providerReference: response.pspReference!,
       status: 'success', // TODO: Handle other statuses
     })
@@ -383,7 +381,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       date,
       id,
       merchantReference: response.reference || reference,
-      name: EventCode.Cancellation,
+      name: 'CANCELLATION',
       providerReference: response.pspReference,
       status: 'requested',
     })
@@ -435,7 +433,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       date,
       id,
       merchantReference: response.reference || reference,
-      name: EventCode.Capture,
+      name: 'CAPTURE',
       providerReference: response.pspReference,
       status: 'requested',
     })
@@ -486,7 +484,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       date,
       id,
       merchantReference: response.reference || reference,
-      name: EventCode.Refund,
+      name: 'REFUND',
       providerReference: response.pspReference,
       status: 'requested',
     })
