@@ -352,7 +352,7 @@ medusaIntegrationTestRunner({
         })
 
         describe('Test processing failed capture notification', () => {
-          it('adds a payment capture event to the data events property after a failed capture notification is processed without prior direct capture', async () => {
+          it('preserves the data events property after a failed capture notification is processed without prior direct capture', async () => {
             const pspReference = 'pspReference'
             const reference = payment.payment_session!.id
             const amount = payment.amount as number
@@ -383,12 +383,7 @@ medusaIntegrationTestRunner({
             })
 
             expect(newPayment.captures).toHaveLength(0)
-            expect(newCaptures).toHaveLength(1)
-            expect(newCaptures[0].providerReference).toBe(pspReference)
-            expect(newCaptures[0].merchantReference).toBe(reference)
-            expect(newCaptures[0].amount.value).toBe(amount)
-            expect(newCaptures[0].amount.currency).toBe(currency)
-            expect(newCaptures[0].status).toBe('failed')
+            expect(newCaptures).toHaveLength(0)
           })
 
           it('updates a payment capture event after a failed capture notification is processed with prior direct capture', async () => {
@@ -537,7 +532,7 @@ medusaIntegrationTestRunner({
         })
 
         describe('Test processing failed refund notification', () => {
-          it('adds a payment refund event to the data events property after a failed refund notification is processed without prior direct refund', async () => {
+          it('preserves the data events property after a failed refund notification is processed without prior direct refund', async () => {
             await paymentService.capturePayment({ payment_id: payment.id })
 
             const originalPayment = await paymentService.retrievePayment(
@@ -578,12 +573,7 @@ medusaIntegrationTestRunner({
 
             expect(originalPayment.refunds).toHaveLength(0)
             expect(newPayment.refunds).toHaveLength(0)
-            expect(newRefunds).toHaveLength(1)
-            expect(newRefunds[0].providerReference).toBe(pspReference)
-            expect(newRefunds[0].merchantReference).toBe(reference)
-            expect(newRefunds[0].amount.value).toBe(amount)
-            expect(newRefunds[0].amount.currency).toBe(currency)
-            expect(newRefunds[0].status).toBe('failed')
+            expect(newRefunds).toHaveLength(0)
           })
 
           it('updates a payment refund event after a failed refund notification is processed with prior direct refund', async () => {
@@ -713,11 +703,10 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const updatedPayment = await paymentService.retrievePayment(
-              payment.id,
-            )
-            const updatedCancellation = updatedPayment.data!
-              .cancellation as PaymentModification
+            const newPayment = await paymentService.retrievePayment(payment.id)
+            const newCancellations = filter(newPayment.data?.events, {
+              name: 'CANCELLATION',
+            })
 
             expect(errors).toEqual([
               {
@@ -730,8 +719,8 @@ medusaIntegrationTestRunner({
               },
             ])
             expect(originalPayment.canceled_at).toBeNull()
-            expect(updatedPayment.canceled_at).toBeNull()
-            expect(updatedCancellation).not.toBeDefined()
+            expect(newPayment.canceled_at).toBeNull()
+            expect(newCancellations).toHaveLength(0)
           })
 
           it('restores initial payment state after a success cancellation notification processing fails with prior direct cancellation', async () => {
@@ -761,11 +750,10 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const updatedPayment = await paymentService.retrievePayment(
-              payment.id,
-            )
-            const updatedCancellation = updatedPayment.data!
-              .cancellation as PaymentModification
+            const newPayment = await paymentService.retrievePayment(payment.id)
+            const newCancellations = filter(newPayment.data?.events, {
+              name: 'CANCELLATION',
+            })
 
             expect(errors).toEqual([
               {
@@ -778,11 +766,9 @@ medusaIntegrationTestRunner({
               },
             ])
             expect(originalPayment.canceled_at).toBeDefined()
-            expect(updatedPayment.canceled_at).toBeDefined()
-            expect(updatedPayment.canceled_at).toEqual(
-              originalPayment.canceled_at,
-            )
-            expect(updatedCancellation).not.toBeDefined()
+            expect(newPayment.canceled_at).toBeDefined()
+            expect(newPayment.canceled_at).toEqual(originalPayment.canceled_at)
+            expect(newCancellations).toHaveLength(0)
           })
         })
 
@@ -812,11 +798,10 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const updatedPayment = await paymentService.retrievePayment(
-              payment.id,
-            )
-            const updatedCancellation = updatedPayment.data!
-              .cancellation as PaymentModification
+            const newPayment = await paymentService.retrievePayment(payment.id)
+            const newCancellations = filter(newPayment.data?.events, {
+              name: 'CANCELLATION',
+            })
 
             expect(errors).toEqual([
               {
@@ -829,8 +814,8 @@ medusaIntegrationTestRunner({
               },
             ])
             expect(originalPayment.canceled_at).toBeNull()
-            expect(updatedPayment.canceled_at).toBeNull()
-            expect(updatedCancellation).not.toBeDefined()
+            expect(newPayment.canceled_at).toBeNull()
+            expect(newCancellations).toHaveLength(0)
           })
 
           it('restores initial payment state after a failed cancellation notification processing fails with prior direct cancellation', async () => {
@@ -860,11 +845,10 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const updatedPayment = await paymentService.retrievePayment(
-              payment.id,
-            )
-            const updatedCancellation = updatedPayment.data!
-              .cancellation as PaymentModification
+            const newPayment = await paymentService.retrievePayment(payment.id)
+            const newCancellations = filter(newPayment.data?.events, {
+              name: 'CANCELLATION',
+            })
 
             expect(errors).toEqual([
               {
@@ -877,11 +861,9 @@ medusaIntegrationTestRunner({
               },
             ])
             expect(originalPayment.canceled_at).toBeDefined()
-            expect(updatedPayment.canceled_at).toBeDefined()
-            expect(updatedPayment.canceled_at).toEqual(
-              originalPayment.canceled_at,
-            )
-            expect(updatedCancellation).not.toBeDefined()
+            expect(newPayment.canceled_at).toBeDefined()
+            expect(newPayment.canceled_at).toEqual(originalPayment.canceled_at)
+            expect(newCancellations).toHaveLength(0)
           })
         })
 
@@ -907,15 +889,16 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const updatedPayment = await paymentService.retrievePayment(
+            const newPayment = await paymentService.retrievePayment(
               payment.id,
               {
                 relations: ['captures'],
               },
             )
 
-            const updatedCaptures = updatedPayment.data!
-              .captures as PaymentModification[]
+            const newCaptures = filter(newPayment.data?.events, {
+              name: 'CAPTURE',
+            })
 
             expect(errors).toEqual([
               {
@@ -927,8 +910,8 @@ medusaIntegrationTestRunner({
                 handlerType: 'invoke',
               },
             ])
-            expect(updatedPayment.captures).toHaveLength(0)
-            expect(updatedCaptures).toHaveLength(0)
+            expect(newPayment.captures).toHaveLength(0)
+            expect(newCaptures).toHaveLength(0)
           })
 
           it('restores initial payment state after a success capture notification processing fails with prior direct capture', async () => {
@@ -941,15 +924,15 @@ medusaIntegrationTestRunner({
               },
             )
 
-            const originalCaptures = originalPayment.data!
-              .captures as PaymentModification[]
-            const originalCapture = originalCaptures[0]
+            const originalCaptures = filter(originalPayment.data?.events, {
+              name: 'CAPTURE',
+            })
 
             const notification = getNotificationRequestItem(
-              originalCapture.pspReference,
-              originalCapture.reference,
-              originalCapture.amount.value,
-              originalCapture.amount.currency,
+              originalCaptures[0].providerReference,
+              originalCaptures[0].merchantReference,
+              originalCaptures[0].amount.value,
+              originalCaptures[0].amount.currency,
               EventCodeEnum.Capture,
               SuccessEnum.True,
             )
@@ -960,15 +943,15 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const updatedPayment = await paymentService.retrievePayment(
+            const newPayment = await paymentService.retrievePayment(
               payment.id,
               {
                 relations: ['captures'],
               },
             )
-            const updatedCaptures = updatedPayment.data!
-              .captures as PaymentModification[]
-            const updatedCapture = updatedCaptures[0]
+            const newCaptures = filter(newPayment.data?.events, {
+              name: 'CAPTURE',
+            })
 
             expect(errors).toEqual([
               {
@@ -981,11 +964,11 @@ medusaIntegrationTestRunner({
               },
             ])
             expect(originalPayment.captures).toHaveLength(1)
-            expect(updatedPayment.captures).toHaveLength(1)
+            expect(newPayment.captures).toHaveLength(1)
             expect(originalCaptures).toHaveLength(1)
-            expect(updatedCaptures).toHaveLength(1)
-            expect(originalCapture.status).toBe('received')
-            expect(updatedCapture.status).toBe('received')
+            expect(newCaptures).toHaveLength(1)
+            expect(originalCaptures[0].status).toBe('requested')
+            expect(newCaptures[0].status).toBe('requested')
           })
         })
 
@@ -1011,15 +994,16 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const updatedPayment = await paymentService.retrievePayment(
+            const newPayment = await paymentService.retrievePayment(
               payment.id,
               {
                 relations: ['captures'],
               },
             )
 
-            const updatedCaptures = updatedPayment.data!
-              .captures as PaymentModification[]
+            const newCaptures = filter(newPayment.data?.events, {
+              name: 'CAPTURE',
+            })
 
             expect(errors).toEqual([
               {
@@ -1031,8 +1015,8 @@ medusaIntegrationTestRunner({
                 handlerType: 'invoke',
               },
             ])
-            expect(updatedPayment.captures).toHaveLength(0)
-            expect(updatedCaptures).toHaveLength(0)
+            expect(newPayment.captures).toHaveLength(0)
+            expect(newCaptures).toHaveLength(0)
           })
 
           it('restores initial payment state after a failed capture notification processing fails with prior direct capture', async () => {
@@ -1045,15 +1029,15 @@ medusaIntegrationTestRunner({
               },
             )
 
-            const originalCaptures = originalPayment.data!
-              .captures as PaymentModification[]
-            const originalCapture = originalCaptures[0]
+            const originalCaptures = filter(originalPayment.data?.events, {
+              name: 'CAPTURE',
+            })
 
             const notification = getNotificationRequestItem(
-              originalCapture.pspReference,
-              originalCapture.reference,
-              originalCapture.amount.value,
-              originalCapture.amount.currency,
+              originalCaptures[0].providerReference,
+              originalCaptures[0].merchantReference,
+              originalCaptures[0].amount.value,
+              originalCaptures[0].amount.currency,
               EventCodeEnum.Capture,
               SuccessEnum.False,
             )
@@ -1064,15 +1048,15 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const updatedPayment = await paymentService.retrievePayment(
+            const newPayment = await paymentService.retrievePayment(
               payment.id,
               {
                 relations: ['captures'],
               },
             )
-            const updatedCaptures = updatedPayment.data!
-              .captures as PaymentModification[]
-            const updatedCapture = updatedCaptures[0]
+            const newCaptures = filter(newPayment.data?.events, {
+              name: 'CAPTURE',
+            })
 
             expect(errors).toEqual([
               {
@@ -1085,11 +1069,11 @@ medusaIntegrationTestRunner({
               },
             ])
             expect(originalPayment.captures).toHaveLength(1)
-            expect(updatedPayment.captures).toHaveLength(1)
+            expect(newPayment.captures).toHaveLength(1)
             expect(originalCaptures).toHaveLength(1)
-            expect(updatedCaptures).toHaveLength(1)
-            expect(originalCapture.status).toBe('received')
-            expect(updatedCapture.status).toBe('received')
+            expect(newCaptures).toHaveLength(1)
+            expect(originalCaptures[0].status).toBe('requested')
+            expect(newCaptures[0].status).toBe('requested')
           })
         })
 
@@ -1124,15 +1108,16 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const updatedPayment = await paymentService.retrievePayment(
+            const newPayment = await paymentService.retrievePayment(
               payment.id,
               {
                 relations: ['refunds'],
               },
             )
 
-            const updatedRefunds = updatedPayment.data!
-              .refunds as PaymentModification[]
+            const newRefunds = filter(newPayment.data?.events, {
+              name: 'REFUND',
+            })
 
             expect(errors).toEqual([
               {
@@ -1145,8 +1130,8 @@ medusaIntegrationTestRunner({
               },
             ])
             expect(originalPayment.refunds).toHaveLength(0)
-            expect(updatedPayment.refunds).toHaveLength(0)
-            expect(updatedRefunds).toHaveLength(0)
+            expect(newPayment.refunds).toHaveLength(0)
+            expect(newRefunds).toHaveLength(0)
           })
 
           it('restores initial payment state after a success refund notification processing fails with prior direct refund', async () => {
@@ -1160,15 +1145,15 @@ medusaIntegrationTestRunner({
               },
             )
 
-            const originalRefunds = originalPayment.data!
-              .refunds as PaymentModification[]
-            const originalRefund = originalRefunds[0]
+            const originalRefunds = filter(originalPayment.data?.events, {
+              name: 'REFUND',
+            })
 
             const notification = getNotificationRequestItem(
-              originalRefund.pspReference,
-              originalRefund.reference,
-              originalRefund.amount.value,
-              originalRefund.amount.currency,
+              originalRefunds[0].providerReference,
+              originalRefunds[0].merchantReference,
+              originalRefunds[0].amount.value,
+              originalRefunds[0].amount.currency,
               EventCodeEnum.Refund,
               SuccessEnum.True,
             )
@@ -1179,15 +1164,15 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const updatedPayment = await paymentService.retrievePayment(
+            const newPayment = await paymentService.retrievePayment(
               payment.id,
               {
                 relations: ['refunds'],
               },
             )
-            const updatedRefunds = updatedPayment.data!
-              .refunds as PaymentModification[]
-            const updatedRefund = updatedRefunds[0]
+            const newRefunds = filter(newPayment.data?.events, {
+              name: 'REFUND',
+            })
 
             expect(errors).toEqual([
               {
@@ -1200,11 +1185,11 @@ medusaIntegrationTestRunner({
               },
             ])
             expect(originalPayment.refunds).toHaveLength(1)
-            expect(updatedPayment.refunds).toHaveLength(1)
+            expect(newPayment.refunds).toHaveLength(1)
             expect(originalRefunds).toHaveLength(1)
-            expect(updatedRefunds).toHaveLength(1)
-            expect(originalRefund.status).toBe('received')
-            expect(updatedRefund.status).toBe('received')
+            expect(newRefunds).toHaveLength(1)
+            expect(originalRefunds[0].status).toBe('requested')
+            expect(newRefunds[0].status).toBe('requested')
           })
         })
 
@@ -1239,15 +1224,16 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const updatedPayment = await paymentService.retrievePayment(
+            const newPayment = await paymentService.retrievePayment(
               payment.id,
               {
                 relations: ['refunds'],
               },
             )
 
-            const updatedRefunds = updatedPayment.data!
-              .refunds as PaymentModification[]
+            const newRefunds = filter(newPayment.data?.events, {
+              name: 'REFUND',
+            })
 
             expect(errors).toEqual([
               {
@@ -1260,8 +1246,8 @@ medusaIntegrationTestRunner({
               },
             ])
             expect(originalPayment.refunds).toHaveLength(0)
-            expect(updatedPayment.refunds).toHaveLength(0)
-            expect(updatedRefunds).toHaveLength(0)
+            expect(newPayment.refunds).toHaveLength(0)
+            expect(newRefunds).toHaveLength(0)
           })
 
           it('restores initial payment state after a failed refund notification processing fails with prior direct refund', async () => {
@@ -1275,15 +1261,15 @@ medusaIntegrationTestRunner({
               },
             )
 
-            const originalRefunds = originalPayment.data!
-              .refunds as PaymentModification[]
-            const originalRefund = originalRefunds[0]
+            const originalRefunds = filter(originalPayment.data?.events, {
+              name: 'REFUND',
+            })
 
             const notification = getNotificationRequestItem(
-              originalRefund.pspReference,
-              originalRefund.reference,
-              originalRefund.amount.value,
-              originalRefund.amount.currency,
+              originalRefunds[0].providerReference,
+              originalRefunds[0].merchantReference,
+              originalRefunds[0].amount.value,
+              originalRefunds[0].amount.currency,
               EventCodeEnum.Refund,
               SuccessEnum.False,
             )
@@ -1294,15 +1280,15 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const updatedPayment = await paymentService.retrievePayment(
+            const newPayment = await paymentService.retrievePayment(
               payment.id,
               {
                 relations: ['refunds'],
               },
             )
-            const updatedRefunds = updatedPayment.data!
-              .refunds as PaymentModification[]
-            const updatedRefund = updatedRefunds[0]
+            const newRefunds = filter(newPayment.data?.events, {
+              name: 'REFUND',
+            })
 
             expect(errors).toEqual([
               {
@@ -1315,11 +1301,11 @@ medusaIntegrationTestRunner({
               },
             ])
             expect(originalPayment.refunds).toHaveLength(1)
-            expect(updatedPayment.refunds).toHaveLength(1)
+            expect(newPayment.refunds).toHaveLength(1)
             expect(originalRefunds).toHaveLength(1)
-            expect(updatedRefunds).toHaveLength(1)
-            expect(originalRefund.status).toBe('received')
-            expect(updatedRefund.status).toBe('received')
+            expect(newRefunds).toHaveLength(1)
+            expect(originalRefunds[0].status).toBe('requested')
+            expect(newRefunds[0].status).toBe('requested')
           })
         })
       })

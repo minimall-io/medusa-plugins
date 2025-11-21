@@ -1,25 +1,29 @@
 import type { Types } from '@adyen/api-library'
-import type { PaymentDTO } from '@medusajs/framework/types'
+import type { CaptureDTO, PaymentDTO } from '@medusajs/framework/types'
 import { ContainerRegistrationKeys, Modules } from '@medusajs/framework/utils'
 import {
   createStep,
   type StepExecutionContext,
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
-import { differenceBy, find } from 'lodash'
-import { type Event, PaymentDataManager } from '../../utils'
+import { differenceBy } from 'lodash'
+import { PaymentDataManager } from '../../utils'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
+
+interface CaptureFailureStepCompensateInput {
+  originalPayment: PaymentDTO
+  notification: NotificationRequestItem
+}
 
 export const captureFailureStepId = 'capture-failure-step'
 
 const captureFailureStepInvoke = async (
   notification: NotificationRequestItem,
   { container, workflowId, stepName }: StepExecutionContext,
-): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
+): Promise<StepResponse<PaymentDTO, CaptureFailureStepCompensateInput>> => {
   const {
     merchantReference,
-    amount: { value, currency },
     pspReference: providerReference,
     eventDate: date,
   } = notification
@@ -43,16 +47,8 @@ const captureFailureStepInvoke = async (
 
   const dataCapture = dataManager.getEvent(providerReference)
 
-  if (value !== undefined && currency !== undefined) {
-    dataManager.setEvent({
-      amount: { currency, value },
-      date,
-      id: dataCapture?.id,
-      merchantReference,
-      name: 'CAPTURE',
-      providerReference,
-      status,
-    })
+  if (dataCapture) {
+    dataManager.setEvent({ ...dataCapture, date, status })
   }
 
   const paymentToUpdate = {
@@ -72,13 +68,17 @@ const captureFailureStepInvoke = async (
     `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
 
-  return new StepResponse<PaymentDTO, PaymentDTO>(newPayment, originalPayment)
+  return new StepResponse<PaymentDTO, CaptureFailureStepCompensateInput>(
+    newPayment,
+    { notification, originalPayment },
+  )
 }
 
 const captureFailureStepCompensate = async (
-  originalPayment: PaymentDTO,
+  { originalPayment, notification }: CaptureFailureStepCompensateInput,
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
+  const { pspReference } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
   logging.debug(
@@ -92,21 +92,17 @@ const captureFailureStepCompensate = async (
     `${workflowId}/${stepName}/compensate/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
 
-  const originalDataManager = PaymentDataManager(originalPayment.data)
-  const newDataManager = PaymentDataManager(newPayment.data)
+  const dataManager = PaymentDataManager(originalPayment.data)
 
-  const [dataCapture]: Event[] = differenceBy(
-    originalDataManager.getCaptures(),
-    newDataManager.getCaptures(),
+  const [originalPaymentCapture]: CaptureDTO[] = differenceBy(
+    originalPayment.captures,
+    newPayment.captures,
     'id',
   )
-  if (dataCapture) {
-    const originalPaymentCapture = find(originalPayment.captures, {
-      id: dataCapture.id,
-    })
-    originalDataManager.setData({ webhook: true })
+  if (originalPaymentCapture) {
+    dataManager.setData({ webhook: true })
     const webhookPayment = {
-      data: originalDataManager.getData(),
+      data: dataManager.getData(),
       id: originalPayment.id,
     }
     await paymentService.updatePayment(webhookPayment)
@@ -124,19 +120,22 @@ const captureFailureStepCompensate = async (
       newPayment.captures,
       'id',
     )
-    originalDataManager.setData({ webhook: false })
-    originalDataManager.setEvent({
-      ...dataCapture,
-      id: restoredPaymentCapture.id,
-    })
-
-    const paymentToUpdate = {
-      captured_at: originalPayment.captured_at,
-      data: originalDataManager.getData(),
-      id: originalPayment.id,
+    const dataCapture = dataManager.getEvent(pspReference)
+    if (dataCapture) {
+      dataManager.setEvent({
+        ...dataCapture,
+        id: restoredPaymentCapture.id,
+      })
     }
-    await paymentService.updatePayment(paymentToUpdate)
+    dataManager.setData({ webhook: false })
   }
+
+  const paymentToUpdate = {
+    captured_at: originalPayment.captured_at,
+    data: dataManager.getData(),
+    id: originalPayment.id,
+  }
+  await paymentService.updatePayment(paymentToUpdate)
 
   const restoredPayment = await paymentService.retrievePayment(
     originalPayment.id,
