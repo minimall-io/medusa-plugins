@@ -7,7 +7,7 @@ import {
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
 import { differenceBy, map } from 'lodash'
-import { getWholeUnit, managePaymentData } from '../../utils'
+import { getWholeUnit, PaymentDataManager } from '../../utils'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 
@@ -18,10 +18,11 @@ const captureSuccessStepInvoke = async (
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
   const {
-    merchantReference: reference,
+    merchantReference,
     amount: { value, currency },
+    pspReference: providerReference,
+    eventDate: date,
     merchantAccountCode,
-    pspReference,
   } = notification
   const status = 'success'
   const paymentService = container.resolve(Modules.PAYMENT)
@@ -29,7 +30,7 @@ const captureSuccessStepInvoke = async (
 
   const [originalPayment] = await paymentService.listPayments(
     {
-      payment_session_id: reference,
+      payment_session_id: merchantReference,
     },
     {
       relations: ['captures'],
@@ -39,21 +40,21 @@ const captureSuccessStepInvoke = async (
     `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
 
-  const { getCapture, updateCapture, updateData } = managePaymentData(
-    originalPayment.data,
-  )
+  const dataManager = PaymentDataManager(originalPayment.data)
 
-  const dataCapture = getCapture(pspReference)
+  const dataCapture = dataManager.getEvent(providerReference)
 
   if (dataCapture) {
+    dataManager.setEvent({ ...dataCapture, date, status })
     const paymentToUpdate = {
-      data: updateCapture({ ...dataCapture, status }),
+      data: dataManager.getData(),
       id: originalPayment.id,
     }
     await paymentService.updatePayment(paymentToUpdate)
   } else if (value !== undefined && currency !== undefined) {
+    dataManager.setData({ webhook: true })
     const webhookPayment = {
-      data: updateData({ webhook: true }),
+      data: dataManager.getData(),
       id: originalPayment.id,
     }
     await paymentService.updatePayment(webhookPayment)
@@ -71,15 +72,19 @@ const captureSuccessStepInvoke = async (
       originalPayment.captures,
       'id',
     )
-    const newDataCapture = {
+    dataManager.setEvent({
       amount: { currency, value },
+      date,
       id: newPaymentCapture.id,
-      pspReference,
-      reference,
+      merchantReference,
+      name: 'CAPTURE',
+      providerReference,
       status,
-    }
+    })
+    dataManager.setData({ webhook: false })
+
     const paymentToUpdate = {
-      data: updateCapture(newDataCapture),
+      data: dataManager.getData(),
       id: originalPayment.id,
     }
     await paymentService.updatePayment(paymentToUpdate)
@@ -105,7 +110,7 @@ const captureSuccessStepCompensate = async (
     `${workflowId}/${stepName}/compensate/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
 
-  const { listCaptures } = managePaymentData(originalPayment.data)
+  const dataManager = PaymentDataManager(originalPayment.data)
 
   const newPaymentCaptures = await paymentService.listCaptures({
     payment_id: originalPayment.id,
@@ -116,13 +121,9 @@ const captureSuccessStepCompensate = async (
   )
 
   await paymentService.deleteCaptures(paymentCapturesToDelete)
-  const dataToUpdate = {
-    ...originalPayment.data,
-    captures: listCaptures(),
-  } as PaymentDTO['data']
   const paymentToUpdate = {
     captured_at: originalPayment.captured_at,
-    data: dataToUpdate,
+    data: dataManager.getData(),
     id: originalPayment.id,
   }
   await paymentService.updatePayment(paymentToUpdate)

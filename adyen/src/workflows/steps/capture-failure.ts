@@ -7,7 +7,7 @@ import {
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
 import { differenceBy, find } from 'lodash'
-import { managePaymentData, type PaymentModification } from '../../utils'
+import { type Event, PaymentDataManager } from '../../utils'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 
@@ -17,7 +17,13 @@ const captureFailureStepInvoke = async (
   notification: NotificationRequestItem,
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
-  const { merchantReference, pspReference } = notification
+  const {
+    merchantReference,
+    amount: { value, currency },
+    pspReference: providerReference,
+    eventDate: date,
+  } = notification
+  const status = 'failed'
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
@@ -33,12 +39,25 @@ const captureFailureStepInvoke = async (
     `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
 
-  const { getCapture, deleteCapture } = managePaymentData(originalPayment.data)
+  const dataManager = PaymentDataManager(originalPayment.data)
 
-  const dataCapture = getCapture(pspReference)
+  const dataCapture = dataManager.getEvent(providerReference)
+
+  if (value !== undefined && currency !== undefined) {
+    dataManager.setEvent({
+      amount: { currency, value },
+      date,
+      id: dataCapture?.id,
+      merchantReference,
+      name: 'CAPTURE',
+      providerReference,
+      status,
+    })
+  }
+
   const paymentToUpdate = {
     captured_at: undefined,
-    data: deleteCapture(pspReference),
+    data: dataManager.getData(),
     id: originalPayment.id,
   }
   await paymentService.updatePayment(paymentToUpdate)
@@ -73,24 +92,21 @@ const captureFailureStepCompensate = async (
     `${workflowId}/${stepName}/compensate/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
 
-  const {
-    listCaptures: originalListCaptures,
-    updateData,
-    updateCapture,
-  } = managePaymentData(originalPayment.data)
-  const { listCaptures: newListCaptures } = managePaymentData(newPayment.data)
+  const originalDataManager = PaymentDataManager(originalPayment.data)
+  const newDataManager = PaymentDataManager(newPayment.data)
 
-  const [dataCapture]: PaymentModification[] = differenceBy(
-    originalListCaptures(),
-    newListCaptures(),
+  const [dataCapture]: Event[] = differenceBy(
+    originalDataManager.getCaptures(),
+    newDataManager.getCaptures(),
     'id',
   )
   if (dataCapture) {
     const originalPaymentCapture = find(originalPayment.captures, {
       id: dataCapture.id,
     })
+    originalDataManager.setData({ webhook: true })
     const webhookPayment = {
-      data: updateData({ webhook: true }),
+      data: originalDataManager.getData(),
       id: originalPayment.id,
     }
     await paymentService.updatePayment(webhookPayment)
@@ -108,10 +124,15 @@ const captureFailureStepCompensate = async (
       newPayment.captures,
       'id',
     )
-    const dataCaptureToAdd = { ...dataCapture, id: restoredPaymentCapture.id }
+    originalDataManager.setData({ webhook: false })
+    originalDataManager.setEvent({
+      ...dataCapture,
+      id: restoredPaymentCapture.id,
+    })
+
     const paymentToUpdate = {
       captured_at: originalPayment.captured_at,
-      data: updateCapture(dataCaptureToAdd),
+      data: originalDataManager.getData(),
       id: originalPayment.id,
     }
     await paymentService.updatePayment(paymentToUpdate)
