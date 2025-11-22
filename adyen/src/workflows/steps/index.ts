@@ -1,3 +1,5 @@
+export { default as authorisationFailedStep } from './authorisation-failed'
+export { default as authorisationSuccessStep } from './authorisation-success'
 export { default as cancellationFailedStep } from './cancellation-failed'
 export { default as cancellationSuccessStep } from './cancellation-success'
 export { default as captureFailedStep } from './capture-failed'

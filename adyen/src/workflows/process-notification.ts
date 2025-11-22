@@ -9,6 +9,8 @@ import {
 } from '@medusajs/framework/workflows-sdk'
 
 import {
+  authorisationFailedStep,
+  authorisationSuccessStep,
   cancellationFailedStep,
   cancellationSuccessStep,
   captureFailedStep,
@@ -87,6 +89,14 @@ export const processNotificationWorkflow = createWorkflow(
   processNotificationWorkflowId,
   (input: WorkflowData<NotificationRequestItem>) => {
     const validateNotification = createHook('validateNotification', input)
+
+    when('authorisation-success', input, isAuthorisationSuccess).then(() => {
+      authorisationSuccessStep(input)
+    })
+
+    when('authorisation-failed', input, isAuthorisationFailed).then(() => {
+      authorisationFailedStep(input)
+    })
 
     when('cancellation-success', input, isCancellationSuccess).then(() => {
       cancellationSuccessStep(input)
