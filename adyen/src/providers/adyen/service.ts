@@ -38,7 +38,6 @@ import {
   MedusaError,
   PaymentActions,
 } from '@medusajs/framework/utils'
-
 import {
   getMinorUnit,
   type Options,
@@ -69,6 +68,7 @@ interface AuthorizePaymentInputData {
   amount: Types.checkout.Amount
   request: Types.checkout.PaymentRequest
   shopper?: Shopper
+  redirectResult?: string
 }
 
 type ProviderWebhookPayloadData = Types.notification.Notification
@@ -174,6 +174,47 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): boolean {
     const { hmacKey } = this.options_
     return this.hmac.validateHMAC(notification, hmacKey)
+  }
+
+  protected handleAuthorisationResponse(
+    response: Types.checkout.PaymentResponse,
+    inputData: AuthorizePaymentInputData,
+    reference: string,
+  ): AuthorizePaymentOutput {
+    this.log('handleAuthorisationResponse/response', response)
+    const { shopper } = inputData
+    const amount = response.amount || inputData.amount
+    const dataManager = PaymentDataManager({ amount, reference })
+
+    if (response.action) {
+      const data = {
+        action: response.action,
+        amount,
+        paymentMethods: undefined,
+        request: undefined,
+        shopper,
+      }
+      const output = { data, status: 'requires_more' as const }
+      this.log('handleAuthorisationResponse/output', output)
+      return output
+    }
+
+    const status = this.getSessionStatus(response.resultCode)
+    const date = new Date().toISOString()
+    dataManager.setAuthorisation({
+      amount: response.amount || amount,
+      date,
+      id: reference,
+      merchantReference: response.merchantReference || reference,
+      name: 'AUTHORISATION',
+      providerReference: response.pspReference!,
+      status: 'SUCCEEDED', // TODO: Handle other statuses
+    })
+
+    const data = dataManager.getData()
+    const output = { data, status }
+    this.log('handleAuthorisationResponse/output', output)
+    return output
   }
 
   public async listPaymentMethods(
@@ -302,14 +343,25 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       recurringProcessingModel,
       returnUrlPrefix: returnUrl,
     } = this.options_
-    const date = new Date().toISOString()
     const inputData = input.data as unknown as AuthorizePaymentInputData
     const shopper = inputData.shopper || {}
     const amount = inputData.amount
+    const redirectResult = inputData.redirectResult
     const sessionId = input.context!.idempotency_key!
     const reference = sessionId
-    const dataManager = PaymentDataManager({ amount, reference })
     const idempotencyKey = sessionId
+
+    if (redirectResult) {
+      const request: Types.checkout.PaymentDetailsRequest = {
+        details: { redirectResult },
+      }
+      const response = await this.checkout.PaymentsApi.paymentsDetails(
+        request,
+        { idempotencyKey },
+      )
+      return this.handleAuthorisationResponse(response, inputData, reference)
+    }
+
     const request: Types.checkout.PaymentRequest = {
       ...inputData.request,
       ...shopper,
@@ -325,21 +377,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       idempotencyKey,
     })
 
-    const status = this.getSessionStatus(response.resultCode)
-
-    dataManager.setAuthorisation({
-      amount: response.amount || amount,
-      date,
-      merchantReference: response.merchantReference || reference,
-      name: 'AUTHORISATION',
-      providerReference: response.pspReference!,
-      status: 'SUCCEEDED', // TODO: Handle other statuses
-    })
-
-    const data = dataManager.getData()
-    const output = { data, status }
-    this.log('authorizePayment/output', output)
-    return output
+    return this.handleAuthorisationResponse(response, inputData, reference)
   }
 
   public async cancelPayment(
@@ -347,14 +385,11 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<CancelPaymentOutput> {
     this.log('cancelPayment/input', input)
     const { merchantAccount } = this.options_
-    const date = new Date().toISOString()
     const dataManager = PaymentDataManager(input.data)
     const { reference, webhook, amount } = dataManager.getData()
-    const authorisation = dataManager.getAuthorisation()
     const paymentId = input.context?.idempotency_key
     const id = paymentId
     const idempotencyKey = paymentId
-    const pspReference = authorisation.providerReference
 
     if (webhook) {
       dataManager.setData({ webhook: undefined })
@@ -364,6 +399,15 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       return output
     }
 
+    if (!dataManager.isAuthorised()) {
+      throw new MedusaError(
+        MedusaError.Types.NOT_ALLOWED,
+        'Payment not authorised.',
+      )
+    }
+
+    const authorisation = dataManager.getAuthorisation()!
+    const pspReference = authorisation.providerReference
     const request: Types.checkout.PaymentCancelRequest = {
       merchantAccount,
       reference,
@@ -376,6 +420,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         { idempotencyKey },
       )
 
+    const date = new Date().toISOString()
     dataManager.setEvent({
       amount,
       date,
@@ -397,15 +442,11 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<CapturePaymentOutput> {
     this.log('capturePayment/input', input)
     const { merchantAccount } = this.options_
-    const date = new Date().toISOString()
     const dataManager = PaymentDataManager(input.data)
     const { webhook, reference } = dataManager.getData()
-    const authorisation = dataManager.getAuthorisation()
     const captureId = input.context?.idempotency_key
     const id = captureId
     const idempotencyKey = captureId
-    const pspReference = authorisation.providerReference
-    const amount = authorisation.amount
 
     if (webhook) {
       dataManager.setData({ webhook: undefined })
@@ -415,6 +456,16 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       return output
     }
 
+    if (!dataManager.isAuthorised()) {
+      throw new MedusaError(
+        MedusaError.Types.NOT_ALLOWED,
+        'Payment not authorised.',
+      )
+    }
+
+    const authorisation = dataManager.getAuthorisation()!
+    const pspReference = authorisation.providerReference
+    const amount = authorisation.amount
     const request: Types.checkout.PaymentCaptureRequest = {
       amount,
       merchantAccount,
@@ -428,6 +479,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         { idempotencyKey },
       )
 
+    const date = new Date().toISOString()
     dataManager.setEvent({
       amount,
       date,
@@ -448,16 +500,11 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): Promise<RefundPaymentOutput> {
     this.log('refundPayment/input', input)
     const { merchantAccount } = this.options_
-    const date = new Date().toISOString()
     const dataManager = PaymentDataManager(input.data)
     const { webhook, reference } = dataManager.getData()
-    const authorisation = dataManager.getAuthorisation()
     const refundId = input.context?.idempotency_key
     const id = refundId
     const idempotencyKey = refundId
-    const currency = authorisation.amount.currency
-    const amount = this.getAmount(input.amount, currency)
-    const pspReference = authorisation.providerReference
 
     if (webhook) {
       dataManager.setData({ webhook: undefined })
@@ -467,6 +514,17 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       return output
     }
 
+    if (!dataManager.isAuthorised()) {
+      throw new MedusaError(
+        MedusaError.Types.NOT_ALLOWED,
+        'Payment not authorised.',
+      )
+    }
+
+    const authorisation = dataManager.getAuthorisation()!
+    const currency = authorisation.amount.currency
+    const amount = this.getAmount(input.amount, currency)
+    const pspReference = authorisation.providerReference
     const request: Types.checkout.PaymentRefundRequest = {
       amount,
       merchantAccount,
@@ -479,6 +537,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       { idempotencyKey },
     )
 
+    const date = new Date().toISOString()
     dataManager.setEvent({
       amount,
       date,
