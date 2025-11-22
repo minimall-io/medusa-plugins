@@ -16,7 +16,12 @@ const authorisationSuccessStepInvoke = async (
   notification: NotificationRequestItem,
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
-  const { merchantReference, pspReference, eventDate: date } = notification
+  const {
+    amount: { currency, value },
+    merchantReference,
+    pspReference: providerReference,
+    eventDate: date,
+  } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
@@ -29,13 +34,18 @@ const authorisationSuccessStepInvoke = async (
 
   const dataManager = PaymentDataManager(originalPayment.data)
 
-  const authorisation = dataManager.getAuthorisation()
-
-  if (authorisation.providerReference !== pspReference) {
-    throw new Error('Payment reference mismatch!')
+  if (value === undefined || currency === undefined) {
+    throw new Error('Authorisation notification is missing amount information!')
   }
 
-  dataManager.setAuthorisation({ ...authorisation, date, status: 'SUCCEEDED' })
+  dataManager.setAuthorisation({
+    amount: { currency, value },
+    date,
+    merchantReference,
+    name: 'AUTHORISATION',
+    providerReference,
+    status: 'SUCCEEDED',
+  })
 
   const paymentToUpdate = {
     data: dataManager.getData(),
