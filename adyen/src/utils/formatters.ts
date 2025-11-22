@@ -51,7 +51,7 @@ export const PaymentDataManager = (data: PaymentDTO['data']) => {
 
   const getEvents = (): Event[] => validData.events || []
 
-  const getAuthorisation = (): Event =>
+  const getAuthorisation = (): Event | undefined =>
     find(getEvents(), { name: 'AUTHORISATION' })
 
   const getCancellation = (): Event[] =>
@@ -63,6 +63,12 @@ export const PaymentDataManager = (data: PaymentDTO['data']) => {
 
   const getEvent = (providerReference: string): Event | undefined =>
     find(getEvents(), { providerReference })
+
+  const isAuthorised = (): boolean => {
+    const authorisation = getAuthorisation()
+    if (!authorisation) return false
+    return authorisation.status === 'SUCCEEDED'
+  }
 
   const setData = (newData: Partial<Data>): void => {
     const newValidData = validatePartialData(newData)
@@ -107,6 +113,7 @@ export const PaymentDataManager = (data: PaymentDTO['data']) => {
     getEvent,
     getEvents,
     getRefunds,
+    isAuthorised,
     setAuthorisation,
     setData,
     setEvent,
