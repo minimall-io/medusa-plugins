@@ -22,7 +22,6 @@ const cancellationFailedStepInvoke = async (
     pspReference: providerReference,
     eventDate: date,
   } = notification
-  const status = 'failed'
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
@@ -49,7 +48,7 @@ const cancellationFailedStepInvoke = async (
     merchantReference,
     name: 'CANCELLATION',
     providerReference,
-    status,
+    status: 'FAILED',
   })
 
   const paymentToUpdate = {

@@ -333,7 +333,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       merchantReference: response.merchantReference || reference,
       name: 'AUTHORISATION',
       providerReference: response.pspReference!,
-      status: 'success', // TODO: Handle other statuses
+      status: 'SUCCEEDED', // TODO: Handle other statuses
     })
 
     const data = dataManager.getData()
@@ -383,7 +383,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       merchantReference: response.reference || reference,
       name: 'CANCELLATION',
       providerReference: response.pspReference,
-      status: 'requested',
+      status: 'REQUESTED',
     })
 
     const data = dataManager.getData()
@@ -435,7 +435,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       merchantReference: response.reference || reference,
       name: 'CAPTURE',
       providerReference: response.pspReference,
-      status: 'requested',
+      status: 'REQUESTED',
     })
     const data = dataManager.getData()
     const output = { data }
@@ -486,7 +486,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       merchantReference: response.reference || reference,
       name: 'REFUND',
       providerReference: response.pspReference,
-      status: 'requested',
+      status: 'REQUESTED',
     })
     const data = dataManager.getData()
     const output = { data }

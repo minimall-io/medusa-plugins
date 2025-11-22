@@ -28,15 +28,27 @@ export const AmountSchema = z.object({
   value: z.number(),
 })
 
+export const EventNameEnumSchema = z.enum([
+  'AUTHORISATION',
+  'CANCELLATION',
+  'CAPTURE',
+  'REFUND',
+])
+export const EventStatusEnumSchema = z.enum([
+  'REQUESTED',
+  'FAILED',
+  'SUCCEEDED',
+])
+
 export const EventSchema = z.object({
   amount: AmountSchema,
   date: z.string(),
   id: z.string().optional(),
   merchantReference: z.string(),
-  name: z.enum(['AUTHORISATION', 'CANCELLATION', 'CAPTURE', 'REFUND']),
+  name: EventNameEnumSchema,
   notes: z.string().optional(),
   providerReference: z.string(),
-  status: z.string(),
+  status: EventStatusEnumSchema,
 })
 
 export const DataSchema = z.object({

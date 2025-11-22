@@ -24,7 +24,6 @@ const captureSuccessStepInvoke = async (
     eventDate: date,
     merchantAccountCode,
   } = notification
-  const status = 'success'
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
@@ -45,7 +44,7 @@ const captureSuccessStepInvoke = async (
   const dataCapture = dataManager.getEvent(providerReference)
 
   if (dataCapture) {
-    dataManager.setEvent({ ...dataCapture, date, status })
+    dataManager.setEvent({ ...dataCapture, date, status: 'SUCCEEDED' })
     const paymentToUpdate = {
       data: dataManager.getData(),
       id: originalPayment.id,
@@ -79,7 +78,7 @@ const captureSuccessStepInvoke = async (
       merchantReference,
       name: 'CAPTURE',
       providerReference,
-      status,
+      status: 'SUCCEEDED',
     })
     dataManager.setData({ webhook: false })
 

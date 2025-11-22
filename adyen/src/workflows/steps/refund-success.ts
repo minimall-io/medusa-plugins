@@ -24,7 +24,6 @@ const refundSuccessStepInvoke = async (
     eventDate: date,
     merchantAccountCode,
   } = notification
-  const status = 'success'
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
@@ -45,7 +44,7 @@ const refundSuccessStepInvoke = async (
   const dataRefund = dataManager.getEvent(providerReference)
 
   if (dataRefund) {
-    dataManager.setEvent({ ...dataRefund, date, status })
+    dataManager.setEvent({ ...dataRefund, date, status: 'SUCCEEDED' })
     const paymentToUpdate = {
       data: dataManager.getData(),
       id: originalPayment.id,
@@ -79,7 +78,7 @@ const refundSuccessStepInvoke = async (
       merchantReference,
       name: 'REFUND',
       providerReference,
-      status,
+      status: 'SUCCEEDED',
     })
     dataManager.setData({ webhook: false })
 
