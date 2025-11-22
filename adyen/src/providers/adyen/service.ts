@@ -39,6 +39,7 @@ import {
   PaymentActions,
 } from '@medusajs/framework/utils'
 import {
+  type Event,
   getMinorUnit,
   type Options,
   PaymentDataManager,
@@ -174,6 +175,19 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   ): boolean {
     const { hmacKey } = this.options_
     return this.hmac.validateHMAC(notification, hmacKey)
+  }
+
+  protected getAuthorisation(
+    dataManager: ReturnType<typeof PaymentDataManager>,
+  ): Event {
+    if (!dataManager.isAuthorised()) {
+      throw new MedusaError(
+        MedusaError.Types.NOT_ALLOWED,
+        'Payment not authorised.',
+      )
+    }
+
+    return dataManager.getAuthorisation()!
   }
 
   protected handleAuthorisationResponse(
@@ -399,14 +413,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       return output
     }
 
-    if (!dataManager.isAuthorised()) {
-      throw new MedusaError(
-        MedusaError.Types.NOT_ALLOWED,
-        'Payment not authorised.',
-      )
-    }
-
-    const authorisation = dataManager.getAuthorisation()!
+    const authorisation = this.getAuthorisation(dataManager)
     const pspReference = authorisation.providerReference
     const request: Types.checkout.PaymentCancelRequest = {
       merchantAccount,
@@ -456,14 +463,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       return output
     }
 
-    if (!dataManager.isAuthorised()) {
-      throw new MedusaError(
-        MedusaError.Types.NOT_ALLOWED,
-        'Payment not authorised.',
-      )
-    }
-
-    const authorisation = dataManager.getAuthorisation()!
+    const authorisation = this.getAuthorisation(dataManager)
     const pspReference = authorisation.providerReference
     const amount = authorisation.amount
     const request: Types.checkout.PaymentCaptureRequest = {
@@ -514,14 +514,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       return output
     }
 
-    if (!dataManager.isAuthorised()) {
-      throw new MedusaError(
-        MedusaError.Types.NOT_ALLOWED,
-        'Payment not authorised.',
-      )
-    }
-
-    const authorisation = dataManager.getAuthorisation()!
+    const authorisation = this.getAuthorisation(dataManager)
     const currency = authorisation.amount.currency
     const amount = this.getAmount(input.amount, currency)
     const pspReference = authorisation.providerReference
