@@ -196,6 +196,10 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     reference: string,
   ): AuthorizePaymentOutput {
     this.log('handleAuthorisationResponse/response', response)
+    this.log(
+      'handleAuthorisationResponse/response/resultCode',
+      response.resultCode,
+    )
     const { shopper } = inputData
     const amount = response.amount || inputData.amount
     const dataManager = PaymentDataManager({ amount, reference })
