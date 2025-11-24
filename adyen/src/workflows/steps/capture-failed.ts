@@ -26,6 +26,7 @@ const captureFailedStepInvoke = async (
     merchantReference,
     pspReference: providerReference,
     eventDate: date,
+    reason: notes,
   } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -47,7 +48,7 @@ const captureFailedStepInvoke = async (
   const dataCapture = dataManager.getEvent(providerReference)
 
   if (dataCapture) {
-    dataManager.setEvent({ ...dataCapture, date, status: 'FAILED' })
+    dataManager.setEvent({ ...dataCapture, date, notes, status: 'FAILED' })
   }
 
   const paymentToUpdate = {

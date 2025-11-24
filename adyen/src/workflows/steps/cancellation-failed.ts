@@ -6,7 +6,7 @@ import {
   type StepExecutionContext,
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
-import { PaymentDataManager } from '../../utils'
+import { getMinorUnit, PaymentDataManager } from '../../utils'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 
@@ -18,9 +18,9 @@ const cancellationFailedStepInvoke = async (
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
   const {
     merchantReference,
-    amount: { value, currency },
     pspReference: providerReference,
     eventDate: date,
+    reason: notes,
   } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -36,10 +36,17 @@ const cancellationFailedStepInvoke = async (
 
   const authorisation = dataManager.getAuthorisation()
 
-  const amount =
-    value !== undefined && currency !== undefined
-      ? { currency, value }
-      : authorisation.amount
+  const value =
+    authorisation?.amount.value ||
+    notification.amount.value ||
+    getMinorUnit(originalPayment.amount, originalPayment.currency_code)
+
+  const currency =
+    authorisation?.amount.currency ||
+    notification.amount.currency ||
+    originalPayment.currency_code
+
+  const amount = { currency, value }
 
   dataManager.setEvent({
     amount,
@@ -47,6 +54,7 @@ const cancellationFailedStepInvoke = async (
     id: originalPayment.id,
     merchantReference,
     name: 'CANCELLATION',
+    notes,
     providerReference,
     status: 'FAILED',
   })

@@ -6,7 +6,7 @@ import {
   type StepExecutionContext,
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
-import { PaymentDataManager } from '../../utils'
+import { getMinorUnit, PaymentDataManager } from '../../utils'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 
@@ -16,7 +16,12 @@ const authorisationFailedStepInvoke = async (
   notification: NotificationRequestItem,
   { container, workflowId, stepName }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
-  const { merchantReference, pspReference, eventDate: date } = notification
+  const {
+    merchantReference,
+    pspReference: providerReference,
+    eventDate: date,
+    reason: notes,
+  } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
@@ -31,11 +36,25 @@ const authorisationFailedStepInvoke = async (
 
   const authorisation = dataManager.getAuthorisation()
 
-  if (authorisation.providerReference !== pspReference) {
-    throw new Error('Payment reference mismatch!')
-  }
+  const value =
+    authorisation?.amount.value ||
+    notification.amount.value ||
+    getMinorUnit(originalPayment.amount, originalPayment.currency_code)
 
-  dataManager.setAuthorisation({ ...authorisation, date, status: 'FAILED' })
+  const currency =
+    authorisation?.amount.currency ||
+    notification.amount.currency ||
+    originalPayment.currency_code
+
+  dataManager.setAuthorisation({
+    amount: { currency, value },
+    date,
+    merchantReference,
+    name: 'AUTHORISATION',
+    notes,
+    providerReference,
+    status: 'FAILED',
+  })
 
   const paymentToUpdate = {
     data: dataManager.getData(),
@@ -45,8 +64,8 @@ const authorisationFailedStepInvoke = async (
   await paymentService.updatePayment(paymentToUpdate)
 
   const paymentSessionToUpdate = {
-    amount: authorisation.amount.value,
-    currency_code: authorisation.amount.currency,
+    amount: originalPayment.amount,
+    currency_code: originalPayment.currency_code,
     data: dataManager.getData(),
     id: merchantReference,
     status: 'error' as const,

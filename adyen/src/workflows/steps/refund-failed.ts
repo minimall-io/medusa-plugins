@@ -26,6 +26,7 @@ const refundFailedStepInvoke = async (
     merchantReference,
     pspReference: providerReference,
     eventDate: date,
+    reason: notes,
   } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -47,7 +48,7 @@ const refundFailedStepInvoke = async (
   const dataRefund = dataManager.getEvent(providerReference)
 
   if (dataRefund) {
-    dataManager.setEvent({ ...dataRefund, date, status: 'FAILED' })
+    dataManager.setEvent({ ...dataRefund, date, notes, status: 'FAILED' })
   }
 
   const paymentToUpdate = {
