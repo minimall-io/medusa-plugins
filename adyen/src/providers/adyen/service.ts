@@ -201,6 +201,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const dataManager = PaymentDataManager({ amount, reference })
 
     if (response.action) {
+      this.log('handleAuthorisationResponse/response/action', response.action)
       const data = {
         action: response.action,
         amount,
