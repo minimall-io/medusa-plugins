@@ -1,4 +1,4 @@
-import { CoreConfiguration } from "@adyen/adyen-web"
+import { Core } from "@adyen/adyen-web"
 import { HttpTypes } from "@medusajs/types"
 import {
   Stripe,
@@ -16,28 +16,31 @@ export type AdyenEnvironment =
   | "live-apse"
   | "live-in"
 
-export interface IStripePaymentConfig {
+
+export interface IPaymentProvider {
+  ready: boolean
+  error: string | null
+  onInit: (providerId: string) => Promise<void>
+  onPay: () => Promise<void>
+}
+
+export interface IStripePaymentProvider extends IPaymentProvider {
   stripePromise: Promise<Stripe | null> | null
   stripeElementsOptions: StripeElementsOptions
   onChange: (event: StripeElementChangeEvent) => void
 }
 
-export interface IPayment<Config> {
-  ready: boolean
-  error: string | null
-  onUpdate: (providerId: string) => Promise<void>
-  onPay: () => Promise<void>
-  config: Config
+export interface IAdyenPaymentProvider extends IPaymentProvider {
+  checkout: Core
 }
 
-export type IAdyenPayment = IPayment<CoreConfiguration | null>
-export type IStripePayment = IPayment<IStripePaymentConfig>
-export type IManualPayment = IPayment<null>
+export interface IManualPaymentProvider extends IPaymentProvider {
+}
 
-export interface IPaymentProvider<Config> {
+export interface IPaymentProviders {
   id: string
-  payment: IPayment<Config> | null
-  selectProvider: (providerId: string) => Promise<void>
+  provider: IStripePaymentProvider | IAdyenPaymentProvider | IManualPaymentProvider | null
+  select: (providerId: string) => Promise<void>
   isAdyen: boolean
   isStripe: boolean
   isPaypal: boolean

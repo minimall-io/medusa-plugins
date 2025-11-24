@@ -12,7 +12,7 @@ import {
 import { HttpTypes } from "@medusajs/types"
 import { useCallback, useMemo, useState } from "react"
 import { getAdyenRequest, getAdyenRequestFromCart } from "../utils"
-import { AdyenEnvironment, IAdyenPayment } from "./interfaces"
+import { AdyenEnvironment, IAdyenPaymentProvider } from "./interfaces"
 
 interface Session extends Record<string, unknown> {
   id: string
@@ -29,13 +29,13 @@ const baseConfig = {
   showPayButton: true,
 }
 
-const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
+const useAdyenPaymentProvider = (cart: HttpTypes.StoreCart): IAdyenPaymentProvider => {
   const [error, setError] = useState<string | null>(null)
   const [session, setSession] = useState<
     HttpTypes.StorePaymentSession | undefined
   >()
 
-  const onUpdate = useCallback(
+  const onInit = useCallback(
     async (providerId: string) => {
       try {
         setError(null)
@@ -115,10 +115,10 @@ const useAdyenPayment = (cart: HttpTypes.StoreCart): IAdyenPayment => {
   return {
     ready: true,
     error,
-    onUpdate,
+    onInit,
     onPay,
-    config,
+    checkout,
   }
 }
 
-export default useAdyenPayment
+export default useAdyenPaymentProvider

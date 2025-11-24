@@ -7,45 +7,36 @@ import {
 } from "@lib/constants"
 import { HttpTypes } from "@medusajs/types"
 import {
-  IPayment,
-  IPaymentProvider,
-  useAdyenPayment,
-  useManualPayment,
-  useStripePayment,
+  IPaymentProviders,
+  useAdyenPaymentProvider,
+  useManualPaymentProvider,
+  useStripePaymentProvider,
 } from "@modules/checkout/hooks"
 import { useCallback, useMemo, useState } from "react"
 
-const templatePayment: IPayment<null> = {
-  ready: false,
-  error: null,
-  onUpdate: () => Promise.resolve(),
-  onPay: () => Promise.resolve(),
-  config: null,
-}
-
-const usePaymentProvider = (
+const usePaymentProviders = (
   cart: HttpTypes.StoreCart
-): IPaymentProvider<unknown> => {
+): IPaymentProviders => {
   const [id, setId] = useState<string>("")
-  const adyenPayment = useAdyenPayment(cart)
-  const stripePayment = useStripePayment(cart)
-  const manualPayment = useManualPayment(cart)
+  const adyenPaymentProvider = useAdyenPaymentProvider(cart)
+  const stripePaymentProvider = useStripePaymentProvider(cart)
+  const manualPaymentProvider = useManualPaymentProvider(cart)
 
-  const selectProvider = useCallback(
+  const select = useCallback(
     async (id: string) => {
       switch (true) {
         case isAdyen(id): {
-          await adyenPayment.onUpdate(id)
+          await adyenPaymentProvider.onInit(id)
           setId(id)
           return
         }
         case isStripe(id): {
-          await stripePayment.onUpdate(id)
+          await stripePaymentProvider.onInit(id)
           setId(id)
           return
         }
         case isManual(id): {
-          await manualPayment.onUpdate(id)
+          await manualPaymentProvider.onInit(id)
           setId(id)
           return
         }
@@ -55,26 +46,26 @@ const usePaymentProvider = (
         }
       }
     },
-    [setId, adyenPayment, stripePayment, manualPayment]
+    [setId, adyenPaymentProvider, stripePaymentProvider, manualPaymentProvider]
   )
 
-  const payment = useMemo(() => {
+  const provider = useMemo(() => {
     switch (true) {
       case isAdyen(id):
-        return adyenPayment
+        return adyenPaymentProvider
       case isStripe(id):
-        return stripePayment
+        return stripePaymentProvider
       case isManual(id):
-        return manualPayment
+        return manualPaymentProvider
       default:
         return null
     }
-  }, [id, adyenPayment, stripePayment, manualPayment])
+  }, [id, adyenPaymentProvider, stripePaymentProvider, manualPaymentProvider])
 
   return {
     id,
-    payment,
-    selectProvider,
+    provider,
+    select,
     isAdyen: isAdyen(id),
     isStripe: isStripe(id),
     isPaypal: isPaypal(id),
@@ -83,4 +74,4 @@ const usePaymentProvider = (
   }
 }
 
-export default usePaymentProvider
+export default usePaymentProviders

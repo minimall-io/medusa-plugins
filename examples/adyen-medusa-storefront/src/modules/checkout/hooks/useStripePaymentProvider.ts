@@ -6,12 +6,12 @@ import {
   StripeElementsOptions,
 } from "@stripe/stripe-js"
 import { useCallback, useState } from "react"
-import { IStripePayment } from "./interfaces"
+import { IStripePaymentProvider } from "./interfaces"
 
 const stripeKey = process.env.NEXT_PUBLIC_STRIPE_KEY
 const stripePromise = stripeKey ? loadStripe(stripeKey) : null
 
-const useStripePayment = (cart: HttpTypes.StoreCart): IStripePayment => {
+const useStripePaymentProvider = (cart: HttpTypes.StoreCart): IStripePaymentProvider => {
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState<boolean>(false)
   const [clientSecret, setClientSecret] = useState<string | undefined>()
@@ -34,7 +34,7 @@ const useStripePayment = (cart: HttpTypes.StoreCart): IStripePayment => {
     setReady(event.complete)
   }, [])
 
-  const onUpdate = useCallback(
+  const onInit = useCallback(
     async (providerId: string) => {
       try {
         setError(null)
@@ -69,14 +69,12 @@ const useStripePayment = (cart: HttpTypes.StoreCart): IStripePayment => {
   return {
     ready,
     error,
-    onUpdate,
+    onInit,
     onPay,
-    config: {
-      stripePromise,
-      stripeElementsOptions,
-      onChange,
-    },
+    stripePromise,
+    stripeElementsOptions,
+    onChange,
   }
 }
 
-export default useStripePayment
+export default useStripePaymentProvider
