@@ -2,9 +2,9 @@
 
 import { HttpTypes } from "@medusajs/types"
 import {
-  IPaymentProvider,
-  IStripePayment,
-  usePaymentProvider,
+  IPaymentProviders,
+  IStripePaymentProvider,
+  usePaymentProviders,
 } from "@modules/checkout/hooks"
 import { Elements } from "@stripe/react-stripe-js"
 import { createContext } from "react"
@@ -14,30 +14,29 @@ interface Props {
   children: React.ReactNode
 }
 
-export const PaymentProvider = createContext<IPaymentProvider<unknown> | null>(
+export const PaymentProviders = createContext<IPaymentProviders | null>(
   null
 )
 
 const PaymentWrapper = ({ cart, children }: Props) => {
-  const provider = usePaymentProvider(cart)
+  const paymentProviders = usePaymentProviders(cart)
 
-  if (provider.isStripe) {
-    const { config } = provider.payment as IStripePayment
-    const { stripeElementsOptions, stripePromise } = config
+  if (paymentProviders.isStripe) {
+    const { stripeElementsOptions, stripePromise } = paymentProviders.provider as IStripePaymentProvider
 
     return (
-      <PaymentProvider.Provider value={{ ...provider }}>
+      <PaymentProviders.Provider value={{ ...paymentProviders }}>
         <Elements options={stripeElementsOptions} stripe={stripePromise}>
           {children}
         </Elements>
-      </PaymentProvider.Provider>
+      </PaymentProviders.Provider>
     )
   }
 
   return (
-    <PaymentProvider.Provider value={{ ...provider }}>
+    <PaymentProviders.Provider value={{ ...paymentProviders }}>
       {children}
-    </PaymentProvider.Provider>
+    </PaymentProviders.Provider>
   )
 }
 

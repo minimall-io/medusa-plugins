@@ -2,9 +2,9 @@ import { Radio as RadioGroupOption } from "@headlessui/react"
 import { paymentInfoMap } from "@lib/constants"
 import { Text, clx } from "@medusajs/ui"
 import {
-  IAdyenPayment,
-  IPaymentProvider,
-  IStripePayment,
+  IAdyenPaymentProvider,
+  IPaymentProviders,
+  IStripePaymentProvider,
 } from "@modules/checkout/hooks"
 import Radio from "@modules/common/components/radio"
 import PaymentTest from "../payment-test"
@@ -13,7 +13,7 @@ import StripeCardPaymentProviderOption from "./stripe-provider"
 
 interface Props {
   providerId: string
-  paymentProvider: IPaymentProvider<unknown>
+  paymentProviders: IPaymentProviders
   selected: boolean
   disabled?: boolean
 }
@@ -22,11 +22,11 @@ const isDevelopment = process.env.NODE_ENV === "development"
 
 const PaymentProviderOption = ({
   providerId,
-  paymentProvider,
+  paymentProviders,
   selected,
   disabled = false,
 }: Props) => {
-  const { id, payment, isAdyen, isStripe, isManual } = paymentProvider
+  const { id, provider, isAdyen, isStripe, isManual } = paymentProviders
   const isActive = id === providerId
   const isTesting = isManual && isDevelopment
   const title = paymentInfoMap[providerId]?.title || providerId
@@ -53,11 +53,11 @@ const PaymentProviderOption = ({
         <span className="justify-self-end text-ui-fg-base">{icon}</span>
       </div>
       {isTesting && <PaymentTest className="small:hidden text-[10px]" />}
-      {isActive && payment && isAdyen && (
-        <AdyenCardPaymentProviderOption payment={payment as IAdyenPayment} />
+      {isActive && provider && isAdyen && (
+        <AdyenCardPaymentProviderOption provider={provider as IAdyenPaymentProvider} />
       )}
-      {isActive && payment && isStripe && (
-        <StripeCardPaymentProviderOption payment={payment as IStripePayment} />
+      {isActive && provider && isStripe && (
+        <StripeCardPaymentProviderOption provider={provider as IStripePaymentProvider} />
       )}
     </RadioGroupOption>
   )

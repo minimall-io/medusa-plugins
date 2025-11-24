@@ -6,7 +6,7 @@ import { HttpTypes } from "@medusajs/types"
 import { Button, clx, Heading, Text } from "@medusajs/ui"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import PaymentProviderOptions from "@modules/checkout/components/payment-providers"
-import { PaymentProvider } from "@modules/checkout/components/payment-wrapper"
+import { PaymentProviders } from "@modules/checkout/components/payment-wrapper"
 import { useCheckoutSteps, usePaymentSession } from "@modules/checkout/hooks"
 import Divider from "@modules/common/components/divider"
 import { useContext, useState } from "react"
@@ -20,10 +20,10 @@ const Payment = ({ cart, providers }: Props) => {
   const session = usePaymentSession(cart)
   const [isLoading, setIsLoading] = useState(false)
   const { isPayment: isOpen, goToPayment, goToReview } = useCheckoutSteps()
-  const provider = useContext(PaymentProvider)
+  const paymentProviders = useContext(PaymentProviders)
 
-  const providerId = provider?.id || ""
-  const { ready, error, onUpdate } = provider?.payment || {}
+  const providerId = paymentProviders?.id || ""
+  const { ready, error, onUpdate } = paymentProviders?.provider || {}
 
   const paidByGiftcard =
     cart.gift_cards && cart.gift_cards?.length > 0 && cart.total === 0
@@ -34,7 +34,7 @@ const Payment = ({ cart, providers }: Props) => {
     (session || paidByGiftcard)
 
   const handleSubmit = async () => {
-    if (!provider || !ready) return
+    if (!paymentProviders || !ready) return
     setIsLoading(true)
     await onUpdate?.(providerId)
     setIsLoading(false)

@@ -2,11 +2,11 @@
 
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@medusajs/ui"
-import { PaymentProvider } from "@modules/checkout/components/payment-wrapper"
+import { PaymentProviders } from "@modules/checkout/components/payment-wrapper"
 import {
-  IAdyenPayment,
-  IManualPayment,
-  IStripePayment,
+  IAdyenPaymentProvider,
+  IManualPaymentProvider,
+  IStripePaymentProvider,
   usePaymentSession,
 } from "@modules/checkout/hooks"
 import { useContext } from "react"
@@ -19,17 +19,17 @@ type Props = {
 }
 
 const PaymentButton = ({ cart }: Props) => {
-  const paymentProvider = useContext(PaymentProvider)
+  const paymentProviders = useContext(PaymentProviders)
   const session = usePaymentSession(cart)
 
-  if (!paymentProvider || !paymentProvider.payment)
+  if (!paymentProviders || !paymentProviders.provider)
     return (
       <Button isLoading disabled>
         Waiting for the provider
       </Button>
     )
 
-  const { payment, isAdyen, isStripe, isManual } = paymentProvider
+  const { provider, isAdyen, isStripe, isManual } = paymentProviders
 
   const ready =
     session !== undefined &&
@@ -40,21 +40,21 @@ const PaymentButton = ({ cart }: Props) => {
 
   if (ready && isAdyen)
     return (
-      <AdyenPaymentButton ready={ready} payment={payment as IAdyenPayment} />
+      <AdyenPaymentButton ready={ready} provider={provider as IAdyenPaymentProvider} />
     )
   if (ready && isStripe)
     return (
       <StripePaymentButton
         ready={ready}
         cart={cart}
-        payment={payment as IStripePayment}
+        provider={provider as IStripePaymentProvider}
       />
     )
   if (ready && isManual)
     return (
       <ManualTestPaymentButton
         ready={ready}
-        payment={payment as IManualPayment}
+        provider={provider as IManualPaymentProvider}
       />
     )
   return <Button disabled>Select a payment method</Button>

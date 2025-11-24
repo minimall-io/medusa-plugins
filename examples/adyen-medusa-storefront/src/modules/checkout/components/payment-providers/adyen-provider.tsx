@@ -8,11 +8,11 @@ import {
   Klarna,
 } from "@adyen/adyen-web"
 import "@adyen/adyen-web/styles/adyen.css"
-import { IAdyenPayment } from "@modules/checkout/hooks"
+import { IAdyenPaymentProvider } from "@modules/checkout/hooks"
 import { useEffect, useRef, useState } from "react"
 
 interface Props {
-  payment: IAdyenPayment
+  provider: IAdyenPaymentProvider
 }
 
 const card: CardConfiguration = {
@@ -30,10 +30,10 @@ const dropinConfiguration: DropinConfiguration = {
   },
 }
 
-const AdyenProviderOption = ({ payment }: Props) => {
+const AdyenProviderOption = ({ provider }: Props) => {
   const [checkout, setCheckout] = useState<Core | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const { config } = payment
+  const { config } = provider
 
   useEffect(() => {
     if (!config) return

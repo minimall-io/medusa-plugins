@@ -2,7 +2,7 @@
 
 import { RadioGroup } from "@headlessui/react"
 import { HttpTypes } from "@medusajs/types"
-import { PaymentProvider } from "@modules/checkout/components/payment-wrapper"
+import { PaymentProviders } from "@modules/checkout/components/payment-wrapper"
 import { useContext, useState } from "react"
 
 import PaymentProviderOption from "./payment-provider"
@@ -12,20 +12,20 @@ interface Props {
 }
 
 const PaymentProviderOptions = ({ providers }: Props) => {
-  const paymentProvider = useContext(PaymentProvider)
+  const paymentProviders = useContext(PaymentProviders)
   // The `selectedProvider` is pretty nasty design decision,
   // with the sole purpose to keep the radio selected while the
   // paymentProvider does the async roundtrip to the backend.
-  // The `usePaymentProvider` hook and, potentially, other checkout hooks
+  // The `usePaymentProviders` hook and, potentially, other checkout hooks
   // need more work to find a better solution than the current one.
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
 
-  if (!paymentProvider) return null
-  const { id, selectProvider } = paymentProvider
+  if (!paymentProviders) return null
+  const { id, select } = paymentProviders
 
   const handleOnChange = (providerId: string) => {
     setSelectedProvider(providerId)
-    selectProvider(providerId)
+    select(providerId)
   }
 
   return (
@@ -35,7 +35,7 @@ const PaymentProviderOptions = ({ providers }: Props) => {
           <div key={provider.id}>
             <PaymentProviderOption
               providerId={provider.id}
-              paymentProvider={paymentProvider}
+              paymentProviders={paymentProviders}
               selected={
                 (selectedProvider && provider.id === selectedProvider) ||
                 (!selectedProvider && provider.id === id)
