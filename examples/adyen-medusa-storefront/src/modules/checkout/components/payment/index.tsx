@@ -36,7 +36,7 @@ const Payment = ({ cart, providers }: Props) => {
   const handleSubmit = async () => {
     if (!paymentProviders || !ready) return
     setIsLoading(true)
-    await onUpdate?.(providerId)
+    await onUpdate?.()
     setIsLoading(false)
     return goToReview()
   }

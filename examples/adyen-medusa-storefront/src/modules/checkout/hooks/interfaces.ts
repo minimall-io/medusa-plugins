@@ -1,4 +1,4 @@
-import { Core } from "@adyen/adyen-web"
+import { CoreConfiguration, OnChangeData, UIElement } from "@adyen/adyen-web"
 import { HttpTypes } from "@medusajs/types"
 import {
   Stripe,
@@ -22,6 +22,7 @@ export interface IPaymentProvider {
   error: string | null
   onInit: (providerId: string) => Promise<void>
   onPay: () => Promise<void>
+  onUpdate?: () => Promise<void>
 }
 
 export interface IStripePaymentProvider extends IPaymentProvider {
@@ -31,7 +32,8 @@ export interface IStripePaymentProvider extends IPaymentProvider {
 }
 
 export interface IAdyenPaymentProvider extends IPaymentProvider {
-  checkout: Core
+  config: CoreConfiguration | null
+  onChange: (state: OnChangeData, component: UIElement) => void
 }
 
 export interface IManualPaymentProvider extends IPaymentProvider {
