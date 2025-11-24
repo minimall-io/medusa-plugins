@@ -131,7 +131,7 @@ medusaIntegrationTestRunner({
             expect(newCancellations[0].merchantReference).toBe(reference)
             expect(newCancellations[0].amount.value).toBe(amount)
             expect(newCancellations[0].amount.currency).toBe(currency)
-            expect(newCancellations[0].status).toBe('success')
+            expect(newCancellations[0].status).toBe('SUCCEEDED')
           })
 
           it('updates a cancellation data event after a success cancellation notification is processed with prior direct cancellation', async () => {
@@ -169,7 +169,7 @@ medusaIntegrationTestRunner({
             expect(newPayment.canceled_at).toBeDefined()
             expect(newPayment.canceled_at).toEqual(originalPayment.canceled_at)
             expect(newCancellations).toHaveLength(1)
-            expect(newCancellations[0].status).toBe('success')
+            expect(newCancellations[0].status).toBe('SUCCEEDED')
           })
         })
 
@@ -210,7 +210,7 @@ medusaIntegrationTestRunner({
             expect(newCancellations[0].merchantReference).toBe(reference)
             expect(newCancellations[0].amount.value).toBe(amount)
             expect(newCancellations[0].amount.currency).toBe(currency)
-            expect(newCancellations[0].status).toBe('failed')
+            expect(newCancellations[0].status).toBe('FAILED')
           })
 
           it('updates a cancellation data event after a failed cancellation notification is processed with prior direct cancellation', async () => {
@@ -251,7 +251,7 @@ medusaIntegrationTestRunner({
             expect(newCancellations[0].merchantReference).toBe(reference)
             expect(newCancellations[0].amount.value).toBe(amount)
             expect(newCancellations[0].amount.currency).toBe(currency)
-            expect(newCancellations[0].status).toBe('failed')
+            expect(newCancellations[0].status).toBe('FAILED')
           })
         })
 
@@ -292,7 +292,7 @@ medusaIntegrationTestRunner({
             expect(newCaptures[0].merchantReference).toBe(reference)
             expect(newCaptures[0].amount.value).toBe(amount)
             expect(newCaptures[0].amount.currency).toBe(currency)
-            expect(newCaptures[0].status).toBe('success')
+            expect(newCaptures[0].status).toBe('SUCCEEDED')
           })
 
           it('updates a payment capture event after a success capture notification is processed with prior direct capture', async () => {
@@ -336,8 +336,8 @@ medusaIntegrationTestRunner({
             expect(newCaptures).toHaveLength(1)
             expect(originalPayment.captures).toHaveLength(1)
             expect(newPayment.captures).toHaveLength(1)
-            expect(originalCaptures[0].status).toBe('requested')
-            expect(newCaptures[0].status).toBe('success')
+            expect(originalCaptures[0].status).toBe('REQUESTED')
+            expect(newCaptures[0].status).toBe('SUCCEEDED')
           })
         })
 
@@ -418,8 +418,8 @@ medusaIntegrationTestRunner({
             expect(newPayment.captures).toHaveLength(0)
             expect(originalCaptures).toHaveLength(1)
             expect(newCaptures).toHaveLength(1)
-            expect(originalCaptures[0].status).toBe('requested')
-            expect(newCaptures[0].status).toBe('failed')
+            expect(originalCaptures[0].status).toBe('REQUESTED')
+            expect(newCaptures[0].status).toBe('FAILED')
           })
         })
 
@@ -471,7 +471,7 @@ medusaIntegrationTestRunner({
             expect(newRefunds[0].merchantReference).toBe(reference)
             expect(newRefunds[0].amount.value).toBe(amount)
             expect(newRefunds[0].amount.currency).toBe(currency)
-            expect(newRefunds[0].status).toBe('success')
+            expect(newRefunds[0].status).toBe('SUCCEEDED')
           })
 
           it('updates a payment refund event after a success refund notification is processed with prior direct refund', async () => {
@@ -516,8 +516,8 @@ medusaIntegrationTestRunner({
             expect(newPayment.refunds).toHaveLength(1)
             expect(originalRefunds).toHaveLength(1)
             expect(newRefunds).toHaveLength(1)
-            expect(originalRefunds[0].status).toBe('requested')
-            expect(newRefunds[0].status).toBe('success')
+            expect(originalRefunds[0].status).toBe('REQUESTED')
+            expect(newRefunds[0].status).toBe('SUCCEEDED')
           })
         })
 
@@ -609,8 +609,8 @@ medusaIntegrationTestRunner({
             expect(newPayment.refunds).toHaveLength(0)
             expect(originalRefunds).toHaveLength(1)
             expect(newRefunds).toHaveLength(1)
-            expect(originalRefunds[0].status).toBe('requested')
-            expect(newRefunds[0].status).toBe('failed')
+            expect(originalRefunds[0].status).toBe('REQUESTED')
+            expect(newRefunds[0].status).toBe('FAILED')
           })
         })
       })
@@ -957,8 +957,8 @@ medusaIntegrationTestRunner({
             expect(newPayment.captures).toHaveLength(1)
             expect(originalCaptures).toHaveLength(1)
             expect(newCaptures).toHaveLength(1)
-            expect(originalCaptures[0].status).toBe('requested')
-            expect(newCaptures[0].status).toBe('requested')
+            expect(originalCaptures[0].status).toBe('REQUESTED')
+            expect(newCaptures[0].status).toBe('REQUESTED')
           })
         })
 
@@ -1062,8 +1062,8 @@ medusaIntegrationTestRunner({
             expect(newPayment.captures).toHaveLength(1)
             expect(originalCaptures).toHaveLength(1)
             expect(newCaptures).toHaveLength(1)
-            expect(originalCaptures[0].status).toBe('requested')
-            expect(newCaptures[0].status).toBe('requested')
+            expect(originalCaptures[0].status).toBe('REQUESTED')
+            expect(newCaptures[0].status).toBe('REQUESTED')
           })
         })
 
@@ -1178,8 +1178,8 @@ medusaIntegrationTestRunner({
             expect(newPayment.refunds).toHaveLength(1)
             expect(originalRefunds).toHaveLength(1)
             expect(newRefunds).toHaveLength(1)
-            expect(originalRefunds[0].status).toBe('requested')
-            expect(newRefunds[0].status).toBe('requested')
+            expect(originalRefunds[0].status).toBe('REQUESTED')
+            expect(newRefunds[0].status).toBe('REQUESTED')
           })
         })
 
@@ -1294,8 +1294,8 @@ medusaIntegrationTestRunner({
             expect(newPayment.refunds).toHaveLength(1)
             expect(originalRefunds).toHaveLength(1)
             expect(newRefunds).toHaveLength(1)
-            expect(originalRefunds[0].status).toBe('requested')
-            expect(newRefunds[0].status).toBe('requested')
+            expect(originalRefunds[0].status).toBe('REQUESTED')
+            expect(newRefunds[0].status).toBe('REQUESTED')
           })
         })
       })
