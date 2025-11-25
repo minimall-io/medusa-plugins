@@ -1,3 +1,5 @@
+"use client"
+
 import { Radio as RadioGroupOption } from "@headlessui/react"
 import { paymentInfoMap } from "@lib/constants"
 import { Text, clx } from "@medusajs/ui"
@@ -14,7 +16,6 @@ import StripeCardPaymentProviderOption from "./stripe-provider"
 interface Props {
   providerId: string
   paymentProviders: IPaymentProviders
-  selected: boolean
   disabled?: boolean
 }
 
@@ -23,12 +24,11 @@ const isDevelopment = process.env.NODE_ENV === "development"
 const PaymentProviderOption = ({
   providerId,
   paymentProviders,
-  selected,
   disabled = false,
 }: Props) => {
   const { id, provider, isAdyen, isStripe, isManual } = paymentProviders
   const isActive = id === providerId
-  const isTesting = isManual && isDevelopment
+  const isTesting = isManual && isDevelopment && isActive
   const title = paymentInfoMap[providerId]?.title || providerId
   const icon = paymentInfoMap[providerId]?.icon
 
@@ -40,13 +40,13 @@ const PaymentProviderOption = ({
       className={clx(
         "flex flex-col gap-y-2 text-small-regular cursor-pointer py-4 border rounded-rounded px-8 mb-2 hover:shadow-borders-interactive-with-active",
         {
-          "border-ui-border-interactive": selected,
+          "border-ui-border-interactive": isActive,
         }
       )}
     >
       <div className="flex items-center justify-between ">
         <div className="flex items-center gap-x-4">
-          <Radio checked={selected} />
+          <Radio checked={isActive} />
           <Text className="text-base-regular">{title}</Text>
           {isTesting && <PaymentTest className="hidden small:block" />}
         </div>

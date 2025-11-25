@@ -1,3 +1,5 @@
+"use client"
+
 import { Text } from "@medusajs/ui"
 import { IStripePaymentProvider } from "@modules/checkout/hooks"
 import SkeletonCardDetails from "@modules/skeletons/components/skeleton-card-details"

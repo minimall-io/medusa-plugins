@@ -26,18 +26,18 @@ const usePaymentProviders = (
     async (id: string) => {
       switch (true) {
         case isAdyen(id): {
-          await adyenPaymentProvider.onInit(id)
           setId(id)
+          await adyenPaymentProvider.onInit(id)
           return
         }
         case isStripe(id): {
-          await stripePaymentProvider.onInit(id)
           setId(id)
+          await stripePaymentProvider.onInit(id)
           return
         }
         case isManual(id): {
-          await manualPaymentProvider.onInit(id)
           setId(id)
+          await manualPaymentProvider.onInit(id)
           return
         }
         default: {

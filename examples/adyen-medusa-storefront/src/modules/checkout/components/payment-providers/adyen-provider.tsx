@@ -1,3 +1,5 @@
+"use client"
+
 import {
   AdyenCheckout,
   Card,
@@ -59,7 +61,7 @@ const AdyenProviderOption = ({ provider }: Props) => {
       dropin.mount(containerRef.current)
 
       return () => {
-        dropin.unmount()
+        dropin.remove()
       }
     } catch (error) {
       console.error("Error mounting Adyen CustomCard:", error)
