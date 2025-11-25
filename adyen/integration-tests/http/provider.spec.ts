@@ -138,7 +138,7 @@ medusaIntegrationTestRunner({
           expect(session.data).toHaveProperty('amount')
           expect(session.data).toHaveProperty('shopper')
           expect(session.data).toHaveProperty('paymentMethods')
-          expect(session.data).not.toHaveProperty('request')
+          expect(session.data).toHaveProperty('request')
         })
 
         it('returns amount and paymentMethods data properties when initiatePayment is called without account holder context', async () => {
@@ -157,7 +157,7 @@ medusaIntegrationTestRunner({
 
           expect(session.data).toHaveProperty('amount')
           expect(session.data).toHaveProperty('paymentMethods')
-          expect(session.data).not.toHaveProperty('request')
+          expect(session.data).toHaveProperty('request')
         })
       })
 

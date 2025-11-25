@@ -33,7 +33,10 @@ medusaIntegrationTestRunner({
       let container: MedusaContainer
       let paymentService: IPaymentModuleService
       let collectionInput: { currency_code: string; amount: number }
+      let amount: number
+      let currency: string
       let provider_id: string
+      let reference: string
       let customer: PaymentCustomerDTO
       let encryptedCardDetails: Types.checkout.CardDetails
       let payment: PaymentDTO
@@ -42,8 +45,10 @@ medusaIntegrationTestRunner({
         container = getContainer()
         paymentService = container.resolve(Modules.PAYMENT)
         const currency_code = getCurrencyCode()
-        const amount = getAmount()
-        collectionInput = { amount, currency_code }
+        const sourceAmount = getAmount()
+        collectionInput = { amount: sourceAmount, currency_code }
+        amount = sourceAmount * 100
+        currency = currency_code.toUpperCase()
         provider_id = getProviderId()
         customer = getCustomer()
         encryptedCardDetails = getCardDetails()
@@ -89,6 +94,7 @@ medusaIntegrationTestRunner({
         )
 
         payment = authorizedPayment
+        reference = session.id
         await delay(1000)
       })
 
@@ -96,9 +102,6 @@ medusaIntegrationTestRunner({
         describe('Test processing success cancellation notification', () => {
           it('adds a cancellation data event to the data events property and updates the payment with new canceled_at date after a success cancellation notification is processed without prior direct cancellation', async () => {
             const pspReference = 'pspReference'
-            const reference = payment.payment_session!.id
-            const amount = payment.amount as number
-            const currency = payment.currency_code.toUpperCase()
 
             const notification = getNotificationRequestItem(
               pspReference,
@@ -138,9 +141,6 @@ medusaIntegrationTestRunner({
             await paymentService.cancelPayment(payment.id)
 
             const pspReference = 'pspReference'
-            const reference = payment.payment_session!.id
-            const amount = payment.amount as number
-            const currency = payment.currency_code.toUpperCase()
 
             const notification = getNotificationRequestItem(
               pspReference,
@@ -176,9 +176,6 @@ medusaIntegrationTestRunner({
         describe('Test processing failed cancellation notification', () => {
           it('adds a cancellation data event to the data events property after a failed cancellation notification is processed without prior direct cancellation', async () => {
             const pspReference = 'pspReference'
-            const reference = payment.payment_session!.id
-            const amount = payment.amount as number
-            const currency = payment.currency_code.toUpperCase()
 
             const notification = getNotificationRequestItem(
               pspReference,
@@ -217,9 +214,6 @@ medusaIntegrationTestRunner({
             await paymentService.cancelPayment(payment.id)
 
             const pspReference = 'pspReference'
-            const reference = payment.payment_session!.id
-            const amount = payment.amount as number
-            const currency = payment.currency_code.toUpperCase()
 
             const notification = getNotificationRequestItem(
               pspReference,
@@ -258,9 +252,6 @@ medusaIntegrationTestRunner({
         describe('Test processing success capture notification', () => {
           it('adds a payment capture event to the data events property after a success capture notification is processed without prior direct capture', async () => {
             const pspReference = 'pspReference'
-            const reference = payment.payment_session!.id
-            const amount = payment.amount as number
-            const currency = payment.currency_code.toUpperCase()
 
             const notification = getNotificationRequestItem(
               pspReference,
@@ -344,9 +335,6 @@ medusaIntegrationTestRunner({
         describe('Test processing failed capture notification', () => {
           it('preserves the data events property after a failed capture notification is processed without prior direct capture', async () => {
             const pspReference = 'pspReference'
-            const reference = payment.payment_session!.id
-            const amount = payment.amount as number
-            const currency = payment.currency_code.toUpperCase()
 
             const notification = getNotificationRequestItem(
               pspReference,
@@ -435,9 +423,6 @@ medusaIntegrationTestRunner({
             )
 
             const pspReference = 'pspReference'
-            const reference = payment.payment_session!.id
-            const amount = payment.amount as number
-            const currency = payment.currency_code.toUpperCase()
 
             const notification = getNotificationRequestItem(
               pspReference,
@@ -533,9 +518,6 @@ medusaIntegrationTestRunner({
             )
 
             const pspReference = 'pspReference'
-            const reference = payment.payment_session!.id
-            const amount = payment.amount as number
-            const currency = payment.currency_code.toUpperCase()
 
             const notification = getNotificationRequestItem(
               pspReference,
@@ -670,9 +652,6 @@ medusaIntegrationTestRunner({
         describe('Test processing success cancellation notification', () => {
           it('preserves the original data property after a success cancellation notification processing fails without prior direct cancellation', async () => {
             const pspReference = 'pspReference'
-            const reference = payment.payment_session!.id
-            const amount = payment.amount as number
-            const currency = payment.currency_code.toUpperCase()
 
             const notification = getNotificationRequestItem(
               pspReference,
@@ -717,9 +696,6 @@ medusaIntegrationTestRunner({
             await paymentService.cancelPayment(payment.id)
 
             const pspReference = 'pspReference'
-            const reference = payment.payment_session!.id
-            const amount = payment.amount as number
-            const currency = payment.currency_code.toUpperCase()
 
             const notification = getNotificationRequestItem(
               pspReference,
@@ -765,9 +741,6 @@ medusaIntegrationTestRunner({
         describe('Test processing failed cancellation notification', () => {
           it('preserves the original data property after a failed cancellation notification processing fails without prior direct cancellation', async () => {
             const pspReference = 'pspReference'
-            const reference = payment.payment_session!.id
-            const amount = payment.amount as number
-            const currency = payment.currency_code.toUpperCase()
 
             const notification = getNotificationRequestItem(
               pspReference,
@@ -812,9 +785,6 @@ medusaIntegrationTestRunner({
             await paymentService.cancelPayment(payment.id)
 
             const pspReference = 'pspReference'
-            const reference = payment.payment_session!.id
-            const amount = payment.amount as number
-            const currency = payment.currency_code.toUpperCase()
 
             const notification = getNotificationRequestItem(
               pspReference,
@@ -860,9 +830,6 @@ medusaIntegrationTestRunner({
         describe('Test processing success capture notification', () => {
           it('preserves the original data property after a success capture notification processing fails without prior direct capture', async () => {
             const pspReference = 'pspReference'
-            const reference = payment.payment_session!.id
-            const amount = payment.amount as number
-            const currency = payment.currency_code.toUpperCase()
 
             const notification = getNotificationRequestItem(
               pspReference,
@@ -965,9 +932,6 @@ medusaIntegrationTestRunner({
         describe('Test processing failed capture notification', () => {
           it('preserves the original data property after a failed capture notification processing fails without prior direct capture', async () => {
             const pspReference = 'pspReference'
-            const reference = payment.payment_session!.id
-            const amount = payment.amount as number
-            const currency = payment.currency_code.toUpperCase()
 
             const notification = getNotificationRequestItem(
               pspReference,
@@ -1079,9 +1043,6 @@ medusaIntegrationTestRunner({
             )
 
             const pspReference = 'pspReference'
-            const reference = payment.payment_session!.id
-            const amount = payment.amount as number
-            const currency = payment.currency_code.toUpperCase()
 
             const notification = getNotificationRequestItem(
               pspReference,
@@ -1195,9 +1156,6 @@ medusaIntegrationTestRunner({
             )
 
             const pspReference = 'pspReference'
-            const reference = payment.payment_session!.id
-            const amount = payment.amount as number
-            const currency = payment.currency_code.toUpperCase()
 
             const notification = getNotificationRequestItem(
               pspReference,
