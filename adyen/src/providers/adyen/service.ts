@@ -67,9 +67,9 @@ interface SavePaymentMethodInputData {
 
 interface AuthorizePaymentInputData {
   amount: Types.checkout.Amount
-  request: Types.checkout.PaymentRequest
+  detailsRequest?: Types.checkout.PaymentDetailsRequest
+  request?: Types.checkout.PaymentRequest
   shopper?: Shopper
-  redirectResult?: string
 }
 
 type ProviderWebhookPayloadData = Types.notification.Notification
@@ -200,18 +200,16 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       'handleAuthorisationResponse/response/resultCode',
       response.resultCode,
     )
-    const { shopper } = inputData
     const amount = response.amount || inputData.amount
     const dataManager = PaymentDataManager({ amount, reference })
 
     if (response.action) {
       this.log('handleAuthorisationResponse/response/action', response.action)
       const data = {
-        action: response.action,
+        ...inputData,
         amount,
-        paymentMethods: undefined,
-        request: undefined,
-        shopper,
+        payment: response,
+        reference,
       }
       const output = { data, status: 'requires_more' as const }
       this.log('handleAuthorisationResponse/output', output)
@@ -221,13 +219,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const status = this.getSessionStatus(response.resultCode)
     const date = new Date().toISOString()
     dataManager.setAuthorisation({
-      amount: response.amount || amount,
+      amount,
       date,
       id: reference,
       merchantReference: response.merchantReference || reference,
       name: 'AUTHORISATION',
       providerReference: response.pspReference!,
-      status: 'SUCCEEDED', // TODO: Handle other statuses
+      status: 'REQUESTED', // TODO: Handle other statuses
     })
 
     const data = dataManager.getData()
@@ -282,7 +280,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       { idempotencyKey },
     )
 
-    const output = { data: { ...response }, id: response.id! }
+    const data = { ...response }
+    const output = { data, id: response.id! }
     this.log('savePaymentMethod/output', output)
     return output
   }
@@ -315,9 +314,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const response = await this.checkout.PaymentsApi.paymentMethods(request)
 
     const data = {
+      ...input.data,
       amount,
       paymentMethods: response,
-      request: undefined,
       shopper,
     }
     const output = { data, id: sessionId }
@@ -365,20 +364,24 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const inputData = input.data as unknown as AuthorizePaymentInputData
     const shopper = inputData.shopper || {}
     const amount = inputData.amount
-    const redirectResult = inputData.redirectResult
+    const detailsRequest = inputData.detailsRequest
     const sessionId = input.context!.idempotency_key!
     const reference = sessionId
     const idempotencyKey = sessionId
 
-    if (redirectResult) {
-      const request: Types.checkout.PaymentDetailsRequest = {
-        details: { redirectResult },
-      }
+    if (detailsRequest) {
       const response = await this.checkout.PaymentsApi.paymentsDetails(
-        request,
+        detailsRequest,
         { idempotencyKey },
       )
       return this.handleAuthorisationResponse(response, inputData, reference)
+    }
+
+    if (!inputData.request) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_ARGUMENT,
+        'Authorization request is missing!',
+      )
     }
 
     const request: Types.checkout.PaymentRequest = {
