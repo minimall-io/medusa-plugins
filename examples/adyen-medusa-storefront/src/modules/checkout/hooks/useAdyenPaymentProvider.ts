@@ -4,8 +4,8 @@ import {
   PaymentCompletedData,
   PaymentFailedData,
   OnChangeData,
-  UIElement,
   PaymentData,
+  PaymentMethodsResponse,
 } from "@adyen/adyen-web"
 import {
   initiatePaymentSession,
@@ -29,7 +29,7 @@ const environment = (process.env.NEXT_PUBLIC_ADYEN_ENVIRONMENT ||
 const baseConfig = {
   environment,
   clientKey,
-  showPayButton: true,
+  showPayButton: false,
 }
 
 const useAdyenPaymentProvider = (cart: HttpTypes.StoreCart): IAdyenPaymentProvider => {
@@ -66,13 +66,13 @@ const useAdyenPaymentProvider = (cart: HttpTypes.StoreCart): IAdyenPaymentProvid
         setError(null)
         const request = getAdyenRequest(cart, paymentData)
         const data = { request }
+        console.log("useAdyenPayment/onUpdate/data", data)
         await updatePaymentSession(session.id, data)
-
       } catch (error: any) {
         setError(error.message)
       }
     },
-    [cart]
+    [cart, paymentData]
   )
 
   const onPay = useCallback(async () => {
@@ -96,23 +96,26 @@ const useAdyenPaymentProvider = (cart: HttpTypes.StoreCart): IAdyenPaymentProvid
     console.log("useAdyenPayment/onPaymentFailed/data", data)
   }, [])
 
-  const onChange = useCallback((state: OnChangeData, component: UIElement) => {
+  const onChange = useCallback((state: OnChangeData) => {
+    console.log("useAdyenPayment/onChange/state", state)
     const { data, isValid, errors } = state
-    setReady(isValid)
     setPaymentData(data)
-    setError( errors ? Object.values(errors).map((error) => error.errorMessage).join(", ") : null )
+    setReady(isValid)
+    if (errors) {
+      setError(Object.values(errors).filter((error) => error !== null).map((error) => error.errorMessage).join(", "))
+    } else {
+      setError(null)
+    }
   }, [])
 
   const config = useMemo(() => {
     const parsedCart = getAdyenRequestFromCart(cart)
     const { countryCode } = parsedCart
     if (!baseConfig.clientKey || !session || !countryCode) return null
-    const checkoutSession = session.data.checkoutSession as Session
-    const { amount } = checkoutSession
+    const paymentMethodsResponse = session.data.paymentMethods as PaymentMethodsResponse
     return {
       ...baseConfig,
-      session: checkoutSession,
-      amount,
+      paymentMethodsResponse,
       countryCode,
       locale: "en-US", // TODO: Extract local from the user.
       onPaymentCompleted,
