@@ -208,7 +208,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       const data = {
         ...inputData,
         amount,
-        payment: response,
+        paymentResponse: response,
         reference,
       }
       const output = { data, status: 'requires_more' as const }
@@ -316,7 +316,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const data = {
       ...input.data,
       amount,
-      paymentMethods: response,
+      paymentMethodsResponse: response,
       shopper,
     }
     const output = { data, id: sessionId }

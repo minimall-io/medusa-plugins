@@ -112,7 +112,7 @@ const useAdyenPaymentProvider = (cart: HttpTypes.StoreCart): IAdyenPaymentProvid
     const parsedCart = getAdyenRequestFromCart(cart)
     const { countryCode } = parsedCart
     if (!baseConfig.clientKey || !session || !countryCode) return null
-    const paymentMethodsResponse = session.data.paymentMethods as PaymentMethodsResponse
+    const paymentMethodsResponse = session.data.paymentMethodsResponse as PaymentMethodsResponse
     return {
       ...baseConfig,
       paymentMethodsResponse,
