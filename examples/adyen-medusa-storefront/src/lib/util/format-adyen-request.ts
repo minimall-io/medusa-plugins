@@ -1,9 +1,7 @@
 import type { AddressData, PaymentData } from '@adyen/adyen-web'
 import type { HttpTypes } from '@medusajs/types'
-
+import { getBaseURL } from './env'
 import { getProviderSession } from './get-session'
-
-const publicBaseUrl = process.env.NEXT_PUBLIC_BASE_URL
 
 enum ChannelEnum {
   IOs = 'iOS',
@@ -23,13 +21,16 @@ enum ShopperInteractionEnum {
   Pos = 'POS',
 }
 
-export interface Request extends Partial<PaymentData> {
-  channel?: ChannelEnum
+interface CartDetails extends Partial<PaymentData> {
   shopperConversionId?: string
   shopperEmail?: string
-  countryCode?: string
   telephoneNumber?: string
-  returnUrl?: string
+}
+
+export interface AdyenRequest extends CartDetails {
+  countryCode: string
+  returnUrl: string
+  channel?: ChannelEnum
   recurringProcessingModel?: RecurringProcessingModelEnum
   shopperInteraction?: ShopperInteractionEnum
   // shopperIP, ??? Where do we get this data from?
@@ -113,7 +114,7 @@ const formatCartAddress = (
   }
 }
 
-export const formatCartDetails = (cart?: HttpTypes.StoreCart): Request => {
+export const formatCartDetails = (cart?: HttpTypes.StoreCart): CartDetails => {
   if (!cart) return {}
   const {
     id: shopperConversionId,
@@ -124,13 +125,10 @@ export const formatCartDetails = (cart?: HttpTypes.StoreCart): Request => {
 
   const billingAddress = formatCartAddress(billing_address)
   const deliveryAddress = formatCartAddress(shipping_address)
-
-  const countryCode = billingAddress?.country
   const telephoneNumber = billing_address?.phone
 
   return {
     billingAddress,
-    countryCode,
     deliveryAddress,
     shopperConversionId,
     shopperEmail,
@@ -142,28 +140,26 @@ export const formatCartDetails = (cart?: HttpTypes.StoreCart): Request => {
 export const formatAdyenRequest = (
   cart: HttpTypes.StoreCart,
   providerId: string,
+  countryCode: string,
   payment: PaymentData | null = null,
   channel: ChannelEnum = ChannelEnum.Web,
   recurringProcessingModel: RecurringProcessingModelEnum = RecurringProcessingModelEnum.CardOnFile,
   shopperInteraction: ShopperInteractionEnum = ShopperInteractionEnum.Ecommerce,
-): Request => {
+): AdyenRequest => {
   const cartDetails = formatCartDetails(cart)
   const session = getProviderSession(cart.payment_collection, providerId)
-  if (!publicBaseUrl) {
-    throw new Error(
-      'NEXT_PUBLIC_BASE_URL is not set in the environment variables',
-    )
-  }
   if (!session) {
     throw new Error('Session not found')
   }
-  const url = new URL(publicBaseUrl)
+  const url = new URL(getBaseURL())
+  url.pathname = `/${countryCode}/checkout/details`
   url.searchParams.set('sessionId', session.id)
   const returnUrl = url.toString()
   return {
     ...cartDetails,
     ...payment,
     channel,
+    countryCode,
     recurringProcessingModel,
     returnUrl,
     shopperInteraction,

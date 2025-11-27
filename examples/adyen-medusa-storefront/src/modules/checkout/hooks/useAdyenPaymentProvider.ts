@@ -13,12 +13,10 @@ import {
   placeOrder,
   updatePaymentSession,
 } from '@lib/data/cart'
-import {
-  formatAdyenRequest,
-  formatCartDetails,
-} from '@lib/util/format-adyen-request'
+import { formatAdyenRequest } from '@lib/util/format-adyen-request'
 import { getProviderSession } from '@lib/util/get-session'
 import type { HttpTypes } from '@medusajs/types'
+import { useParams } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
 
 import type { AdyenEnvironment, IAdyenPaymentProvider } from './interfaces'
@@ -93,11 +91,13 @@ const useAdyenPaymentProvider = (
     HttpTypes.StorePaymentSession | undefined
   >()
 
+  const { countryCode } = useParams<{ countryCode: string }>()
+
   const onInit = useCallback(
     async (providerId: string) => {
       try {
         setError(null)
-        const request = formatAdyenRequest(cart, providerId)
+        const request = formatAdyenRequest(cart, providerId, countryCode)
         const data = { request }
         const options = { data, provider_id: providerId }
         const response = await initiatePaymentSession(cart, options)
@@ -110,7 +110,7 @@ const useAdyenPaymentProvider = (
         setError(error.message)
       }
     },
-    [cart],
+    [cart, countryCode],
   )
 
   const onUpdate = useCallback(async () => {
@@ -118,14 +118,19 @@ const useAdyenPaymentProvider = (
     try {
       setError(null)
       const providerId = session.provider_id
-      const request = formatAdyenRequest(cart, providerId, paymentData)
+      const request = formatAdyenRequest(
+        cart,
+        providerId,
+        countryCode,
+        paymentData,
+      )
       const data = { request }
       console.log('useAdyenPayment/onUpdate/data', data)
       await updatePaymentSession(session.id, data)
     } catch (error: any) {
       setError(error.message)
     }
-  }, [cart, paymentData, session])
+  }, [cart, paymentData, session, countryCode])
 
   const onPay = useCallback(async () => {
     if (!session) return
@@ -176,8 +181,6 @@ const useAdyenPaymentProvider = (
   }, [])
 
   const config = useMemo(() => {
-    const parsedCart = formatCartDetails(cart)
-    const { countryCode } = parsedCart
     if (!baseConfig.clientKey || !session || !countryCode) return null
     const paymentMethodsResponse = session.data
       .paymentMethodsResponse as PaymentMethodsResponse
@@ -191,7 +194,7 @@ const useAdyenPaymentProvider = (
       onPaymentFailed,
       paymentMethodsResponse,
     }
-  }, [session, cart])
+  }, [session, countryCode])
 
   return {
     config,
