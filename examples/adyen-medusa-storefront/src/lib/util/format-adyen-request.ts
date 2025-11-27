@@ -1,10 +1,26 @@
-import { AddressData, PaymentData } from "@adyen/adyen-web"
-import { HttpTypes } from "@medusajs/types"
+import type { AddressData, PaymentData } from '@adyen/adyen-web'
+import type { HttpTypes } from '@medusajs/types'
 
-export enum ChannelEnum {
-  IOs = "iOS",
-  Android = "Android",
-  Web = "Web",
+import { getProviderSession } from './get-session'
+
+const publicBaseUrl = process.env.NEXT_PUBLIC_BASE_URL
+
+enum ChannelEnum {
+  IOs = 'iOS',
+  Android = 'Android',
+  Web = 'Web',
+}
+
+enum RecurringProcessingModelEnum {
+  CardOnFile = 'CardOnFile',
+  Subscription = 'Subscription',
+  UnscheduledCardOnFile = 'UnscheduledCardOnFile',
+}
+enum ShopperInteractionEnum {
+  Ecommerce = 'Ecommerce',
+  ContAuth = 'ContAuth',
+  Moto = 'Moto',
+  Pos = 'POS',
 }
 
 export interface Request extends Partial<PaymentData> {
@@ -13,6 +29,9 @@ export interface Request extends Partial<PaymentData> {
   shopperEmail?: string
   countryCode?: string
   telephoneNumber?: string
+  returnUrl?: string
+  recurringProcessingModel?: RecurringProcessingModelEnum
+  shopperInteraction?: ShopperInteractionEnum
   // shopperIP, ??? Where do we get this data from?
 }
 
@@ -32,7 +51,7 @@ const parseStreetAddress = (fullAddress: string): [number, string] | null => {
   // Examples: "123 Almond St", "123A Main Road", "10-B Elm Street", "221B Baker Street"
   // The regex captures digits, optionally followed by hyphens or word characters (for 'A', 'B', '10-12', etc.).
   const pattern1 = /^(\d+[-\w]*)\s+(.*)$/
-  let match1 = trimmedAddress.match(pattern1)
+  const match1 = trimmedAddress.match(pattern1)
 
   if (match1) {
     const streetNumber = parseInt(match1[1], 10) // parseInt extracts the numerical part (e.g., "123A" -> 123)
@@ -48,7 +67,7 @@ const parseStreetAddress = (fullAddress: string): [number, string] | null => {
   // The regex captures the street name first (non-greedy), then one or more commas or spaces,
   // then the number part (digits, optionally with hyphens or word characters).
   const pattern2 = /^(.*?)[,\s]+(\d+[-\w]*)\s*$/
-  let match2 = trimmedAddress.match(pattern2)
+  const match2 = trimmedAddress.match(pattern2)
 
   if (match2) {
     const streetNumber = parseInt(match2[2], 10) // Number is in the second capturing group
@@ -65,8 +84,8 @@ const parseStreetAddress = (fullAddress: string): [number, string] | null => {
   return null
 }
 
-export const getAdyenRequestAddressFromCart = (
-  address?: HttpTypes.StoreCartAddress
+const formatCartAddress = (
+  address?: HttpTypes.StoreCartAddress,
 ): AddressData | undefined => {
   if (!address) return
 
@@ -80,23 +99,21 @@ export const getAdyenRequestAddressFromCart = (
   const streetAddress = parseStreetAddress(address_1)
 
   const houseNumberOrName =
-    streetAddress !== null ? streetAddress[0].toString() : ""
+    streetAddress !== null ? streetAddress[0].toString() : ''
 
-  const street = streetAddress !== null ? streetAddress[1] : ""
+  const street = streetAddress !== null ? streetAddress[1] : ''
 
   return {
-    country,
-    stateOrProvince,
-    postalCode,
     city,
+    country,
     houseNumberOrName,
+    postalCode,
+    stateOrProvince,
     street,
   }
 }
 
-export const getAdyenRequestFromCart = (
-  cart?: HttpTypes.StoreCart
-): Request => {
+export const formatCartDetails = (cart?: HttpTypes.StoreCart): Request => {
   if (!cart) return {}
   const {
     id: shopperConversionId,
@@ -105,28 +122,50 @@ export const getAdyenRequestFromCart = (
     billing_address,
   } = cart
 
-  const billingAddress = getAdyenRequestAddressFromCart(billing_address)
-  const deliveryAddress = getAdyenRequestAddressFromCart(shipping_address)
+  const billingAddress = formatCartAddress(billing_address)
+  const deliveryAddress = formatCartAddress(shipping_address)
 
   const countryCode = billingAddress?.country
   const telephoneNumber = billing_address?.phone
 
   return {
+    billingAddress,
+    countryCode,
+    deliveryAddress,
     shopperConversionId,
     shopperEmail,
-    countryCode,
     telephoneNumber,
-    billingAddress,
-    deliveryAddress,
     // shopperIP, ??? Where do we get this data from?
   }
 }
 
-export const getAdyenRequest = (
+export const formatAdyenRequest = (
   cart: HttpTypes.StoreCart,
+  providerId: string,
   payment: PaymentData | null = null,
-  channel: ChannelEnum = ChannelEnum.Web
+  channel: ChannelEnum = ChannelEnum.Web,
+  recurringProcessingModel: RecurringProcessingModelEnum = RecurringProcessingModelEnum.CardOnFile,
+  shopperInteraction: ShopperInteractionEnum = ShopperInteractionEnum.Ecommerce,
 ): Request => {
-  const cartDetails = getAdyenRequestFromCart(cart)
-  return { channel, ...cartDetails, ...payment }
+  const cartDetails = formatCartDetails(cart)
+  const session = getProviderSession(cart.payment_collection, providerId)
+  if (!publicBaseUrl) {
+    throw new Error(
+      'NEXT_PUBLIC_BASE_URL is not set in the environment variables',
+    )
+  }
+  if (!session) {
+    throw new Error('Session not found')
+  }
+  const url = new URL(publicBaseUrl)
+  url.searchParams.set('sessionId', session.id)
+  const returnUrl = url.toString()
+  return {
+    ...cartDetails,
+    ...payment,
+    channel,
+    recurringProcessingModel,
+    returnUrl,
+    shopperInteraction,
+  }
 }

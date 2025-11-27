@@ -1,15 +1,13 @@
-import { HttpTypes } from "@medusajs/types"
-import { useMemo } from "react"
-
-const getPendingSession = (session: HttpTypes.StorePaymentSession): boolean =>
-  session.status === "pending"
+import { getPendingSession } from '@lib/util/get-session'
+import type { HttpTypes } from '@medusajs/types'
+import { useMemo } from 'react'
 
 const usePaymentSession = (
-  cart: HttpTypes.StoreCart
+  cart: HttpTypes.StoreCart,
 ): HttpTypes.StorePaymentSession | undefined => {
   const session = useMemo(
-    () => cart.payment_collection?.payment_sessions?.find(getPendingSession),
-    [cart]
+    () => getPendingSession(cart.payment_collection),
+    [cart],
   )
 
   return session

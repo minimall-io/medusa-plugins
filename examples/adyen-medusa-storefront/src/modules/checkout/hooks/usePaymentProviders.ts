@@ -4,20 +4,18 @@ import {
   isPaypal,
   isStripe,
   isUnknown,
-} from "@lib/constants"
-import { HttpTypes } from "@medusajs/types"
+} from '@lib/constants'
+import type { HttpTypes } from '@medusajs/types'
 import {
-  IPaymentProviders,
+  type IPaymentProviders,
   useAdyenPaymentProvider,
   useManualPaymentProvider,
   useStripePaymentProvider,
-} from "@modules/checkout/hooks"
-import { useCallback, useMemo, useState } from "react"
+} from '@modules/checkout/hooks'
+import { useCallback, useMemo, useState } from 'react'
 
-const usePaymentProviders = (
-  cart: HttpTypes.StoreCart
-): IPaymentProviders => {
-  const [id, setId] = useState<string>("")
+const usePaymentProviders = (cart: HttpTypes.StoreCart): IPaymentProviders => {
+  const [id, setId] = useState<string>('')
   const adyenPaymentProvider = useAdyenPaymentProvider(cart)
   const stripePaymentProvider = useStripePaymentProvider(cart)
   const manualPaymentProvider = useManualPaymentProvider(cart)
@@ -41,12 +39,12 @@ const usePaymentProviders = (
           return
         }
         default: {
-          setId("")
+          setId('')
           return
         }
       }
     },
-    [setId, adyenPaymentProvider, stripePaymentProvider, manualPaymentProvider]
+    [adyenPaymentProvider, stripePaymentProvider, manualPaymentProvider],
   )
 
   const provider = useMemo(() => {
@@ -64,13 +62,13 @@ const usePaymentProviders = (
 
   return {
     id,
+    isAdyen: isAdyen(id),
+    isManual: isManual(id),
+    isPaypal: isPaypal(id),
+    isStripe: isStripe(id),
+    isUnknown: isUnknown(id),
     provider,
     select,
-    isAdyen: isAdyen(id),
-    isStripe: isStripe(id),
-    isPaypal: isPaypal(id),
-    isManual: isManual(id),
-    isUnknown: isUnknown(id),
   }
 }
 

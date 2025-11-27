@@ -1,21 +1,24 @@
-import { CoreConfiguration, OnChangeData, UIElement } from "@adyen/adyen-web"
-import { HttpTypes } from "@medusajs/types"
-import {
+import type {
+  CoreConfiguration,
+  OnChangeData,
+  UIElement,
+} from '@adyen/adyen-web'
+import type { HttpTypes } from '@medusajs/types'
+import type {
   Stripe,
   StripeElementChangeEvent,
   StripeElementsOptions,
-} from "@stripe/stripe-js"
+} from '@stripe/stripe-js'
 
 export type Providers = HttpTypes.StorePaymentProvider[]
 
 export type AdyenEnvironment =
-  | "test"
-  | "live"
-  | "live-us"
-  | "live-au"
-  | "live-apse"
-  | "live-in"
-
+  | 'test'
+  | 'live'
+  | 'live-us'
+  | 'live-au'
+  | 'live-apse'
+  | 'live-in'
 
 export interface IPaymentProvider {
   ready: boolean
@@ -36,12 +39,15 @@ export interface IAdyenPaymentProvider extends IPaymentProvider {
   onChange: (state: OnChangeData, component: UIElement) => void
 }
 
-export interface IManualPaymentProvider extends IPaymentProvider {
-}
+export interface IManualPaymentProvider extends IPaymentProvider {}
 
 export interface IPaymentProviders {
   id: string
-  provider: IStripePaymentProvider | IAdyenPaymentProvider | IManualPaymentProvider | null
+  provider:
+    | IStripePaymentProvider
+    | IAdyenPaymentProvider
+    | IManualPaymentProvider
+    | null
   select: (providerId: string) => Promise<void>
   isAdyen: boolean
   isStripe: boolean

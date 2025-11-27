@@ -18,9 +18,8 @@ export const OptionsSchema = z.object({
   hmacKey: z.string(),
   liveEndpointUrlPrefix: z.string(),
   merchantAccount: z.string(),
-  recurringProcessingModel: RecurringProcessingModelEnumSchema,
-  returnUrlPrefix: z.string(),
-  shopperInteraction: ShopperInteractionEnumSchema,
+  recurringProcessingModel: RecurringProcessingModelEnumSchema.optional(),
+  shopperInteraction: ShopperInteractionEnumSchema.optional(),
 })
 
 export const AmountSchema = z.object({

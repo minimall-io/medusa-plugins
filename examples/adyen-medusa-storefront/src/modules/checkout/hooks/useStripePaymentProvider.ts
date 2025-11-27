@@ -1,17 +1,19 @@
-import { initiatePaymentSession, placeOrder } from "@lib/data/cart"
-import { HttpTypes } from "@medusajs/types"
+import { initiatePaymentSession, placeOrder } from '@lib/data/cart'
+import type { HttpTypes } from '@medusajs/types'
 import {
   loadStripe,
-  StripeElementChangeEvent,
-  StripeElementsOptions,
-} from "@stripe/stripe-js"
-import { useCallback, useState } from "react"
-import { IStripePaymentProvider } from "./interfaces"
+  type StripeElementChangeEvent,
+  type StripeElementsOptions,
+} from '@stripe/stripe-js'
+import { useCallback, useState } from 'react'
+import type { IStripePaymentProvider } from './interfaces'
 
 const stripeKey = process.env.NEXT_PUBLIC_STRIPE_KEY
 const stripePromise = stripeKey ? loadStripe(stripeKey) : null
 
-const useStripePaymentProvider = (cart: HttpTypes.StoreCart): IStripePaymentProvider => {
+const useStripePaymentProvider = (
+  cart: HttpTypes.StoreCart,
+): IStripePaymentProvider => {
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState<boolean>(false)
   const [clientSecret, setClientSecret] = useState<string | undefined>()
@@ -19,13 +21,13 @@ const useStripePaymentProvider = (cart: HttpTypes.StoreCart): IStripePaymentProv
 
   if (!stripeKey) {
     throw new Error(
-      "Stripe key is missing. Set NEXT_PUBLIC_STRIPE_KEY environment variable."
+      'Stripe key is missing. Set NEXT_PUBLIC_STRIPE_KEY environment variable.',
     )
   }
 
   if (!stripePromise) {
     throw new Error(
-      "Stripe promise is missing. Make sure you have provided a valid Stripe key."
+      'Stripe promise is missing. Make sure you have provided a valid Stripe key.',
     )
   }
 
@@ -41,12 +43,12 @@ const useStripePaymentProvider = (cart: HttpTypes.StoreCart): IStripePaymentProv
         const options = { provider_id: providerId }
         const response = await initiatePaymentSession(cart, options)
         const session = response.payment_collection?.payment_sessions?.find(
-          (session) => session.provider_id === providerId
+          (session) => session.provider_id === providerId,
         )
         const secret = session?.data?.client_secret as string | undefined
         if (!secret) {
           throw new Error(
-            "Stripe client secret is missing. Cannot initialize Stripe."
+            'Stripe client secret is missing. Cannot initialize Stripe.',
           )
         }
         setClientSecret(secret)
@@ -54,7 +56,7 @@ const useStripePaymentProvider = (cart: HttpTypes.StoreCart): IStripePaymentProv
         setError(error.message)
       }
     },
-    [cart]
+    [cart],
   )
 
   const onPay = useCallback(async () => {
@@ -67,13 +69,13 @@ const useStripePaymentProvider = (cart: HttpTypes.StoreCart): IStripePaymentProv
   }, [])
 
   return {
-    ready,
     error,
+    onChange,
     onInit,
     onPay,
-    stripePromise,
+    ready,
     stripeElementsOptions,
-    onChange,
+    stripePromise,
   }
 }
 

@@ -1,5 +1,5 @@
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useCallback } from "react"
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useCallback } from 'react'
 
 const useCheckoutSteps = () => {
   const searchParams = useSearchParams()
@@ -13,45 +13,45 @@ const useCheckoutSteps = () => {
 
       return params.toString()
     },
-    [searchParams]
+    [searchParams],
   )
 
   const goToAddress = () => {
-    router.push(pathname + "?" + createQueryString("step", "address"))
+    router.push(pathname + '?' + createQueryString('step', 'address'))
   }
 
   const goToDelivery = () => {
-    router.push(pathname + "?" + createQueryString("step", "delivery"), {
+    router.push(pathname + '?' + createQueryString('step', 'delivery'), {
       scroll: false,
     })
   }
 
   const goToPayment = () => {
-    router.push(pathname + "?" + createQueryString("step", "payment"), {
+    router.push(pathname + '?' + createQueryString('step', 'payment'), {
       scroll: false,
     })
   }
 
   const goToReview = () => {
-    router.push(pathname + "?" + createQueryString("step", "review"), {
+    router.push(pathname + '?' + createQueryString('step', 'review'), {
       scroll: false,
     })
   }
 
-  const isAddress = searchParams.get("step") === "address"
-  const isDelivery = searchParams.get("step") === "delivery"
-  const isPayment = searchParams.get("step") === "payment"
-  const isReview = searchParams.get("step") === "review"
+  const isAddress = searchParams.get('step') === 'address'
+  const isDelivery = searchParams.get('step') === 'delivery'
+  const isPayment = searchParams.get('step') === 'payment'
+  const isReview = searchParams.get('step') === 'review'
 
   return {
-    isAddress,
-    isDelivery,
-    isPayment,
-    isReview,
     goToAddress,
     goToDelivery,
     goToPayment,
     goToReview,
+    isAddress,
+    isDelivery,
+    isPayment,
+    isReview,
   }
 }
 

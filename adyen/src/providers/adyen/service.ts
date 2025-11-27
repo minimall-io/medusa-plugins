@@ -58,7 +58,7 @@ interface Shopper
   > {}
 
 interface InitiatePaymentInputData {
-  request: Types.checkout.PaymentMethodsRequest
+  request: Partial<Types.checkout.PaymentMethodsRequest>
 }
 
 interface SavePaymentMethodInputData {
@@ -263,11 +263,14 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     input: SavePaymentMethodInput,
   ): Promise<SavePaymentMethodOutput> {
     this.log('savePaymentMethod/input', input)
-    const { recurringProcessingModel, merchantAccount } = this.options_
+    const { merchantAccount } = this.options_
     const inputData = input.data as unknown as SavePaymentMethodInputData
     const shopper = input.context?.account_holder?.data as Shopper
     const shopperReference = shopper.shopperReference!
     const idempotencyKey = shopperReference
+    const recurringProcessingModel =
+      this.options_.recurringProcessingModel ||
+      inputData.request.recurringProcessingModel
     const request: Types.checkout.StoredPaymentMethodRequest = {
       ...inputData.request,
       merchantAccount,
@@ -355,12 +358,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     input: AuthorizePaymentInput,
   ): Promise<AuthorizePaymentOutput> {
     this.log('authorizePayment/input', input)
-    const {
-      merchantAccount,
-      shopperInteraction,
-      recurringProcessingModel,
-      returnUrlPrefix: returnUrl,
-    } = this.options_
+    const { merchantAccount } = this.options_
     const inputData = input.data as unknown as AuthorizePaymentInputData
     const shopper = inputData.shopper || {}
     const amount = inputData.amount
@@ -384,6 +382,12 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       )
     }
 
+    const recurringProcessingModel =
+      this.options_.recurringProcessingModel ||
+      inputData.request.recurringProcessingModel
+    const shopperInteraction =
+      this.options_.shopperInteraction || inputData.request.shopperInteraction
+
     const request: Types.checkout.PaymentRequest = {
       ...inputData.request,
       ...shopper,
@@ -391,9 +395,10 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       merchantAccount,
       recurringProcessingModel,
       reference,
-      returnUrl,
       shopperInteraction,
     }
+
+    this.log('authorizePayment/request', request)
 
     const response = await this.checkout.PaymentsApi.payments(request, {
       idempotencyKey,

@@ -1,9 +1,11 @@
-import { initiatePaymentSession, placeOrder } from "@lib/data/cart"
-import { HttpTypes } from "@medusajs/types"
-import { useCallback, useState } from "react"
-import { IManualPaymentProvider } from "./interfaces"
+import { initiatePaymentSession, placeOrder } from '@lib/data/cart'
+import type { HttpTypes } from '@medusajs/types'
+import { useCallback, useState } from 'react'
+import type { IManualPaymentProvider } from './interfaces'
 
-const useManualPaymentProvider = (cart: HttpTypes.StoreCart): IManualPaymentProvider => {
+const useManualPaymentProvider = (
+  cart: HttpTypes.StoreCart,
+): IManualPaymentProvider => {
   const [error, setError] = useState<string | null>(null)
 
   const onInit = useCallback(
@@ -16,7 +18,7 @@ const useManualPaymentProvider = (cart: HttpTypes.StoreCart): IManualPaymentProv
         setError(error.message)
       }
     },
-    [cart]
+    [cart],
   )
 
   const onPay = useCallback(async () => {
@@ -29,10 +31,10 @@ const useManualPaymentProvider = (cart: HttpTypes.StoreCart): IManualPaymentProv
   }, [])
 
   return {
-    ready: true,
     error,
     onInit,
     onPay,
+    ready: true,
   }
 }
 
