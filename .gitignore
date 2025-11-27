@@ -1,3 +1,4 @@
 # Ignore the store folders
 /store
 /store*
+/node_modules

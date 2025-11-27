@@ -2,9 +2,8 @@
   "[typescript]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
-  "biome.configurationPath": "/home/workspace/medusa-plugins/adyen/biome.json",
+  "biome.configurationPath": "/home/workspace/medusa-plugins/biome.json",
   "biome.enabled": true,
-  "biome.lsp.bin": "/home/workspace/medusa-plugins/adyen/node_modules/@biomejs/biome/bin/biome",
   "diffEditor.ignoreTrimWhitespace": false,
   "editor.codeActionsOnSave": {
     "source.action.useSortedAttributes.biome": "explicit",
