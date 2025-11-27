@@ -17,23 +17,23 @@ const useCheckoutSteps = () => {
   )
 
   const goToAddress = () => {
-    router.push(pathname + '?' + createQueryString('step', 'address'))
+    router.push(`${pathname}?${createQueryString('step', 'address')}`)
   }
 
   const goToDelivery = () => {
-    router.push(pathname + '?' + createQueryString('step', 'delivery'), {
+    router.push(`${pathname}?${createQueryString('step', 'delivery')}`, {
       scroll: false,
     })
   }
 
   const goToPayment = () => {
-    router.push(pathname + '?' + createQueryString('step', 'payment'), {
+    router.push(`${pathname}?${createQueryString('step', 'payment')}`, {
       scroll: false,
     })
   }
 
   const goToReview = () => {
-    router.push(pathname + '?' + createQueryString('step', 'review'), {
+    router.push(`${pathname}?${createQueryString('step', 'review')}`, {
       scroll: false,
     })
   }
