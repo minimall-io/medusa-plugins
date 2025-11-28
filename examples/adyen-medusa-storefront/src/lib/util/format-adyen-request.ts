@@ -1,7 +1,6 @@
 import type { AddressData, PaymentData } from '@adyen/adyen-web'
 import type { HttpTypes } from '@medusajs/types'
 import { getBaseURL } from './env'
-import { getProviderSession } from './get-session'
 
 enum ChannelEnum {
   IOs = 'iOS',
@@ -114,7 +113,7 @@ const formatCartAddress = (
   }
 }
 
-export const formatCartDetails = (cart?: HttpTypes.StoreCart): CartDetails => {
+const formatCartDetails = (cart?: HttpTypes.StoreCart): CartDetails => {
   if (!cart) return {}
   const {
     id: shopperConversionId,
@@ -137,24 +136,25 @@ export const formatCartDetails = (cart?: HttpTypes.StoreCart): CartDetails => {
   }
 }
 
+const formatReturnUrl = (countryCode: string, sessionId?: string): string => {
+  const url = new URL(getBaseURL())
+  url.pathname = `/${countryCode}/checkout/details`
+  if (sessionId) url.searchParams.set('sessionId', sessionId)
+  return url.toString()
+}
+
 export const formatAdyenRequest = (
   cart: HttpTypes.StoreCart,
-  providerId: string,
   countryCode: string,
+  sessionId?: string,
   payment: PaymentData | null = null,
   channel: ChannelEnum = ChannelEnum.Web,
   recurringProcessingModel: RecurringProcessingModelEnum = RecurringProcessingModelEnum.CardOnFile,
   shopperInteraction: ShopperInteractionEnum = ShopperInteractionEnum.Ecommerce,
 ): AdyenRequest => {
   const cartDetails = formatCartDetails(cart)
-  const session = getProviderSession(cart.payment_collection, providerId)
-  if (!session) {
-    throw new Error('Session not found')
-  }
-  const url = new URL(getBaseURL())
-  url.pathname = `/${countryCode}/checkout/details`
-  url.searchParams.set('sessionId', session.id)
-  const returnUrl = url.toString()
+  const returnUrl = formatReturnUrl(countryCode, sessionId)
+
   return {
     ...cartDetails,
     ...payment,

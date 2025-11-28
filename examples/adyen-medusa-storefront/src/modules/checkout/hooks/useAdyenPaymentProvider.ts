@@ -97,7 +97,7 @@ const useAdyenPaymentProvider = (
     async (providerId: string) => {
       try {
         setError(null)
-        const request = formatAdyenRequest(cart, providerId, countryCode)
+        const request = formatAdyenRequest(cart, countryCode)
         const data = { request }
         const options = { data, provider_id: providerId }
         const response = await initiatePaymentSession(cart, options)
@@ -117,11 +117,10 @@ const useAdyenPaymentProvider = (
     if (!session) return
     try {
       setError(null)
-      const providerId = session.provider_id
       const request = formatAdyenRequest(
         cart,
-        providerId,
         countryCode,
+        session.id,
         paymentData,
       )
       const data = { request }
