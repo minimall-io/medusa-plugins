@@ -136,9 +136,14 @@ const formatCartDetails = (cart?: HttpTypes.StoreCart): CartDetails => {
   }
 }
 
-const formatReturnUrl = (countryCode: string, sessionId?: string): string => {
+const formatReturnUrl = (
+  cartId: string,
+  countryCode: string,
+  sessionId?: string,
+): string => {
   const url = new URL(getBaseURL())
   url.pathname = `/${countryCode}/checkout/details`
+  url.searchParams.set('cartId', cartId)
   if (sessionId) url.searchParams.set('sessionId', sessionId)
   return url.toString()
 }
@@ -153,7 +158,7 @@ export const formatAdyenRequest = (
   shopperInteraction: ShopperInteractionEnum = ShopperInteractionEnum.Ecommerce,
 ): AdyenRequest => {
   const cartDetails = formatCartDetails(cart)
-  const returnUrl = formatReturnUrl(countryCode, sessionId)
+  const returnUrl = formatReturnUrl(cart.id, countryCode, sessionId)
 
   return {
     ...cartDetails,

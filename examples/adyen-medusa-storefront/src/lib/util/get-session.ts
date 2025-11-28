@@ -12,3 +12,9 @@ export const getProviderSession = (
   collection?.payment_sessions?.find(
     (session) => session.provider_id === providerId,
   )
+
+export const getSession = (
+  collection: HttpTypes.StorePaymentCollection | undefined,
+  sessionId: string,
+): HttpTypes.StorePaymentSession | undefined =>
+  collection?.payment_sessions?.find((session) => session.id === sessionId)

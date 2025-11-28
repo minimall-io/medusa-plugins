@@ -1,12 +1,10 @@
 import type {
   AdyenCheckoutError,
   OnChangeData,
-  PaymentAction,
   PaymentCompletedData,
   PaymentData,
   PaymentFailedData,
   PaymentMethodsResponse,
-  PaymentResponseData,
 } from '@adyen/adyen-web'
 import {
   initiatePaymentSession,
@@ -15,21 +13,12 @@ import {
 } from '@lib/data/cart'
 import { formatAdyenRequest } from '@lib/util/format-adyen-request'
 import { getProviderSession } from '@lib/util/get-session'
+import { handlePaymentResponse } from '@lib/util/handle-payment-response'
 import type { HttpTypes } from '@medusajs/types'
 import { useParams } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
 
 import type { AdyenEnvironment, IAdyenPaymentProvider } from './interfaces'
-
-interface Action extends PaymentAction {
-  url: string
-  method: string
-  data: Record<string, string>
-}
-
-interface PaymentResponse extends Omit<PaymentResponseData, 'action'> {
-  action?: Action
-}
 
 const clientKey = process.env.NEXT_PUBLIC_ADYEN_CLIENT_KEY
 const environment = (process.env.NEXT_PUBLIC_ADYEN_ENVIRONMENT ||
@@ -39,46 +28,6 @@ const baseConfig = {
   clientKey,
   environment,
   showPayButton: false,
-}
-
-const handleRedirectAction = (action: Action) => {
-  console.log('useAdyenPayment/handleRedirectAction/action', action)
-  if (action.type === 'redirect' && action.url && action.method === 'POST') {
-    const form = document.createElement('form')
-    form.method = 'POST'
-    form.action = action.url
-    if (action.data) {
-      Object.entries(action.data).forEach(([key, value]) => {
-        const input = document.createElement('input')
-        input.type = 'hidden'
-        input.name = key
-        input.value = value
-        form.appendChild(input)
-      })
-    }
-    document.body.appendChild(form)
-    form.submit()
-    document.body.removeChild(form)
-  }
-}
-
-const handlePaymentResponse = (
-  paymentResponse: PaymentResponse | undefined,
-) => {
-  console.log(
-    'useAdyenPayment/handlePaymentResponse/paymentResponse',
-    paymentResponse,
-  )
-  if (!paymentResponse) return
-  const action = paymentResponse.action
-  if (!action) return
-  switch (action.type) {
-    case 'redirect':
-      handleRedirectAction(action)
-      break
-    default:
-      break
-  }
 }
 
 const useAdyenPaymentProvider = (
@@ -144,7 +93,7 @@ const useAdyenPaymentProvider = (
       )
       setSession(newSession)
       if (!newSession) return
-      handlePaymentResponse(newSession.data.paymentResponse as PaymentResponse)
+      handlePaymentResponse(newSession.data.paymentResponse)
     } catch (error: any) {
       setError(error.message)
     }
