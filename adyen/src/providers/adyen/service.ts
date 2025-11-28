@@ -125,7 +125,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       case 'verbose':
         return this.logger_.verbose(message)
       case 'debug': {
-        console.log(title, stringData)
         return this.logger_.debug(message)
       }
       default:
@@ -195,24 +194,18 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     inputData: AuthorizePaymentInputData,
     reference: string,
   ): AuthorizePaymentOutput {
-    this.log('handleAuthorisationResponse/response', response)
-    this.log(
-      'handleAuthorisationResponse/response/resultCode',
-      response.resultCode,
-    )
     const amount = response.amount || inputData.amount
     const dataManager = PaymentDataManager({ amount, reference })
 
     if (response.action) {
-      this.log('handleAuthorisationResponse/response/action', response.action)
       const data = {
-        ...inputData,
         amount,
         paymentResponse: response,
         reference,
+        shopper: inputData.shopper,
       }
       const output = { data, status: 'requires_more' as const }
-      this.log('handleAuthorisationResponse/output', output)
+      this.log('handleAuthorisationResponse/action/output', output)
       return output
     }
 
@@ -368,10 +361,12 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const idempotencyKey = sessionId
 
     if (detailsRequest) {
+      this.log('authorizePayment/detailsRequest', detailsRequest)
       const response = await this.checkout.PaymentsApi.paymentsDetails(
         detailsRequest,
         { idempotencyKey },
       )
+      this.log('authorizePayment/detailsResponse', response)
       return this.handleAuthorisationResponse(response, inputData, reference)
     }
 
@@ -403,6 +398,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const response = await this.checkout.PaymentsApi.payments(request, {
       idempotencyKey,
     })
+
+    this.log('authorizePayment/response', response)
 
     return this.handleAuthorisationResponse(response, inputData, reference)
   }
