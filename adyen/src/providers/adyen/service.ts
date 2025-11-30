@@ -68,7 +68,7 @@ interface SavePaymentMethodInputData {
 interface AuthorizePaymentInputData {
   amount: Types.checkout.Amount
   detailsRequest?: Types.checkout.PaymentDetailsRequest
-  request?: Types.checkout.PaymentRequest
+  request: Types.checkout.PaymentRequest
   shopper?: Shopper
 }
 
@@ -199,10 +199,10 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
     if (response.action) {
       const data = {
+        ...inputData,
         amount,
         paymentResponse: response,
         reference,
-        shopper: inputData.shopper,
       }
       const output = { data, status: 'requires_more' as const }
       this.log('handleAuthorisationResponse/action/output', output)
@@ -368,13 +368,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       )
       this.log('authorizePayment/detailsResponse', response)
       return this.handleAuthorisationResponse(response, inputData, reference)
-    }
-
-    if (!inputData.request) {
-      throw new MedusaError(
-        MedusaError.Types.INVALID_ARGUMENT,
-        'Authorization request is missing!',
-      )
     }
 
     const recurringProcessingModel =

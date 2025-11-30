@@ -13,7 +13,7 @@ import {
 } from '@lib/data/cart'
 import { formatAdyenRequest } from '@lib/util/format-adyen-request'
 import { getProviderSession } from '@lib/util/get-session'
-import { handlePaymentResponse } from '@lib/util/handle-payment-response'
+import { handlePaymentResponse } from '@lib/util/payment-response'
 import type { HttpTypes } from '@medusajs/types'
 import { useParams } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'

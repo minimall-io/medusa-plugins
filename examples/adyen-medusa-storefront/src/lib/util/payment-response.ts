@@ -42,8 +42,11 @@ const handleRedirectAction = (action: Action) => {
   return handleGetRedirectAction(action)
 }
 
+export const getPaymentResponse = (input: unknown) =>
+  input as PaymentResponse | undefined
+
 export const handlePaymentResponse = (input: unknown) => {
-  const paymentResponse = input as PaymentResponse | undefined
+  const paymentResponse = getPaymentResponse(input)
   if (!paymentResponse) return
   const action = paymentResponse.action
   if (!action) return
