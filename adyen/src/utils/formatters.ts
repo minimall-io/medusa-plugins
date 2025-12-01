@@ -44,6 +44,25 @@ export const getWholeUnit = (
   return standardAmount.numeric
 }
 
+export const roundToCurrencyPrecision = (
+  amount: BigNumberInput,
+  currencyCode: string,
+): BigNumberInput => {
+  let precision: number | undefined
+  try {
+    const formatted = Intl.NumberFormat(undefined, {
+      currency: currencyCode,
+      style: 'currency',
+    }).format(0.1111111)
+
+    precision = formatted.split('.')[1].length
+  } catch {
+    // Unknown currency, keep the full precision
+  }
+
+  return MathBN.convert(amount, precision)
+}
+
 export const PaymentDataManager = (data: PaymentDTO['data']) => {
   let validData = validateData(cloneDeep(data))
 

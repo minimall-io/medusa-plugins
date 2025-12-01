@@ -8,6 +8,7 @@ import {
 } from '@medusajs/framework/workflows-sdk'
 import { differenceBy, map } from 'lodash'
 import { getWholeUnit, PaymentDataManager } from '../../utils'
+import { maybeUpdatePaymentCollection } from './helpers'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 
@@ -15,8 +16,9 @@ export const captureSuccessStepId = 'capture-success-step'
 
 const captureSuccessStepInvoke = async (
   notification: NotificationRequestItem,
-  { container, workflowId, stepName, context }: StepExecutionContext,
+  stepExecutionContext: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
+  const { container, workflowId, stepName, context } = stepExecutionContext
   const {
     merchantReference,
     amount: { value, currency },
@@ -105,13 +107,19 @@ const captureSuccessStepInvoke = async (
     `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
 
+  await maybeUpdatePaymentCollection(
+    originalPayment.payment_collection_id,
+    stepExecutionContext,
+  )
+
   return new StepResponse<PaymentDTO, PaymentDTO>(newPayment, originalPayment)
 }
 
 const captureSuccessStepCompensate = async (
   originalPayment: PaymentDTO,
-  { container, workflowId, stepName, context }: StepExecutionContext,
+  stepExecutionContext: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
+  const { container, workflowId, stepName, context } = stepExecutionContext
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
   logging.debug(
@@ -149,6 +157,11 @@ const captureSuccessStepCompensate = async (
   )
   logging.debug(
     `${workflowId}/${stepName}/compensate/restoredPayment ${JSON.stringify(restoredPayment, null, 2)}`,
+  )
+
+  await maybeUpdatePaymentCollection(
+    originalPayment.payment_collection_id,
+    stepExecutionContext,
   )
 
   return new StepResponse<PaymentDTO>(restoredPayment)

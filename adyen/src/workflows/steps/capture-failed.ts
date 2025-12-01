@@ -8,6 +8,7 @@ import {
 } from '@medusajs/framework/workflows-sdk'
 import { differenceBy } from 'lodash'
 import { PaymentDataManager } from '../../utils'
+import { maybeUpdatePaymentCollection } from './helpers'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 
@@ -20,8 +21,9 @@ export const captureFailedStepId = 'capture-failed-step'
 
 const captureFailedStepInvoke = async (
   notification: NotificationRequestItem,
-  { container, workflowId, stepName, context }: StepExecutionContext,
+  stepExecutionContext: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, CaptureFailedStepCompensateInput>> => {
+  const { container, workflowId, stepName, context } = stepExecutionContext
   const {
     merchantReference,
     pspReference: providerReference,
@@ -73,6 +75,11 @@ const captureFailedStepInvoke = async (
     `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
 
+  await maybeUpdatePaymentCollection(
+    originalPayment.payment_collection_id,
+    stepExecutionContext,
+  )
+
   return new StepResponse<PaymentDTO, CaptureFailedStepCompensateInput>(
     newPayment,
     { notification, originalPayment },
@@ -81,8 +88,9 @@ const captureFailedStepInvoke = async (
 
 const captureFailedStepCompensate = async (
   { originalPayment, notification }: CaptureFailedStepCompensateInput,
-  { container, workflowId, stepName, context }: StepExecutionContext,
+  stepExecutionContext: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
+  const { container, workflowId, stepName, context } = stepExecutionContext
   const { pspReference } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -159,6 +167,11 @@ const captureFailedStepCompensate = async (
   )
   logging.debug(
     `${workflowId}/${stepName}/compensate/restoredPayment ${JSON.stringify(restoredPayment, null, 2)}`,
+  )
+
+  await maybeUpdatePaymentCollection(
+    originalPayment.payment_collection_id,
+    stepExecutionContext,
   )
 
   return new StepResponse<PaymentDTO>(restoredPayment)
