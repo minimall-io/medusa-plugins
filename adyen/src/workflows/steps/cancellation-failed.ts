@@ -57,7 +57,7 @@ const cancellationFailedStepInvoke = async (
   dataManager.setEvent({
     amount,
     date,
-    id: originalPayment.id,
+    id: merchantReference,
     merchantReference,
     name: 'CANCELLATION',
     notes,

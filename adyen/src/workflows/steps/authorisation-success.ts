@@ -47,6 +47,7 @@ const authorisationSuccessStepInvoke = async (
   dataManager.setAuthorisation({
     amount: { currency, value },
     date,
+    id: merchantReference,
     merchantReference,
     name: 'AUTHORISATION',
     providerReference,

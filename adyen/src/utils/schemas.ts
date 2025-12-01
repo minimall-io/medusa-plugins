@@ -42,7 +42,7 @@ export const EventStatusEnumSchema = z.enum([
 export const EventSchema = z.object({
   amount: AmountSchema,
   date: z.string(),
-  id: z.string().optional(),
+  id: z.string(),
   merchantReference: z.string(),
   name: EventNameEnumSchema,
   notes: z.string().optional(),

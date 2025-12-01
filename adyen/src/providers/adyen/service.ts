@@ -356,11 +356,10 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const shopper = inputData.shopper || {}
     const amount = inputData.amount
     const detailsRequest = inputData.detailsRequest
-    const sessionId = input.context?.idempotency_key
-    const reference = sessionId
-    const idempotencyKey = sessionId
+    const idempotencyKey = input.context?.idempotency_key // Payment Session ID
+    const reference = idempotencyKey
 
-    if (!sessionId) {
+    if (!reference) {
       throw new MedusaError(
         MedusaError.Types.NOT_ALLOWED,
         'Missing Payment Session ID!',
@@ -460,11 +459,10 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const { merchantAccount } = this.options_
     const dataManager = PaymentDataManager(input.data)
     const { webhook, reference } = dataManager.getData()
-    const captureId = input.context?.idempotency_key
-    const id = captureId
-    const idempotencyKey = captureId
+    const idempotencyKey = input.context?.idempotency_key // Payment Capture ID
+    const id = idempotencyKey
 
-    if (!captureId) {
+    if (!id) {
       const data = dataManager.getData()
       const output = { data }
       this.log('capturePayment/output', output)
@@ -518,11 +516,10 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const { merchantAccount } = this.options_
     const dataManager = PaymentDataManager(input.data)
     const { webhook, reference } = dataManager.getData()
-    const refundId = input.context?.idempotency_key
-    const id = refundId
-    const idempotencyKey = refundId
+    const idempotencyKey = input.context?.idempotency_key // Payment Refund ID
+    const id = idempotencyKey
 
-    if (!refundId) {
+    if (!id) {
       const data = dataManager.getData()
       const output = { data }
       this.log('refundPayment/output', output)
