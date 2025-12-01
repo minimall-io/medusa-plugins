@@ -355,8 +355,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const shopper = inputData.shopper || {}
     const amount = inputData.amount
     const detailsRequest = inputData.detailsRequest
-    const idempotencyKey = input.context?.idempotency_key // Payment Session ID
-    const reference = idempotencyKey
+    const reference = input.context?.idempotency_key // Payment Session ID
 
     if (!reference) {
       throw new MedusaError(
@@ -369,7 +368,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       this.log('authorizePayment/detailsRequest', detailsRequest)
       const response = await this.checkout.PaymentsApi.paymentsDetails(
         detailsRequest,
-        { idempotencyKey: `${idempotencyKey}_details` },
+        { idempotencyKey: `${reference}_payment_details` },
       )
       this.log('authorizePayment/detailsResponse', response)
       return this.handleAuthorisationResponse(response, inputData, reference)
@@ -394,7 +393,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.log('authorizePayment/request', request)
 
     const response = await this.checkout.PaymentsApi.payments(request, {
-      idempotencyKey,
+      idempotencyKey: `${reference}_payment`,
     })
 
     this.log('authorizePayment/response', response)
@@ -410,7 +409,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const dataManager = PaymentDataManager(input.data)
     const { reference, webhook, amount } = dataManager.getData()
     const id = reference
-    const idempotencyKey = reference
+    const idempotencyKey = `${reference}_cancellation`
 
     if (webhook) {
       dataManager.setData({ webhook: undefined })
