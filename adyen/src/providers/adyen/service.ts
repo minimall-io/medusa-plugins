@@ -370,7 +370,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       this.log('authorizePayment/detailsRequest', detailsRequest)
       const response = await this.checkout.PaymentsApi.paymentsDetails(
         detailsRequest,
-        { idempotencyKey },
+        { idempotencyKey: `${idempotencyKey}_details` },
       )
       this.log('authorizePayment/detailsResponse', response)
       return this.handleAuthorisationResponse(response, inputData, reference)
