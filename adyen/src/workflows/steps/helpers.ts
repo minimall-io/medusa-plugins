@@ -5,7 +5,7 @@ import {
   PaymentSessionStatus,
 } from '@medusajs/framework/utils'
 import type { StepExecutionContext } from '@medusajs/framework/workflows-sdk'
-import { flatMap } from 'lodash'
+import { filter, flatMap, map } from 'lodash'
 import { roundToCurrencyPrecision } from '../../utils/formatters'
 
 export const maybeUpdatePaymentCollection = async (
@@ -34,24 +34,16 @@ export const maybeUpdatePaymentCollection = async (
   const captures = flatMap(paymentCollection.payments, 'captures') ?? []
   const refunds = flatMap(paymentCollection.payments, 'refunds') ?? []
 
-  let authorizedAmount = MathBN.convert(0)
-  let capturedAmount = MathBN.convert(0)
-  let refundedAmount = MathBN.convert(0)
+  const authorizedAmount = MathBN.add(
+    map(
+      filter(paymentSessions, { status: PaymentSessionStatus.AUTHORIZED }),
+      'amount',
+    ),
+  )
+  const capturedAmount = MathBN.add(map(captures, 'amount'))
+  const refundedAmount = MathBN.add(map(refunds, 'amount'))
+
   let completedAt: Date | undefined
-
-  for (const ps of paymentSessions) {
-    if (ps.status === PaymentSessionStatus.AUTHORIZED) {
-      authorizedAmount = MathBN.add(authorizedAmount, ps.amount)
-    }
-  }
-
-  for (const capture of captures) {
-    capturedAmount = MathBN.add(capturedAmount, capture.amount)
-  }
-
-  for (const refund of refunds) {
-    refundedAmount = MathBN.add(refundedAmount, refund.amount)
-  }
 
   let status =
     paymentSessions.length === 0
