@@ -142,25 +142,24 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     }
   }
 
+  // https://docs.adyen.com/online-payments/build-your-integration/payment-result-codes/
   protected getSessionStatus(
     code?: Types.checkout.PaymentResponse.ResultCodeEnum,
   ): PaymentSessionStatus {
     const codes = Types.checkout.PaymentResponse.ResultCodeEnum
     switch (code) {
-      // https://docs.adyen.com/online-payments/build-your-integration/payment-result-codes/
+      case codes.Authorised:
+        return 'authorized'
+      case codes.Cancelled:
+        return 'canceled'
       case codes.Received:
+        return 'pending'
       case codes.Pending:
       case codes.PresentToShopper:
-        return 'pending'
       case codes.ChallengeShopper:
       case codes.IdentifyShopper:
       case codes.RedirectShopper:
-      case codes.PartiallyAuthorised:
         return 'requires_more'
-      case codes.Cancelled:
-        return 'canceled'
-      case codes.Authorised:
-        return 'authorized'
       case codes.Error:
       case codes.Refused:
         return 'error'
