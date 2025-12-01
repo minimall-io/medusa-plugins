@@ -356,9 +356,16 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const shopper = inputData.shopper || {}
     const amount = inputData.amount
     const detailsRequest = inputData.detailsRequest
-    const sessionId = input.context!.idempotency_key!
+    const sessionId = input.context?.idempotency_key
     const reference = sessionId
     const idempotencyKey = sessionId
+
+    if (!sessionId) {
+      throw new MedusaError(
+        MedusaError.Types.NOT_ALLOWED,
+        'Missing Payment Session ID!',
+      )
+    }
 
     if (detailsRequest) {
       this.log('authorizePayment/detailsRequest', detailsRequest)
@@ -404,9 +411,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const { merchantAccount } = this.options_
     const dataManager = PaymentDataManager(input.data)
     const { reference, webhook, amount } = dataManager.getData()
-    const paymentId = input.context?.idempotency_key
-    const id = paymentId
-    const idempotencyKey = paymentId
+    const id = reference
+    const idempotencyKey = reference
 
     if (webhook) {
       dataManager.setData({ webhook: undefined })
@@ -458,6 +464,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const id = captureId
     const idempotencyKey = captureId
 
+    if (!captureId) {
+      const data = dataManager.getData()
+      const output = { data }
+      this.log('capturePayment/output', output)
+      return output
+    }
+
     if (webhook) {
       dataManager.setData({ webhook: undefined })
       const data = dataManager.getData()
@@ -508,6 +521,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const refundId = input.context?.idempotency_key
     const id = refundId
     const idempotencyKey = refundId
+
+    if (!refundId) {
+      const data = dataManager.getData()
+      const output = { data }
+      this.log('refundPayment/output', output)
+      return output
+    }
 
     if (webhook) {
       dataManager.setData({ webhook: undefined })
