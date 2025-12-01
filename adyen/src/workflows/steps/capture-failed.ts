@@ -20,7 +20,7 @@ export const captureFailedStepId = 'capture-failed-step'
 
 const captureFailedStepInvoke = async (
   notification: NotificationRequestItem,
-  { container, workflowId, stepName }: StepExecutionContext,
+  { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, CaptureFailedStepCompensateInput>> => {
   const {
     merchantReference,
@@ -38,6 +38,7 @@ const captureFailedStepInvoke = async (
     {
       relations: ['captures'],
     },
+    context,
   )
   logging.debug(
     `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
@@ -56,14 +57,18 @@ const captureFailedStepInvoke = async (
     data: dataManager.getData(),
     id: originalPayment.id,
   }
-  await paymentService.updatePayment(paymentToUpdate)
+  await paymentService.updatePayment(paymentToUpdate, context)
   if (dataCapture?.id) {
-    await paymentService.deleteCaptures([dataCapture.id])
+    await paymentService.deleteCaptures([dataCapture.id], context)
   }
 
-  const newPayment = await paymentService.retrievePayment(originalPayment.id, {
-    relations: ['captures'],
-  })
+  const newPayment = await paymentService.retrievePayment(
+    originalPayment.id,
+    {
+      relations: ['captures'],
+    },
+    context,
+  )
   logging.debug(
     `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
@@ -76,7 +81,7 @@ const captureFailedStepInvoke = async (
 
 const captureFailedStepCompensate = async (
   { originalPayment, notification }: CaptureFailedStepCompensateInput,
-  { container, workflowId, stepName }: StepExecutionContext,
+  { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
   const { pspReference } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
@@ -85,9 +90,13 @@ const captureFailedStepCompensate = async (
     `${workflowId}/${stepName}/compensate/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
 
-  const newPayment = await paymentService.retrievePayment(originalPayment.id, {
-    relations: ['captures'],
-  })
+  const newPayment = await paymentService.retrievePayment(
+    originalPayment.id,
+    {
+      relations: ['captures'],
+    },
+    context,
+  )
   logging.debug(
     `${workflowId}/${stepName}/compensate/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
@@ -105,16 +114,20 @@ const captureFailedStepCompensate = async (
       data: dataManager.getData(),
       id: originalPayment.id,
     }
-    await paymentService.updatePayment(webhookPayment)
+    await paymentService.updatePayment(webhookPayment, context)
     const paymentCaptureToCreate = {
       amount: originalPaymentCapture.amount,
       captured_by: originalPaymentCapture.created_by,
       payment_id: originalPayment.id,
     }
-    await paymentService.capturePayment(paymentCaptureToCreate)
-    const restoredPaymentCaptures = await paymentService.listCaptures({
-      payment_id: originalPayment.id,
-    })
+    await paymentService.capturePayment(paymentCaptureToCreate, context)
+    const restoredPaymentCaptures = await paymentService.listCaptures(
+      {
+        payment_id: originalPayment.id,
+      },
+      undefined,
+      context,
+    )
     const [restoredPaymentCapture] = differenceBy(
       restoredPaymentCaptures,
       newPayment.captures,
@@ -135,13 +148,14 @@ const captureFailedStepCompensate = async (
     data: dataManager.getData(),
     id: originalPayment.id,
   }
-  await paymentService.updatePayment(paymentToUpdate)
+  await paymentService.updatePayment(paymentToUpdate, context)
 
   const restoredPayment = await paymentService.retrievePayment(
     originalPayment.id,
     {
       relations: ['captures'],
     },
+    context,
   )
   logging.debug(
     `${workflowId}/${stepName}/compensate/restoredPayment ${JSON.stringify(restoredPayment, null, 2)}`,

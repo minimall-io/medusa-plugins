@@ -14,7 +14,7 @@ export const authorisationSuccessStepId = 'authorisation-success-step'
 
 const authorisationSuccessStepInvoke = async (
   notification: NotificationRequestItem,
-  { container, workflowId, stepName }: StepExecutionContext,
+  { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
   const {
     amount: { currency, value },
@@ -25,9 +25,13 @@ const authorisationSuccessStepInvoke = async (
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
-  const [originalPayment] = await paymentService.listPayments({
-    payment_session_id: merchantReference,
-  })
+  const [originalPayment] = await paymentService.listPayments(
+    {
+      payment_session_id: merchantReference,
+    },
+    undefined,
+    context,
+  )
   logging.debug(
     `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
@@ -52,9 +56,13 @@ const authorisationSuccessStepInvoke = async (
     id: originalPayment.id,
   }
 
-  await paymentService.updatePayment(paymentToUpdate)
+  await paymentService.updatePayment(paymentToUpdate, context)
 
-  const newPayment = await paymentService.retrievePayment(originalPayment.id)
+  const newPayment = await paymentService.retrievePayment(
+    originalPayment.id,
+    undefined,
+    context,
+  )
   logging.debug(
     `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
@@ -64,7 +72,7 @@ const authorisationSuccessStepInvoke = async (
 
 const authorisationSuccessStepCompensate = async (
   originalPayment: PaymentDTO,
-  { container, workflowId, stepName }: StepExecutionContext,
+  { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -78,10 +86,12 @@ const authorisationSuccessStepCompensate = async (
     data: dataManager.getData(),
     id: originalPayment.id,
   }
-  await paymentService.updatePayment(paymentToUpdate)
+  await paymentService.updatePayment(paymentToUpdate, context)
 
   const restoredPayment = await paymentService.retrievePayment(
     originalPayment.id,
+    undefined,
+    context,
   )
   logging.debug(
     `${workflowId}/${stepName}/compensate/restoredPayment ${JSON.stringify(restoredPayment, null, 2)}`,

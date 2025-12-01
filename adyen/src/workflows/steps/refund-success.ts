@@ -15,7 +15,7 @@ export const refundSuccessStepId = 'refund-success-step'
 
 const refundSuccessStepInvoke = async (
   notification: NotificationRequestItem,
-  { container, workflowId, stepName }: StepExecutionContext,
+  { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
   const {
     merchantReference,
@@ -34,6 +34,7 @@ const refundSuccessStepInvoke = async (
     {
       relations: ['refunds'],
     },
+    context,
   )
   logging.debug(
     `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
@@ -49,23 +50,27 @@ const refundSuccessStepInvoke = async (
       data: dataManager.getData(),
       id: originalPayment.id,
     }
-    await paymentService.updatePayment(paymentToUpdate)
+    await paymentService.updatePayment(paymentToUpdate, context)
   } else if (value !== undefined && currency !== undefined) {
     dataManager.setData({ webhook: true })
     const webhookPayment = {
       data: dataManager.getData(),
       id: originalPayment.id,
     }
-    await paymentService.updatePayment(webhookPayment)
+    await paymentService.updatePayment(webhookPayment, context)
     const paymentRefundToCreate = {
       amount: getWholeUnit(value, currency),
       created_by: merchantAccountCode,
       payment_id: originalPayment.id,
     }
-    await paymentService.refundPayment(paymentRefundToCreate)
-    const newPaymentRefunds = await paymentService.listRefunds({
-      payment_id: originalPayment.id,
-    })
+    await paymentService.refundPayment(paymentRefundToCreate, context)
+    const newPaymentRefunds = await paymentService.listRefunds(
+      {
+        payment_id: originalPayment.id,
+      },
+      undefined,
+      context,
+    )
     const [newPaymentRefund]: RefundDTO[] = differenceBy(
       newPaymentRefunds,
       originalPayment.refunds,
@@ -86,12 +91,16 @@ const refundSuccessStepInvoke = async (
       data: dataManager.getData(),
       id: originalPayment.id,
     }
-    await paymentService.updatePayment(paymentToUpdate)
+    await paymentService.updatePayment(paymentToUpdate, context)
   }
 
-  const newPayment = await paymentService.retrievePayment(originalPayment.id, {
-    relations: ['refunds'],
-  })
+  const newPayment = await paymentService.retrievePayment(
+    originalPayment.id,
+    {
+      relations: ['refunds'],
+    },
+    context,
+  )
   logging.debug(
     `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
@@ -101,7 +110,7 @@ const refundSuccessStepInvoke = async (
 
 const refundSuccessStepCompensate = async (
   originalPayment: PaymentDTO,
-  { container, workflowId, stepName }: StepExecutionContext,
+  { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -111,26 +120,31 @@ const refundSuccessStepCompensate = async (
 
   const dataManager = PaymentDataManager(originalPayment.data)
 
-  const newPaymentRefunds = await paymentService.listRefunds({
-    payment_id: originalPayment.id,
-  })
+  const newPaymentRefunds = await paymentService.listRefunds(
+    {
+      payment_id: originalPayment.id,
+    },
+    undefined,
+    context,
+  )
   const paymentRefundsToDelete: string[] = map(
     differenceBy(newPaymentRefunds, originalPayment.refunds, 'id'),
     'id',
   )
 
-  await paymentService.deleteRefunds(paymentRefundsToDelete)
+  await paymentService.deleteRefunds(paymentRefundsToDelete, context)
   const paymentToUpdate = {
     data: dataManager.getData(),
     id: originalPayment.id,
   }
-  await paymentService.updatePayment(paymentToUpdate)
+  await paymentService.updatePayment(paymentToUpdate, context)
 
   const restoredPayment = await paymentService.retrievePayment(
     originalPayment.id,
     {
       relations: ['refunds'],
     },
+    context,
   )
   logging.debug(
     `${workflowId}/${stepName}/compensate/restoredPayment ${JSON.stringify(restoredPayment, null, 2)}`,

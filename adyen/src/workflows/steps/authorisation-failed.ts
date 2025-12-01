@@ -14,7 +14,7 @@ export const authorisationFailedStepId = 'authorisation-failed-step'
 
 const authorisationFailedStepInvoke = async (
   notification: NotificationRequestItem,
-  { container, workflowId, stepName }: StepExecutionContext,
+  { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
   const {
     merchantReference,
@@ -25,9 +25,13 @@ const authorisationFailedStepInvoke = async (
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
-  const [originalPayment] = await paymentService.listPayments({
-    payment_session_id: merchantReference,
-  })
+  const [originalPayment] = await paymentService.listPayments(
+    {
+      payment_session_id: merchantReference,
+    },
+    undefined,
+    context,
+  )
   logging.debug(
     `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
@@ -61,7 +65,7 @@ const authorisationFailedStepInvoke = async (
     id: originalPayment.id,
   }
 
-  await paymentService.updatePayment(paymentToUpdate)
+  await paymentService.updatePayment(paymentToUpdate, context)
 
   const paymentSessionToUpdate = {
     amount: originalPayment.amount,
@@ -70,9 +74,13 @@ const authorisationFailedStepInvoke = async (
     id: merchantReference,
     status: 'error' as const,
   }
-  await paymentService.updatePaymentSession(paymentSessionToUpdate)
+  await paymentService.updatePaymentSession(paymentSessionToUpdate, context)
 
-  const newPayment = await paymentService.retrievePayment(originalPayment.id)
+  const newPayment = await paymentService.retrievePayment(
+    originalPayment.id,
+    undefined,
+    context,
+  )
   logging.debug(
     `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
@@ -82,7 +90,7 @@ const authorisationFailedStepInvoke = async (
 
 const authorisationFailedStepCompensate = async (
   originalPayment: PaymentDTO,
-  { container, workflowId, stepName }: StepExecutionContext,
+  { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -96,10 +104,12 @@ const authorisationFailedStepCompensate = async (
     data: dataManager.getData(),
     id: originalPayment.id,
   }
-  await paymentService.updatePayment(paymentToUpdate)
+  await paymentService.updatePayment(paymentToUpdate, context)
 
   const restoredPayment = await paymentService.retrievePayment(
     originalPayment.id,
+    undefined,
+    context,
   )
   logging.debug(
     `${workflowId}/${stepName}/compensate/restoredPayment ${JSON.stringify(restoredPayment, null, 2)}`,

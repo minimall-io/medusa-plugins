@@ -15,7 +15,7 @@ export const captureSuccessStepId = 'capture-success-step'
 
 const captureSuccessStepInvoke = async (
   notification: NotificationRequestItem,
-  { container, workflowId, stepName }: StepExecutionContext,
+  { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
   const {
     merchantReference,
@@ -34,6 +34,7 @@ const captureSuccessStepInvoke = async (
     {
       relations: ['captures'],
     },
+    context,
   )
   logging.debug(
     `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
@@ -49,23 +50,27 @@ const captureSuccessStepInvoke = async (
       data: dataManager.getData(),
       id: originalPayment.id,
     }
-    await paymentService.updatePayment(paymentToUpdate)
+    await paymentService.updatePayment(paymentToUpdate, context)
   } else if (value !== undefined && currency !== undefined) {
     dataManager.setData({ webhook: true })
     const webhookPayment = {
       data: dataManager.getData(),
       id: originalPayment.id,
     }
-    await paymentService.updatePayment(webhookPayment)
+    await paymentService.updatePayment(webhookPayment, context)
     const paymentCaptureToCreate = {
       amount: getWholeUnit(value, currency),
       captured_by: merchantAccountCode,
       payment_id: originalPayment.id,
     }
-    await paymentService.capturePayment(paymentCaptureToCreate)
-    const newPaymentCaptures = await paymentService.listCaptures({
-      payment_id: originalPayment.id,
-    })
+    await paymentService.capturePayment(paymentCaptureToCreate, context)
+    const newPaymentCaptures = await paymentService.listCaptures(
+      {
+        payment_id: originalPayment.id,
+      },
+      undefined,
+      context,
+    )
     const [newPaymentCapture]: CaptureDTO[] = differenceBy(
       newPaymentCaptures,
       originalPayment.captures,
@@ -86,12 +91,16 @@ const captureSuccessStepInvoke = async (
       data: dataManager.getData(),
       id: originalPayment.id,
     }
-    await paymentService.updatePayment(paymentToUpdate)
+    await paymentService.updatePayment(paymentToUpdate, context)
   }
 
-  const newPayment = await paymentService.retrievePayment(originalPayment.id, {
-    relations: ['captures'],
-  })
+  const newPayment = await paymentService.retrievePayment(
+    originalPayment.id,
+    {
+      relations: ['captures'],
+    },
+    context,
+  )
   logging.debug(
     `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
@@ -101,7 +110,7 @@ const captureSuccessStepInvoke = async (
 
 const captureSuccessStepCompensate = async (
   originalPayment: PaymentDTO,
-  { container, workflowId, stepName }: StepExecutionContext,
+  { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -111,27 +120,32 @@ const captureSuccessStepCompensate = async (
 
   const dataManager = PaymentDataManager(originalPayment.data)
 
-  const newPaymentCaptures = await paymentService.listCaptures({
-    payment_id: originalPayment.id,
-  })
+  const newPaymentCaptures = await paymentService.listCaptures(
+    {
+      payment_id: originalPayment.id,
+    },
+    undefined,
+    context,
+  )
   const paymentCapturesToDelete: string[] = map(
     differenceBy(newPaymentCaptures, originalPayment.captures, 'id'),
     'id',
   )
 
-  await paymentService.deleteCaptures(paymentCapturesToDelete)
+  await paymentService.deleteCaptures(paymentCapturesToDelete, context)
   const paymentToUpdate = {
     captured_at: originalPayment.captured_at,
     data: dataManager.getData(),
     id: originalPayment.id,
   }
-  await paymentService.updatePayment(paymentToUpdate)
+  await paymentService.updatePayment(paymentToUpdate, context)
 
   const restoredPayment = await paymentService.retrievePayment(
     originalPayment.id,
     {
       relations: ['captures'],
     },
+    context,
   )
   logging.debug(
     `${workflowId}/${stepName}/compensate/restoredPayment ${JSON.stringify(restoredPayment, null, 2)}`,

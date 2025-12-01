@@ -14,7 +14,7 @@ export const cancellationFailedStepId = 'cancellation-failed-step'
 
 const cancellationFailedStepInvoke = async (
   notification: NotificationRequestItem,
-  { container, workflowId, stepName }: StepExecutionContext,
+  { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
   const {
     merchantReference,
@@ -25,9 +25,13 @@ const cancellationFailedStepInvoke = async (
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
-  const [originalPayment] = await paymentService.listPayments({
-    payment_session_id: merchantReference,
-  })
+  const [originalPayment] = await paymentService.listPayments(
+    {
+      payment_session_id: merchantReference,
+    },
+    undefined,
+    context,
+  )
   logging.debug(
     `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
@@ -65,9 +69,13 @@ const cancellationFailedStepInvoke = async (
     id: originalPayment.id,
   }
 
-  await paymentService.updatePayment(paymentToUpdate)
+  await paymentService.updatePayment(paymentToUpdate, context)
 
-  const newPayment = await paymentService.retrievePayment(originalPayment.id)
+  const newPayment = await paymentService.retrievePayment(
+    originalPayment.id,
+    undefined,
+    context,
+  )
   logging.debug(
     `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
@@ -77,7 +85,7 @@ const cancellationFailedStepInvoke = async (
 
 const cancellationFailedStepCompensate = async (
   originalPayment: PaymentDTO,
-  { container, workflowId, stepName }: StepExecutionContext,
+  { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -92,10 +100,12 @@ const cancellationFailedStepCompensate = async (
     data: dataManager.getData(),
     id: originalPayment.id,
   }
-  await paymentService.updatePayment(paymentToUpdate)
+  await paymentService.updatePayment(paymentToUpdate, context)
 
   const restoredPayment = await paymentService.retrievePayment(
     originalPayment.id,
+    undefined,
+    context,
   )
   logging.debug(
     `${workflowId}/${stepName}/compensate/restoredPayment ${JSON.stringify(restoredPayment, null, 2)}`,

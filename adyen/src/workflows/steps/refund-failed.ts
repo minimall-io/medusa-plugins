@@ -20,7 +20,7 @@ export const refundFailedStepId = 'refund-failed-step'
 
 const refundFailedStepInvoke = async (
   notification: NotificationRequestItem,
-  { container, workflowId, stepName }: StepExecutionContext,
+  { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO, RefundFailedStepCompensateInput>> => {
   const {
     merchantReference,
@@ -38,6 +38,7 @@ const refundFailedStepInvoke = async (
     {
       relations: ['refunds'],
     },
+    context,
   )
   logging.debug(
     `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
@@ -55,14 +56,18 @@ const refundFailedStepInvoke = async (
     data: dataManager.getData(),
     id: originalPayment.id,
   }
-  await paymentService.updatePayment(paymentToUpdate)
+  await paymentService.updatePayment(paymentToUpdate, context)
   if (dataRefund?.id) {
-    await paymentService.deleteRefunds([dataRefund.id])
+    await paymentService.deleteRefunds([dataRefund.id], context)
   }
 
-  const newPayment = await paymentService.retrievePayment(originalPayment.id, {
-    relations: ['refunds'],
-  })
+  const newPayment = await paymentService.retrievePayment(
+    originalPayment.id,
+    {
+      relations: ['refunds'],
+    },
+    context,
+  )
   logging.debug(
     `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
@@ -75,7 +80,7 @@ const refundFailedStepInvoke = async (
 
 const refundFailedStepCompensate = async (
   { originalPayment, notification }: RefundFailedStepCompensateInput,
-  { container, workflowId, stepName }: StepExecutionContext,
+  { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentDTO>> => {
   const { pspReference } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
@@ -84,9 +89,13 @@ const refundFailedStepCompensate = async (
     `${workflowId}/${stepName}/compensate/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
 
-  const newPayment = await paymentService.retrievePayment(originalPayment.id, {
-    relations: ['refunds'],
-  })
+  const newPayment = await paymentService.retrievePayment(
+    originalPayment.id,
+    {
+      relations: ['refunds'],
+    },
+    context,
+  )
   logging.debug(
     `${workflowId}/${stepName}/compensate/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
@@ -105,16 +114,20 @@ const refundFailedStepCompensate = async (
       data: dataManager.getData(),
       id: originalPayment.id,
     }
-    await paymentService.updatePayment(webhookPayment)
+    await paymentService.updatePayment(webhookPayment, context)
     const paymentRefundToCreate = {
       amount: originalPaymentRefund.amount,
       created_by: originalPaymentRefund.created_by,
       payment_id: originalPayment.id,
     }
-    await paymentService.refundPayment(paymentRefundToCreate)
-    const restoredPaymentRefunds = await paymentService.listRefunds({
-      payment_id: originalPayment.id,
-    })
+    await paymentService.refundPayment(paymentRefundToCreate, context)
+    const restoredPaymentRefunds = await paymentService.listRefunds(
+      {
+        payment_id: originalPayment.id,
+      },
+      undefined,
+      context,
+    )
     const [restoredPaymentRefund] = differenceBy(
       restoredPaymentRefunds,
       newPayment.refunds,
@@ -134,13 +147,14 @@ const refundFailedStepCompensate = async (
     data: dataManager.getData(),
     id: originalPayment.id,
   }
-  await paymentService.updatePayment(paymentToUpdate)
+  await paymentService.updatePayment(paymentToUpdate, context)
 
   const restoredPayment = await paymentService.retrievePayment(
     originalPayment.id,
     {
       relations: ['refunds'],
     },
+    context,
   )
   logging.debug(
     `${workflowId}/${stepName}/compensate/restoredPayment ${JSON.stringify(restoredPayment, null, 2)}`,
