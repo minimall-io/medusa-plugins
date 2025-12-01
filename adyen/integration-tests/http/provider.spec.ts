@@ -26,6 +26,9 @@ medusaIntegrationTestRunner({
   debug: false,
   testSuite: ({ getContainer }) => {
     describe('Adyen Payment Provider', () => {
+      const recurringProcessingModel = 'CardOnFile'
+      const shopperInteraction = 'Ecommerce'
+      const storePaymentMethod = true
       let container: MedusaContainer
       let paymentService: IPaymentModuleService
       let collectionInput: { currency_code: string; amount: number }
@@ -289,7 +292,9 @@ medusaIntegrationTestRunner({
             data: {
               request: {
                 paymentMethod: encryptedCardDetails,
-                storePaymentMethod: true,
+                recurringProcessingModel,
+                shopperInteraction,
+                storePaymentMethod,
               },
             },
             id: sessionWithAccountHolder.id,
@@ -325,7 +330,9 @@ medusaIntegrationTestRunner({
               request: {
                 ...accountHolder.data,
                 paymentMethod: encryptedCardDetails,
-                storePaymentMethod: true,
+                recurringProcessingModel,
+                shopperInteraction,
+                storePaymentMethod,
               },
             },
             id: sessionWithoutAccountHolder.id,
@@ -360,8 +367,10 @@ medusaIntegrationTestRunner({
             data: {
               request: {
                 paymentMethod: encryptedCardDetails,
+                recurringProcessingModel,
+                shopperInteraction,
                 shopperReference: 'random_shopper_reference',
-                storePaymentMethod: true,
+                storePaymentMethod,
               },
             },
             id: sessionWithAccountHolder.id,
@@ -449,7 +458,9 @@ medusaIntegrationTestRunner({
             data: {
               request: {
                 paymentMethod: encryptedCardDetails,
-                storePaymentMethod: true,
+                recurringProcessingModel,
+                shopperInteraction,
+                storePaymentMethod,
               },
             },
             id: session.id,
