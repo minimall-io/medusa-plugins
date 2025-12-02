@@ -35,13 +35,13 @@ export const maybeUpdatePaymentCollection = async (
   const refunds = flatMap(paymentCollection.payments, 'refunds') ?? []
 
   const authorizedAmount = MathBN.add(
-    map(
+    ...map(
       filter(paymentSessions, { status: PaymentSessionStatus.AUTHORIZED }),
       'amount',
     ),
   )
-  const capturedAmount = MathBN.add(map(captures, 'amount'))
-  const refundedAmount = MathBN.add(map(refunds, 'amount'))
+  const capturedAmount = MathBN.add(...map(captures, 'amount'))
+  const refundedAmount = MathBN.add(...map(refunds, 'amount'))
 
   let completedAt: Date | undefined
 
