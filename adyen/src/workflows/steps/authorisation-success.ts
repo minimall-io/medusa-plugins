@@ -1,13 +1,19 @@
 import type { Types } from '@adyen/api-library'
-import type { PaymentDTO } from '@medusajs/framework/types'
-import { ContainerRegistrationKeys, Modules } from '@medusajs/framework/utils'
+import type {
+  PaymentSessionDTO,
+  PaymentSessionStatus,
+} from '@medusajs/framework/types'
+import {
+  ContainerRegistrationKeys,
+  MedusaError,
+  Modules,
+} from '@medusajs/framework/utils'
 import {
   createStep,
   type StepExecutionContext,
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
 import { PaymentDataManager } from '../../utils'
-import { maybeUpdatePaymentCollection } from './helpers'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 
@@ -15,9 +21,8 @@ export const authorisationSuccessStepId = 'authorisation-success-step'
 
 const authorisationSuccessStepInvoke = async (
   notification: NotificationRequestItem,
-  stepExecutionContext: StepExecutionContext,
-): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
-  const { container, workflowId, stepName, context } = stepExecutionContext
+  { container, workflowId, stepName, context }: StepExecutionContext,
+): Promise<StepResponse<PaymentSessionDTO, PaymentSessionDTO>> => {
   const {
     amount: { currency, value },
     merchantReference,
@@ -27,22 +32,27 @@ const authorisationSuccessStepInvoke = async (
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
-  const [originalPayment] = await paymentService.listPayments(
+  if (value === undefined || currency === undefined) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_ARGUMENT,
+      'Authorisation notification is missing amount information!',
+    )
+  }
+
+  const originalPaymentSession = await paymentService.retrievePaymentSession(
+    merchantReference,
     {
-      payment_session_id: merchantReference,
+      relations: ['payment'],
     },
-    undefined,
     context,
   )
   logging.debug(
-    `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
+    `${workflowId}/${stepName}/invoke/originalPaymentSession ${JSON.stringify(originalPaymentSession, null, 2)}`,
   )
 
-  const dataManager = PaymentDataManager(originalPayment.data)
+  const originalPayment = originalPaymentSession.payment!
 
-  if (value === undefined || currency === undefined) {
-    throw new Error('Authorisation notification is missing amount information!')
-  }
+  const dataManager = PaymentDataManager(originalPayment.data)
 
   dataManager.setAuthorisation({
     amount: { currency, value },
@@ -59,35 +69,42 @@ const authorisationSuccessStepInvoke = async (
     id: originalPayment.id,
   }
 
-  await paymentService.updatePayment(paymentToUpdate, context)
+  const paymentSessionToUpdate = {
+    ...originalPaymentSession,
+    status: 'authorized' as PaymentSessionStatus,
+  }
 
-  const newPayment = await paymentService.retrievePayment(
-    originalPayment.id,
-    undefined,
+  await paymentService.updatePayment(paymentToUpdate, context)
+  await paymentService.updatePaymentSession(paymentSessionToUpdate, context)
+
+  const newPaymentSession = await paymentService.retrievePaymentSession(
+    originalPaymentSession.id,
+    {
+      relations: ['payment'],
+    },
     context,
   )
   logging.debug(
-    `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
+    `${workflowId}/${stepName}/invoke/newPaymentSession ${JSON.stringify(newPaymentSession, null, 2)}`,
   )
 
-  await maybeUpdatePaymentCollection(
-    originalPayment.payment_collection_id,
-    stepExecutionContext,
+  return new StepResponse<PaymentSessionDTO, PaymentSessionDTO>(
+    newPaymentSession,
+    originalPaymentSession,
   )
-
-  return new StepResponse<PaymentDTO, PaymentDTO>(newPayment, originalPayment)
 }
 
 const authorisationSuccessStepCompensate = async (
-  originalPayment: PaymentDTO,
-  stepExecutionContext: StepExecutionContext,
-): Promise<StepResponse<PaymentDTO>> => {
-  const { container, workflowId, stepName, context } = stepExecutionContext
+  originalPaymentSession: PaymentSessionDTO,
+  { container, workflowId, stepName, context }: StepExecutionContext,
+): Promise<StepResponse<PaymentSessionDTO>> => {
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
   logging.debug(
-    `${workflowId}/${stepName}/compensate/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
+    `${workflowId}/${stepName}/compensate/originalPaymentSession ${JSON.stringify(originalPaymentSession, null, 2)}`,
   )
+
+  const originalPayment = originalPaymentSession.payment!
 
   const dataManager = PaymentDataManager(originalPayment.data)
 
@@ -95,22 +112,22 @@ const authorisationSuccessStepCompensate = async (
     data: dataManager.getData(),
     id: originalPayment.id,
   }
-  await paymentService.updatePayment(paymentToUpdate, context)
 
-  const restoredPayment = await paymentService.retrievePayment(
-    originalPayment.id,
-    undefined,
+  await paymentService.updatePayment(paymentToUpdate, context)
+  await paymentService.updatePaymentSession(originalPaymentSession, context)
+
+  const restoredPaymentSession = await paymentService.retrievePaymentSession(
+    originalPaymentSession.id,
+    {
+      relations: ['payment'],
+    },
     context,
   )
   logging.debug(
-    `${workflowId}/${stepName}/compensate/restoredPayment ${JSON.stringify(restoredPayment, null, 2)}`,
-  )
-  await maybeUpdatePaymentCollection(
-    originalPayment.payment_collection_id,
-    stepExecutionContext,
+    `${workflowId}/${stepName}/compensate/restoredPaymentSession ${JSON.stringify(restoredPaymentSession, null, 2)}`,
   )
 
-  return new StepResponse<PaymentDTO>(restoredPayment)
+  return new StepResponse<PaymentSessionDTO>(restoredPaymentSession)
 }
 
 const authorisationSuccessStep = createStep(
