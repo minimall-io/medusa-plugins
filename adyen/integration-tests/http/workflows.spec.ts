@@ -3,7 +3,7 @@ import type {
   IPaymentModuleService,
   MedusaContainer,
   PaymentCustomerDTO,
-  PaymentDTO,
+  PaymentSessionDTO,
 } from '@medusajs/framework/types'
 import { MedusaError, Modules } from '@medusajs/framework/utils'
 import { WorkflowManager } from '@medusajs/orchestration'
@@ -39,7 +39,7 @@ medusaIntegrationTestRunner({
       let reference: string
       let customer: PaymentCustomerDTO
       let encryptedCardDetails: Types.checkout.CardDetails
-      let payment: PaymentDTO
+      let session: PaymentSessionDTO
 
       beforeAll(async () => {
         container = getContainer()
@@ -60,18 +60,7 @@ medusaIntegrationTestRunner({
         ])
         const collection = collections[0]
 
-        const session = await paymentService.createPaymentSession(
-          collection.id,
-          {
-            amount: collection.amount,
-            context: {},
-            currency_code: collection.currency_code,
-            data: { request: {} },
-            provider_id,
-          },
-        )
-
-        await paymentService.updatePaymentSession({
+        session = await paymentService.createPaymentSession(collection.id, {
           amount: collection.amount,
           currency_code: collection.currency_code,
           data: {
@@ -79,21 +68,9 @@ medusaIntegrationTestRunner({
               paymentMethod: encryptedCardDetails,
             },
           },
-          id: session.id,
+          provider_id,
         })
 
-        await paymentService.authorizePaymentSession(session.id, {})
-
-        const [authorizedPayment] = await paymentService.listPayments(
-          {
-            payment_session_id: session.id,
-          },
-          {
-            relations: ['payment_session', 'captures', 'refunds'],
-          },
-        )
-
-        payment = authorizedPayment
         reference = session.id
         await delay(1000)
       })
@@ -101,6 +78,9 @@ medusaIntegrationTestRunner({
       describe('Without Errors', () => {
         describe('Test processing success cancellation notification', () => {
           it('adds a cancellation data event to the data events property and updates the payment with new canceled_at date after a success cancellation notification is processed without prior direct cancellation', async () => {
+            const originalPayment =
+              await paymentService.authorizePaymentSession(session.id, {})
+
             const pspReference = 'pspReference'
 
             const notification = getNotificationRequestItem(
@@ -112,16 +92,14 @@ medusaIntegrationTestRunner({
               SuccessEnum.True,
             )
 
-            const originalPayment = await paymentService.retrievePayment(
-              payment.id,
-            )
-
             const workflow = processNotificationWorkflow(container)
             await workflow.run({
               input: notification,
             })
 
-            const newPayment = await paymentService.retrievePayment(payment.id)
+            const newPayment = await paymentService.retrievePayment(
+              originalPayment.id,
+            )
 
             const newCancellations = filter(newPayment.data?.events, {
               name: 'CANCELLATION',
@@ -138,7 +116,16 @@ medusaIntegrationTestRunner({
           })
 
           it('updates a cancellation data event after a success cancellation notification is processed with prior direct cancellation', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             await paymentService.cancelPayment(payment.id)
+
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
 
             const pspReference = 'pspReference'
 
@@ -149,10 +136,6 @@ medusaIntegrationTestRunner({
               currency,
               EventCodeEnum.Cancellation,
               SuccessEnum.True,
-            )
-
-            const originalPayment = await paymentService.retrievePayment(
-              payment.id,
             )
 
             const workflow = processNotificationWorkflow(container)
@@ -175,6 +158,9 @@ medusaIntegrationTestRunner({
 
         describe('Test processing failed cancellation notification', () => {
           it('adds a cancellation data event to the data events property after a failed cancellation notification is processed without prior direct cancellation', async () => {
+            const originalPayment =
+              await paymentService.authorizePaymentSession(session.id, {})
+
             const pspReference = 'pspReference'
 
             const notification = getNotificationRequestItem(
@@ -186,16 +172,14 @@ medusaIntegrationTestRunner({
               SuccessEnum.False,
             )
 
-            const originalPayment = await paymentService.retrievePayment(
-              payment.id,
-            )
-
             const workflow = processNotificationWorkflow(container)
             await workflow.run({
               input: notification,
             })
 
-            const newPayment = await paymentService.retrievePayment(payment.id)
+            const newPayment = await paymentService.retrievePayment(
+              originalPayment.id,
+            )
             const newCancellations = filter(newPayment.data?.events, {
               name: 'CANCELLATION',
             })
@@ -211,7 +195,16 @@ medusaIntegrationTestRunner({
           })
 
           it('updates a cancellation data event after a failed cancellation notification is processed with prior direct cancellation', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             await paymentService.cancelPayment(payment.id)
+
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
 
             const pspReference = 'pspReference'
 
@@ -222,10 +215,6 @@ medusaIntegrationTestRunner({
               currency,
               EventCodeEnum.Cancellation,
               SuccessEnum.False,
-            )
-
-            const originalPayment = await paymentService.retrievePayment(
-              payment.id,
             )
 
             const workflow = processNotificationWorkflow(container)
@@ -251,6 +240,11 @@ medusaIntegrationTestRunner({
 
         describe('Test processing success capture notification', () => {
           it('adds a payment capture event to the data events property after a success capture notification is processed without prior direct capture', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             const pspReference = 'pspReference'
 
             const notification = getNotificationRequestItem(
@@ -287,6 +281,11 @@ medusaIntegrationTestRunner({
           })
 
           it('updates a payment capture event after a success capture notification is processed with prior direct capture', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             await paymentService.capturePayment({ payment_id: payment.id })
 
             const originalPayment = await paymentService.retrievePayment(
@@ -308,6 +307,7 @@ medusaIntegrationTestRunner({
               EventCodeEnum.Capture,
               SuccessEnum.True,
             )
+
             const workflow = processNotificationWorkflow(container)
             await workflow.run({
               input: notification,
@@ -334,6 +334,11 @@ medusaIntegrationTestRunner({
 
         describe('Test processing failed capture notification', () => {
           it('preserves the data events property after a failed capture notification is processed without prior direct capture', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             const pspReference = 'pspReference'
 
             const notification = getNotificationRequestItem(
@@ -365,6 +370,11 @@ medusaIntegrationTestRunner({
           })
 
           it('updates a payment capture event after a failed capture notification is processed with prior direct capture', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             await paymentService.capturePayment({ payment_id: payment.id })
 
             const originalPayment = await paymentService.retrievePayment(
@@ -413,6 +423,11 @@ medusaIntegrationTestRunner({
 
         describe('Test processing success refund notification', () => {
           it('adds a payment refund event to the data events property after a success refund notification is processed without prior direct refund', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             await paymentService.capturePayment({ payment_id: payment.id })
 
             const originalPayment = await paymentService.retrievePayment(
@@ -460,6 +475,11 @@ medusaIntegrationTestRunner({
           })
 
           it('updates a payment refund event after a success refund notification is processed with prior direct refund', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             await paymentService.capturePayment({ payment_id: payment.id })
             await paymentService.refundPayment({ payment_id: payment.id })
 
@@ -508,6 +528,11 @@ medusaIntegrationTestRunner({
 
         describe('Test processing failed refund notification', () => {
           it('preserves the data events property after a failed refund notification is processed without prior direct refund', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             await paymentService.capturePayment({ payment_id: payment.id })
 
             const originalPayment = await paymentService.retrievePayment(
@@ -549,6 +574,11 @@ medusaIntegrationTestRunner({
           })
 
           it('updates a payment refund event after a failed refund notification is processed with prior direct refund', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             await paymentService.capturePayment({ payment_id: payment.id })
             await paymentService.refundPayment({ payment_id: payment.id })
 
@@ -571,6 +601,7 @@ medusaIntegrationTestRunner({
               EventCodeEnum.Refund,
               SuccessEnum.False,
             )
+
             const workflow = processNotificationWorkflow(container)
             await workflow.run({
               input: notification,
@@ -651,6 +682,9 @@ medusaIntegrationTestRunner({
 
         describe('Test processing success cancellation notification', () => {
           it('preserves the original data property after a success cancellation notification processing fails without prior direct cancellation', async () => {
+            const originalPayment =
+              await paymentService.authorizePaymentSession(session.id, {})
+
             const pspReference = 'pspReference'
 
             const notification = getNotificationRequestItem(
@@ -662,17 +696,15 @@ medusaIntegrationTestRunner({
               SuccessEnum.True,
             )
 
-            const originalPayment = await paymentService.retrievePayment(
-              payment.id,
-            )
-
             const workflow = processNotificationWorkflow(container)
             const { errors } = await workflow.run({
               input: notification,
               throwOnError: false,
             })
 
-            const newPayment = await paymentService.retrievePayment(payment.id)
+            const newPayment = await paymentService.retrievePayment(
+              originalPayment.id,
+            )
             const newCancellations = filter(newPayment.data?.events, {
               name: 'CANCELLATION',
             })
@@ -693,7 +725,16 @@ medusaIntegrationTestRunner({
           })
 
           it('restores initial payment state after a success cancellation notification processing fails with prior direct cancellation', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             await paymentService.cancelPayment(payment.id)
+
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
 
             const pspReference = 'pspReference'
 
@@ -704,10 +745,6 @@ medusaIntegrationTestRunner({
               currency,
               EventCodeEnum.Cancellation,
               SuccessEnum.True,
-            )
-
-            const originalPayment = await paymentService.retrievePayment(
-              payment.id,
             )
 
             const workflow = processNotificationWorkflow(container)
@@ -740,6 +777,9 @@ medusaIntegrationTestRunner({
 
         describe('Test processing failed cancellation notification', () => {
           it('preserves the original data property after a failed cancellation notification processing fails without prior direct cancellation', async () => {
+            const originalPayment =
+              await paymentService.authorizePaymentSession(session.id, {})
+
             const pspReference = 'pspReference'
 
             const notification = getNotificationRequestItem(
@@ -751,17 +791,15 @@ medusaIntegrationTestRunner({
               SuccessEnum.False,
             )
 
-            const originalPayment = await paymentService.retrievePayment(
-              payment.id,
-            )
-
             const workflow = processNotificationWorkflow(container)
             const { errors } = await workflow.run({
               input: notification,
               throwOnError: false,
             })
 
-            const newPayment = await paymentService.retrievePayment(payment.id)
+            const newPayment = await paymentService.retrievePayment(
+              originalPayment.id,
+            )
             const newCancellations = filter(newPayment.data?.events, {
               name: 'CANCELLATION',
             })
@@ -782,7 +820,16 @@ medusaIntegrationTestRunner({
           })
 
           it('restores initial payment state after a failed cancellation notification processing fails with prior direct cancellation', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             await paymentService.cancelPayment(payment.id)
+
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
+            )
 
             const pspReference = 'pspReference'
 
@@ -793,10 +840,6 @@ medusaIntegrationTestRunner({
               currency,
               EventCodeEnum.Cancellation,
               SuccessEnum.False,
-            )
-
-            const originalPayment = await paymentService.retrievePayment(
-              payment.id,
             )
 
             const workflow = processNotificationWorkflow(container)
@@ -829,6 +872,11 @@ medusaIntegrationTestRunner({
 
         describe('Test processing success capture notification', () => {
           it('preserves the original data property after a success capture notification processing fails without prior direct capture', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             const pspReference = 'pspReference'
 
             const notification = getNotificationRequestItem(
@@ -872,6 +920,11 @@ medusaIntegrationTestRunner({
           })
 
           it('restores initial payment state after a success capture notification processing fails with prior direct capture', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             await paymentService.capturePayment({ payment_id: payment.id })
 
             const originalPayment = await paymentService.retrievePayment(
@@ -931,6 +984,11 @@ medusaIntegrationTestRunner({
 
         describe('Test processing failed capture notification', () => {
           it('preserves the original data property after a failed capture notification processing fails without prior direct capture', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             const pspReference = 'pspReference'
 
             const notification = getNotificationRequestItem(
@@ -974,6 +1032,11 @@ medusaIntegrationTestRunner({
           })
 
           it('restores initial payment state after a failed capture notification processing fails with prior direct capture', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             await paymentService.capturePayment({ payment_id: payment.id })
 
             const originalPayment = await paymentService.retrievePayment(
@@ -1033,6 +1096,11 @@ medusaIntegrationTestRunner({
 
         describe('Test processing success refund notification', () => {
           it('preserves the original data property after a success refund notification processing fails without prior direct refund', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             await paymentService.capturePayment({ payment_id: payment.id })
 
             const originalPayment = await paymentService.retrievePayment(
@@ -1086,6 +1154,11 @@ medusaIntegrationTestRunner({
           })
 
           it('restores initial payment state after a success refund notification processing fails with prior direct refund', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             await paymentService.capturePayment({ payment_id: payment.id })
             await paymentService.refundPayment({ payment_id: payment.id })
 
@@ -1146,6 +1219,11 @@ medusaIntegrationTestRunner({
 
         describe('Test processing failed refund notification', () => {
           it('preserves the original data property after a failed refund notification processing fails without prior direct refund', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             await paymentService.capturePayment({ payment_id: payment.id })
 
             const originalPayment = await paymentService.retrievePayment(
@@ -1199,6 +1277,11 @@ medusaIntegrationTestRunner({
           })
 
           it('restores initial payment state after a failed refund notification processing fails with prior direct refund', async () => {
+            const payment = await paymentService.authorizePaymentSession(
+              session.id,
+              {},
+            )
+
             await paymentService.capturePayment({ payment_id: payment.id })
             await paymentService.refundPayment({ payment_id: payment.id })
 
