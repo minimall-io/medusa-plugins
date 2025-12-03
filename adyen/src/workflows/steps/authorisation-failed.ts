@@ -1,12 +1,10 @@
 import type { Types } from '@adyen/api-library'
-import type {
-  PaymentSessionDTO,
-  PaymentSessionStatus,
-} from '@medusajs/framework/types'
+import type { PaymentSessionDTO } from '@medusajs/framework/types'
 import {
   ContainerRegistrationKeys,
   MedusaError,
   Modules,
+  PaymentSessionStatus,
 } from '@medusajs/framework/utils'
 import {
   createStep,
@@ -73,7 +71,7 @@ const authorisationFailedStepInvoke = async (
 
   const paymentSessionToUpdate = {
     ...originalPaymentSession,
-    status: 'error' as PaymentSessionStatus,
+    status: PaymentSessionStatus.ERROR,
   }
 
   await paymentService.updatePayment(paymentToUpdate, context)
