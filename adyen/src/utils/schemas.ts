@@ -44,8 +44,8 @@ export const EventSchema = z.object({
   date: z.string(),
   id: z.string(),
   merchantReference: z.string(),
+  message: z.string().optional(),
   name: EventNameEnumSchema,
-  notes: z.string().optional(),
   providerReference: z.string(),
   status: EventStatusEnumSchema,
 })
@@ -54,5 +54,5 @@ export const DataSchema = z.object({
   amount: AmountSchema,
   events: z.array(EventSchema).optional(),
   reference: z.string(),
-  webhook: z.boolean().optional(),
+  webhook: EventSchema.optional(),
 })

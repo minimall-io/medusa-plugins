@@ -26,7 +26,7 @@ const authorisationFailedStepInvoke = async (
     merchantReference,
     pspReference: providerReference,
     eventDate: date,
-    reason: notes,
+    reason: message,
   } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -58,8 +58,8 @@ const authorisationFailedStepInvoke = async (
     date,
     id: merchantReference,
     merchantReference,
+    message,
     name: 'AUTHORISATION',
-    notes,
     providerReference,
     status: 'FAILED',
   })

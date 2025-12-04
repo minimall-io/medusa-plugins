@@ -411,7 +411,9 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const id = reference
     const idempotencyKey = `${reference}_cancellation`
 
+    // Currently not used due to the Payment Module's bug.
     if (webhook) {
+      dataManager.setEvent({ ...webhook, id })
       dataManager.setData({ webhook: undefined })
       const data = dataManager.getData()
       const output = { data }
@@ -468,6 +470,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     }
 
     if (webhook) {
+      dataManager.setEvent({ ...webhook, id })
       dataManager.setData({ webhook: undefined })
       const data = dataManager.getData()
       const output = { data }
@@ -525,6 +528,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     }
 
     if (webhook) {
+      dataManager.setEvent({ ...webhook, id })
       dataManager.setData({ webhook: undefined })
       const data = dataManager.getData()
       const output = { data }
