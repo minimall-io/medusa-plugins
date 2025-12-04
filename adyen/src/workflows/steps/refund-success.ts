@@ -142,7 +142,7 @@ const refundSuccessStepCompensate = async (
     context,
   )
   logging.debug(
-    `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
+    `${workflowId}/${stepName}/compensate/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
 
   const originalDataManager = PaymentDataManager(originalPayment.data)
