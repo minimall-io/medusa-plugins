@@ -1,4 +1,5 @@
 import type { Types } from '@adyen/api-library'
+import type { PaymentCollectionDTO } from '@medusajs/framework/types'
 import {
   MathBN,
   Modules,
@@ -21,7 +22,7 @@ export const synchronizePaymentCollectionStepId =
 const synchronizePaymentCollectionStepCall = async (
   notification: NotificationRequestItem,
   { container, context }: StepExecutionContext,
-): Promise<StepResponse<undefined, NotificationRequestItem>> => {
+): Promise<StepResponse<PaymentCollectionDTO, NotificationRequestItem>> => {
   const { merchantReference } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
 
@@ -35,25 +36,26 @@ const synchronizePaymentCollectionStepCall = async (
 
   const paymentCollectionId = paymentSession.payment_collection_id
 
-  const paymentCollection = await paymentService.retrievePaymentCollection(
-    paymentCollectionId,
-    {
-      relations: [
-        'payment_sessions.amount',
-        'payment_sessions.raw_amount',
-        'payments.captures.amount',
-        'payments.captures.raw_amount',
-        'payments.refunds.amount',
-        'payments.refunds.raw_amount',
-      ],
-      select: ['amount', 'raw_amount', 'status', 'currency_code'],
-    },
-    context,
-  )
+  const originalPaymentCollection =
+    await paymentService.retrievePaymentCollection(
+      paymentCollectionId,
+      {
+        relations: [
+          'payment_sessions.amount',
+          'payment_sessions.raw_amount',
+          'payments.captures.amount',
+          'payments.captures.raw_amount',
+          'payments.refunds.amount',
+          'payments.refunds.raw_amount',
+        ],
+        select: ['amount', 'raw_amount', 'status', 'currency_code'],
+      },
+      context,
+    )
 
-  const paymentSessions = paymentCollection.payment_sessions ?? []
-  const captures = flatMap(paymentCollection.payments, 'captures') ?? []
-  const refunds = flatMap(paymentCollection.payments, 'refunds') ?? []
+  const paymentSessions = originalPaymentCollection.payment_sessions ?? []
+  const captures = flatMap(originalPaymentCollection.payments, 'captures') ?? []
+  const refunds = flatMap(originalPaymentCollection.payments, 'refunds') ?? []
 
   const authorizedAmount = MathBN.add(
     ...map(
@@ -75,11 +77,11 @@ const synchronizePaymentCollectionStepCall = async (
     status = MathBN.gte(
       roundToCurrencyPrecision(
         authorizedAmount,
-        paymentCollection.currency_code,
+        originalPaymentCollection.currency_code,
       ),
       roundToCurrencyPrecision(
-        paymentCollection.amount,
-        paymentCollection.currency_code,
+        originalPaymentCollection.amount,
+        originalPaymentCollection.currency_code,
       ),
     )
       ? PaymentCollectionStatus.AUTHORIZED
@@ -88,10 +90,13 @@ const synchronizePaymentCollectionStepCall = async (
 
   if (
     MathBN.gte(
-      roundToCurrencyPrecision(capturedAmount, paymentCollection.currency_code),
       roundToCurrencyPrecision(
-        paymentCollection.amount,
-        paymentCollection.currency_code,
+        capturedAmount,
+        originalPaymentCollection.currency_code,
+      ),
+      roundToCurrencyPrecision(
+        originalPaymentCollection.amount,
+        originalPaymentCollection.currency_code,
       ),
     )
   ) {
@@ -113,8 +118,24 @@ const synchronizePaymentCollectionStepCall = async (
     context,
   )
 
-  return new StepResponse<undefined, NotificationRequestItem>(
-    undefined,
+  const newPaymentCollection = await paymentService.retrievePaymentCollection(
+    paymentCollectionId,
+    {
+      relations: [
+        'payment_sessions.amount',
+        'payment_sessions.raw_amount',
+        'payments.captures.amount',
+        'payments.captures.raw_amount',
+        'payments.refunds.amount',
+        'payments.refunds.raw_amount',
+      ],
+      select: ['amount', 'raw_amount', 'status', 'currency_code'],
+    },
+    context,
+  )
+
+  return new StepResponse<PaymentCollectionDTO, NotificationRequestItem>(
+    newPaymentCollection,
     notification,
   )
 }
