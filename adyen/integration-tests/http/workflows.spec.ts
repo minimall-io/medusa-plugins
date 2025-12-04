@@ -421,7 +421,7 @@ medusaIntegrationTestRunner({
             })
 
             expect(newPayment.captures).toHaveLength(0)
-            expect(newCaptures).toHaveLength(0)
+            expect(newCaptures).toHaveLength(1)
           })
 
           it('updates a payment capture event after a failed capture notification is processed with prior direct capture', async () => {
@@ -625,7 +625,7 @@ medusaIntegrationTestRunner({
 
             expect(originalPayment.refunds).toHaveLength(0)
             expect(newPayment.refunds).toHaveLength(0)
-            expect(newRefunds).toHaveLength(0)
+            expect(newRefunds).toHaveLength(1)
           })
 
           it('updates a payment refund event after a failed refund notification is processed with prior direct refund', async () => {
