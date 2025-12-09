@@ -12,13 +12,7 @@ import type {
 import { Modules } from '@medusajs/framework/utils'
 import { medusaIntegrationTestRunner } from '@medusajs/test-utils'
 import { filter } from 'lodash'
-import {
-  getAmount,
-  getCardDetails,
-  getCurrencyCode,
-  getCustomer,
-  getProviderId,
-} from './fixtures'
+import { getCardDetails, getCustomer, getProviderId } from './fixtures'
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -39,9 +33,7 @@ medusaIntegrationTestRunner({
       beforeAll(async () => {
         container = getContainer()
         paymentService = container.resolve(Modules.PAYMENT)
-        const currency_code = getCurrencyCode()
-        const amount = getAmount()
-        collectionInput = { amount, currency_code }
+        collectionInput = { amount: 100.0, currency_code: 'usd' }
         provider_id = getProviderId()
         customer = getCustomer()
         encryptedCardDetails = getCardDetails()
@@ -520,9 +512,8 @@ medusaIntegrationTestRunner({
         it('returns updated payment data property when refundPayment is called', async () => {
           await paymentService.capturePayment({ payment_id: payment.id })
 
-          const totalAmount = Number(collection.amount)
-          const ten = 10
-          const remainingAmount = totalAmount - ten
+          const ten = 10.0
+          const remainingAmount = 90.0
 
           /**
            * As of this writing, the payment module's refundPayment method,

@@ -2,7 +2,6 @@ import { Types } from '@adyen/api-library'
 import type {
   IPaymentModuleService,
   MedusaContainer,
-  PaymentCustomerDTO,
   PaymentSessionDTO,
 } from '@medusajs/framework/types'
 import {
@@ -16,10 +15,7 @@ import { OrchestrationUtils } from '@medusajs/utils'
 import { filter } from 'lodash'
 import { processNotificationWorkflow } from '../../src/workflows'
 import {
-  getAmount,
   getCardDetails,
-  getCurrencyCode,
-  getCustomer,
   getNotificationRequestItem,
   getProviderId,
 } from './fixtures'
@@ -41,20 +37,16 @@ medusaIntegrationTestRunner({
       let currency: string
       let provider_id: string
       let reference: string
-      let customer: PaymentCustomerDTO
       let encryptedCardDetails: Types.checkout.CardDetails
       let session: PaymentSessionDTO
 
       beforeAll(async () => {
         container = getContainer()
         paymentService = container.resolve(Modules.PAYMENT)
-        const currency_code = getCurrencyCode()
-        const sourceAmount = getAmount()
-        collectionInput = { amount: sourceAmount, currency_code }
-        amount = sourceAmount * 100
-        currency = currency_code.toUpperCase()
+        collectionInput = { amount: 100.0, currency_code: 'usd' }
+        amount = 10000
+        currency = 'USD'
         provider_id = getProviderId()
-        customer = getCustomer()
         encryptedCardDetails = getCardDetails()
       })
 
@@ -846,8 +838,8 @@ medusaIntegrationTestRunner({
             )
             expect(cancelledSession.status).toBe(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is becuase the Payment Module's bug.
-            expect(newSession.status).toBe(PaymentSessionStatus.AUTHORIZED)
+            ) // This is becuase the Payment Module's bug. The session is not updated after the cancelPayment call.
+            expect(newSession.status).toBe(PaymentSessionStatus.CANCELED)
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(cancelledSession.payment?.canceled_at).toBeDefined()
             expect(newSession.payment?.canceled_at).toBeDefined()
@@ -970,8 +962,8 @@ medusaIntegrationTestRunner({
             )
             expect(cancelledSession.status).toBe(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is becuase the Payment Module's bug.
-            expect(newSession.status).toBe(PaymentSessionStatus.AUTHORIZED)
+            ) // This is becuase the Payment Module's bug. The session is not updated after the cancelPayment call.
+            expect(newSession.status).toBe(PaymentSessionStatus.CANCELED)
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(cancelledSession.payment?.canceled_at).toBeDefined()
             expect(newSession.payment?.canceled_at).toBeDefined()
