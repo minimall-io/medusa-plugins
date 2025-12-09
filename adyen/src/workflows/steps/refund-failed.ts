@@ -74,7 +74,7 @@ const refundFailedStepInvoke = async (
   dataManager.setEvent({
     amount: { currency, value },
     date,
-    id: originalDataRefund?.id ?? 'MISSING',
+    id: 'MISSING',
     merchantReference,
     message,
     name: 'REFUND',

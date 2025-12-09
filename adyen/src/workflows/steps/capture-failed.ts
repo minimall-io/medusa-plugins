@@ -74,7 +74,7 @@ const captureFailedStepInvoke = async (
   dataManager.setEvent({
     amount: { currency, value },
     date,
-    id: originalDataCapture?.id ?? 'MISSING',
+    id: 'MISSING',
     merchantReference,
     message,
     name: 'CAPTURE',
