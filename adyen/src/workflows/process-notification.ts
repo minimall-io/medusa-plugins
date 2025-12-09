@@ -18,6 +18,7 @@ import {
   refundFailedStep,
   refundSuccessStep,
   synchronizePaymentCollectionStep,
+  synchronizePaymentSessionStep,
 } from './steps'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
@@ -123,6 +124,7 @@ export const processNotificationWorkflow = createWorkflow(
       refundFailedStep(input)
     })
 
+    synchronizePaymentSessionStep(input)
     synchronizePaymentCollectionStep(input)
 
     const notificationProcessed = createHook('notificationProcessed', input)

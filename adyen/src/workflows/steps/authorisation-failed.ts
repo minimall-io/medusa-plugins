@@ -1,10 +1,9 @@
 import type { Types } from '@adyen/api-library'
-import type { PaymentSessionDTO } from '@medusajs/framework/types'
+import type { PaymentDTO } from '@medusajs/framework/types'
 import {
   ContainerRegistrationKeys,
   MedusaError,
   Modules,
-  PaymentSessionStatus,
 } from '@medusajs/framework/utils'
 import {
   createStep,
@@ -20,7 +19,7 @@ export const authorisationFailedStepId = 'authorisation-failed-step'
 const authorisationFailedStepInvoke = async (
   notification: NotificationRequestItem,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<PaymentSessionDTO, PaymentSessionDTO>> => {
+): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
   const {
     amount: { currency, value },
     merchantReference,
@@ -38,18 +37,16 @@ const authorisationFailedStepInvoke = async (
     )
   }
 
-  const originalPaymentSession = await paymentService.retrievePaymentSession(
-    merchantReference,
+  const [originalPayment] = await paymentService.listPayments(
     {
-      relations: ['payment'],
+      payment_session_id: merchantReference,
     },
+    undefined,
     context,
   )
   logging.debug(
-    `${workflowId}/${stepName}/invoke/originalPaymentSession ${JSON.stringify(originalPaymentSession, null, 2)}`,
+    `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
-
-  const originalPayment = originalPaymentSession.payment!
 
   const dataManager = PaymentDataManager(originalPayment.data)
 
@@ -69,42 +66,29 @@ const authorisationFailedStepInvoke = async (
     id: originalPayment.id,
   }
 
-  const paymentSessionToUpdate = {
-    ...originalPaymentSession,
-    status: PaymentSessionStatus.ERROR,
-  }
-
   await paymentService.updatePayment(paymentToUpdate, context)
-  await paymentService.updatePaymentSession(paymentSessionToUpdate, context)
 
-  const newPaymentSession = await paymentService.retrievePaymentSession(
-    originalPaymentSession.id,
-    {
-      relations: ['payment'],
-    },
+  const newPayment = await paymentService.retrievePayment(
+    originalPayment.id,
+    undefined,
     context,
   )
   logging.debug(
-    `${workflowId}/${stepName}/invoke/newPaymentSession ${JSON.stringify(newPaymentSession, null, 2)}`,
+    `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
 
-  return new StepResponse<PaymentSessionDTO, PaymentSessionDTO>(
-    newPaymentSession,
-    originalPaymentSession,
-  )
+  return new StepResponse<PaymentDTO, PaymentDTO>(newPayment, originalPayment)
 }
 
 const authorisationFailedStepCompensate = async (
-  originalPaymentSession: PaymentSessionDTO,
+  originalPayment: PaymentDTO,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<PaymentSessionDTO>> => {
+): Promise<StepResponse<PaymentDTO>> => {
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
   logging.debug(
-    `${workflowId}/${stepName}/compensate/originalPaymentSession ${JSON.stringify(originalPaymentSession, null, 2)}`,
+    `${workflowId}/${stepName}/compensate/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
   )
-
-  const originalPayment = originalPaymentSession.payment!
 
   const dataManager = PaymentDataManager(originalPayment.data)
 
@@ -114,20 +98,17 @@ const authorisationFailedStepCompensate = async (
   }
 
   await paymentService.updatePayment(paymentToUpdate, context)
-  await paymentService.updatePaymentSession(originalPaymentSession, context)
 
-  const restoredPaymentSession = await paymentService.retrievePaymentSession(
-    originalPaymentSession.id,
-    {
-      relations: ['payment'],
-    },
+  const restoredPayment = await paymentService.retrievePayment(
+    originalPayment.id,
+    undefined,
     context,
   )
   logging.debug(
-    `${workflowId}/${stepName}/compensate/restoredPaymentSession ${JSON.stringify(restoredPaymentSession, null, 2)}`,
+    `${workflowId}/${stepName}/compensate/restoredPayment ${JSON.stringify(restoredPayment, null, 2)}`,
   )
 
-  return new StepResponse<PaymentSessionDTO>(restoredPaymentSession)
+  return new StepResponse<PaymentDTO>(restoredPayment)
 }
 
 const authorisationFailedStep = createStep(

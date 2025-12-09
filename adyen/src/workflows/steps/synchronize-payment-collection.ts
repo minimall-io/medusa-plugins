@@ -1,4 +1,4 @@
-import type { Types } from '@adyen/api-library'
+import { Types } from '@adyen/api-library'
 import type { PaymentCollectionDTO } from '@medusajs/framework/types'
 import {
   MathBN,
@@ -15,6 +15,8 @@ import { filter, flatMap, map } from 'lodash'
 import { roundToCurrencyPrecision } from '../../utils/formatters'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
+const EventCodeEnum = Types.notification.NotificationRequestItem.EventCodeEnum
+const SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
 
 export const synchronizePaymentCollectionStepId =
   'synchronize-payment-collection-step'
@@ -23,8 +25,13 @@ const synchronizePaymentCollectionStepCall = async (
   notification: NotificationRequestItem,
   { container, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentCollectionDTO, NotificationRequestItem>> => {
-  const { merchantReference } = notification
+  const { merchantReference, eventCode, success } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
+
+  const isCancellation =
+    eventCode === EventCodeEnum.Cancellation ||
+    eventCode === EventCodeEnum.TechnicalCancel
+  const isCancellationSuccess = isCancellation && success === SuccessEnum.True
 
   const paymentSession = await paymentService.retrievePaymentSession(
     merchantReference,
@@ -86,6 +93,14 @@ const synchronizePaymentCollectionStepCall = async (
     )
       ? PaymentCollectionStatus.AUTHORIZED
       : PaymentCollectionStatus.PARTIALLY_AUTHORIZED
+  }
+
+  if (isCancellationSuccess) {
+    status = PaymentCollectionStatus.CANCELED
+  }
+
+  if (MathBN.gt(capturedAmount, 0)) {
+    status = PaymentCollectionStatus.PARTIALLY_CAPTURED
   }
 
   if (
