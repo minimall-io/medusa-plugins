@@ -31,6 +31,7 @@ const synchronizePaymentSessionStepCall = async (
   const originalPayment = originalPaymentSession.payment
 
   let status = PaymentSessionStatus.PENDING
+  let authorized_at = originalPaymentSession.authorized_at
 
   if (originalPayment) {
     status = PaymentSessionStatus.AUTHORIZED
@@ -38,6 +39,7 @@ const synchronizePaymentSessionStepCall = async (
     const authorisation = dataManager.getAuthorisation()
     if (authorisation?.status === 'FAILED') {
       status = PaymentSessionStatus.ERROR
+      authorized_at = undefined
     }
   }
 
@@ -51,6 +53,7 @@ const synchronizePaymentSessionStepCall = async (
 
   const paymentSessionToUpdate = {
     ...originalPaymentSession,
+    authorized_at,
     status,
   }
 
