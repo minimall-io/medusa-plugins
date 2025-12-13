@@ -1,6 +1,10 @@
 import type { Types } from '@adyen/api-library'
 import type { PaymentSessionDTO } from '@medusajs/framework/types'
-import { Modules, PaymentSessionStatus } from '@medusajs/framework/utils'
+import {
+  ContainerRegistrationKeys,
+  Modules,
+  PaymentSessionStatus,
+} from '@medusajs/framework/utils'
 import {
   createStep,
   type StepExecutionContext,
@@ -15,10 +19,11 @@ export const synchronizePaymentSessionStepId =
 
 const synchronizePaymentSessionStepCall = async (
   notification: NotificationRequestItem,
-  { container, context }: StepExecutionContext,
+  { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentSessionDTO, NotificationRequestItem>> => {
   const { merchantReference } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
+  const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
   const originalPaymentSession = await paymentService.retrievePaymentSession(
     merchantReference,
@@ -26,6 +31,9 @@ const synchronizePaymentSessionStepCall = async (
       relations: ['payment'],
     },
     context,
+  )
+  logging.debug(
+    `${workflowId}/${stepName}/call/originalPaymentSession ${JSON.stringify(originalPaymentSession, null, 2)}`,
   )
 
   const originalPayment = originalPaymentSession.payment
@@ -65,6 +73,9 @@ const synchronizePaymentSessionStepCall = async (
       relations: ['payment'],
     },
     context,
+  )
+  logging.debug(
+    `${workflowId}/${stepName}/call/newPaymentSession ${JSON.stringify(newPaymentSession, null, 2)}`,
   )
 
   return new StepResponse<PaymentSessionDTO, NotificationRequestItem>(

@@ -1,6 +1,7 @@
 import { Types } from '@adyen/api-library'
 import type { PaymentCollectionDTO } from '@medusajs/framework/types'
 import {
+  ContainerRegistrationKeys,
   MathBN,
   Modules,
   PaymentCollectionStatus,
@@ -23,10 +24,11 @@ export const synchronizePaymentCollectionStepId =
 
 const synchronizePaymentCollectionStepCall = async (
   notification: NotificationRequestItem,
-  { container, context }: StepExecutionContext,
+  { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentCollectionDTO, NotificationRequestItem>> => {
   const { merchantReference, eventCode, success } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
+  const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
   const isCancellation =
     eventCode === EventCodeEnum.Cancellation ||
@@ -39,6 +41,9 @@ const synchronizePaymentCollectionStepCall = async (
       select: ['payment_collection_id'],
     },
     context,
+  )
+  logging.debug(
+    `${workflowId}/${stepName}/call/paymentSession ${JSON.stringify(paymentSession, null, 2)}`,
   )
 
   const paymentCollectionId = paymentSession.payment_collection_id
@@ -59,6 +64,9 @@ const synchronizePaymentCollectionStepCall = async (
       },
       context,
     )
+  logging.debug(
+    `${workflowId}/${stepName}/call/originalPaymentCollection ${JSON.stringify(originalPaymentCollection, null, 2)}`,
+  )
 
   const paymentSessions = originalPaymentCollection.payment_sessions ?? []
   const captures = flatMap(originalPaymentCollection.payments, 'captures') ?? []
@@ -147,6 +155,9 @@ const synchronizePaymentCollectionStepCall = async (
       select: ['amount', 'raw_amount', 'status', 'currency_code'],
     },
     context,
+  )
+  logging.debug(
+    `${workflowId}/${stepName}/call/newPaymentCollection ${JSON.stringify(newPaymentCollection, null, 2)}`,
   )
 
   return new StepResponse<PaymentCollectionDTO, NotificationRequestItem>(
