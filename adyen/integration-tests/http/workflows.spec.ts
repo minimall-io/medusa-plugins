@@ -659,7 +659,16 @@ medusaIntegrationTestRunner({
 
         describe('Test processing capture notification', () => {
           it('updates all payment data models to reflect the change after a success capture notification is processed without prior direct capture', async () => {
-            const payment = await authorizePaymentSession(session.id)
+            await authorizePaymentSession(session.id)
+
+            const authorizedCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const authorizedSession =
+              await paymentService.retrievePaymentSession(session.id, {
+                relations: ['payment', 'payment.captures'],
+              })
 
             const pspReference = 'pspReference'
 
@@ -677,40 +686,77 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newPayment = await paymentService.retrievePayment(
-              payment.id,
+            const newCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const newSession = await paymentService.retrievePaymentSession(
+              session.id,
               {
-                relations: ['captures'],
+                relations: ['payment', 'payment.captures'],
               },
             )
-            const newCaptures = filter(newPayment.data?.events, {
+
+            const newCaptures = filter(newSession.payment?.data?.events, {
               name: 'CAPTURE',
             })
 
-            expect(newPayment.captures).toHaveLength(1)
+            expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            expect(authorizedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(newSession.status).toEqual(PaymentSessionStatus.CAPTURED)
+            expect(authorizedSession.payment?.captured_at).toBeNull()
+            expect(newSession.payment?.captured_at).toBeDefined()
+            expect(authorizedSession.payment?.captures).toHaveLength(0)
+            expect(newSession.payment?.captures).toHaveLength(1)
             expect(newCaptures).toHaveLength(1)
-            expect(newCaptures[0].providerReference).toBe(pspReference)
-            expect(newCaptures[0].merchantReference).toBe(reference)
-            expect(newCaptures[0].amount.value).toBe(amount)
-            expect(newCaptures[0].amount.currency).toBe(currency)
-            expect(newCaptures[0].status).toBe('SUCCEEDED')
+            expect(newCaptures[0].id).toEqual(
+              newSession.payment?.captures?.[0].id,
+            )
+            expect(newCaptures[0].providerReference).toEqual(pspReference)
+            expect(newCaptures[0].merchantReference).toEqual(reference)
+            expect(newCaptures[0].amount.value).toEqual(amount)
+            expect(newCaptures[0].amount.currency).toEqual(currency)
+            expect(newCaptures[0].status).toEqual('SUCCEEDED')
           })
 
           it('updates all payment data models to reflect the change after a success capture notification is processed with prior direct capture', async () => {
             const payment = await authorizePaymentSession(session.id)
 
+            const authorizedCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const authorizedSession =
+              await paymentService.retrievePaymentSession(session.id, {
+                relations: ['payment', 'payment.captures'],
+              })
+
             await paymentService.capturePayment({ payment_id: payment.id })
 
-            const originalPayment = await paymentService.retrievePayment(
-              payment.id,
+            const capturedCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const capturedSession = await paymentService.retrievePaymentSession(
+              session.id,
               {
-                relations: ['captures'],
+                relations: ['payment', 'payment.captures'],
               },
             )
 
-            const originalCaptures = filter(originalPayment.data?.events, {
-              name: 'CAPTURE',
-            })
+            const originalCaptures = filter(
+              capturedSession.payment?.data?.events,
+              {
+                name: 'CAPTURE',
+              },
+            )
 
             const notification = getNotificationRequestItem(
               originalCaptures[0].providerReference,
@@ -726,26 +772,74 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newPayment = await paymentService.retrievePayment(
-              payment.id,
+            const newCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const newSession = await paymentService.retrievePaymentSession(
+              session.id,
               {
-                relations: ['captures'],
+                relations: ['payment', 'payment.captures'],
               },
             )
-            const newCaptures = filter(newPayment.data?.events, {
+
+            const newCaptures = filter(newSession.payment?.data?.events, {
               name: 'CAPTURE',
             })
 
-            expect(originalCaptures).toHaveLength(1)
+            expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(capturedCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            expect(authorizedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(capturedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            ) // This is because of the Payment Module's bug.
+            expect(newSession.status).toEqual(PaymentSessionStatus.CAPTURED)
+            expect(authorizedSession.payment?.captured_at).toBeNull()
+            expect(capturedSession.payment?.captured_at).toBeDefined()
+            expect(newSession.payment?.captured_at).toBeDefined()
+            expect(authorizedSession.payment?.captures).toHaveLength(0)
+            expect(capturedSession.payment?.captures).toHaveLength(1)
+            expect(newSession.payment?.captures).toHaveLength(1)
             expect(newCaptures).toHaveLength(1)
-            expect(originalPayment.captures).toHaveLength(1)
-            expect(newPayment.captures).toHaveLength(1)
-            expect(originalCaptures[0].status).toBe('REQUESTED')
-            expect(newCaptures[0].status).toBe('SUCCEEDED')
+            expect(newCaptures[0].id).toEqual(
+              newSession.payment?.captures?.[0].id,
+            )
+            expect(newCaptures[0].providerReference).toEqual(
+              originalCaptures[0].providerReference,
+            )
+            expect(newCaptures[0].merchantReference).toEqual(
+              originalCaptures[0].merchantReference,
+            )
+            expect(newCaptures[0].amount.value).toEqual(
+              originalCaptures[0].amount.value,
+            )
+            expect(newCaptures[0].amount.currency).toEqual(
+              originalCaptures[0].amount.currency,
+            )
+            expect(originalCaptures[0].status).toEqual('REQUESTED')
+            expect(newCaptures[0].status).toEqual('SUCCEEDED')
           })
 
           it('updates all payment data models to reflect the change after a failed capture notification is processed without prior direct capture', async () => {
-            const payment = await authorizePaymentSession(session.id)
+            await authorizePaymentSession(session.id)
+
+            const authorizedCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const authorizedSession =
+              await paymentService.retrievePaymentSession(session.id, {
+                relations: ['payment', 'payment.captures'],
+              })
 
             const pspReference = 'pspReference'
 
@@ -763,22 +857,55 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newPayment = await paymentService.retrievePayment(
-              payment.id,
+            const newCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const newSession = await paymentService.retrievePaymentSession(
+              session.id,
               {
-                relations: ['captures'],
+                relations: ['payment', 'payment.captures'],
               },
             )
-            const newCaptures = filter(newPayment.data?.events, {
+
+            const newCaptures = filter(newSession.payment?.data?.events, {
               name: 'CAPTURE',
             })
 
-            expect(newPayment.captures).toHaveLength(0)
+            expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(authorizedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
+            expect(authorizedSession.payment?.captured_at).toBeNull()
+            expect(newSession.payment?.captured_at).toBeNull()
+            expect(authorizedSession.payment?.captures).toHaveLength(0)
+            expect(newSession.payment?.captures).toHaveLength(0)
             expect(newCaptures).toHaveLength(1)
+            expect(newCaptures[0].id).toEqual('MISSING')
+            expect(newCaptures[0].providerReference).toEqual(pspReference)
+            expect(newCaptures[0].merchantReference).toEqual(reference)
+            expect(newCaptures[0].amount.value).toEqual(amount)
+            expect(newCaptures[0].amount.currency).toEqual(currency)
+            expect(newCaptures[0].status).toEqual('FAILED')
           })
 
           it('updates all payment data models to reflect the change after a success capture failed notification is processed without prior direct capture', async () => {
-            const payment = await authorizePaymentSession(session.id)
+            await authorizePaymentSession(session.id)
+
+            const authorizedCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const authorizedSession =
+              await paymentService.retrievePaymentSession(session.id, {
+                relations: ['payment', 'payment.captures'],
+              })
 
             const pspReference = 'pspReference'
 
@@ -796,35 +923,75 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newPayment = await paymentService.retrievePayment(
-              payment.id,
+            const newCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const newSession = await paymentService.retrievePaymentSession(
+              session.id,
               {
-                relations: ['captures'],
+                relations: ['payment', 'payment.captures'],
               },
             )
-            const newCaptures = filter(newPayment.data?.events, {
+
+            const newCaptures = filter(newSession.payment?.data?.events, {
               name: 'CAPTURE',
             })
 
-            expect(newPayment.captures).toHaveLength(0)
+            expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(authorizedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
+            expect(authorizedSession.payment?.captured_at).toBeNull()
+            expect(newSession.payment?.captured_at).toBeNull()
+            expect(authorizedSession.payment?.captures).toHaveLength(0)
+            expect(newSession.payment?.captures).toHaveLength(0)
             expect(newCaptures).toHaveLength(1)
+            expect(newCaptures[0].id).toEqual('MISSING')
+            expect(newCaptures[0].providerReference).toEqual(pspReference)
+            expect(newCaptures[0].merchantReference).toEqual(reference)
+            expect(newCaptures[0].amount.value).toEqual(amount)
+            expect(newCaptures[0].amount.currency).toEqual(currency)
+            expect(newCaptures[0].status).toEqual('FAILED')
           })
 
           it('updates all payment data models to reflect the change after a failed capture notification is processed with prior direct capture', async () => {
             const payment = await authorizePaymentSession(session.id)
 
+            const authorizedCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const authorizedSession =
+              await paymentService.retrievePaymentSession(session.id, {
+                relations: ['payment', 'payment.captures'],
+              })
+
             await paymentService.capturePayment({ payment_id: payment.id })
 
-            const originalPayment = await paymentService.retrievePayment(
-              payment.id,
+            const capturedCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const capturedSession = await paymentService.retrievePaymentSession(
+              session.id,
               {
-                relations: ['captures'],
+                relations: ['payment', 'payment.captures'],
               },
             )
 
-            const originalCaptures = filter(originalPayment.data?.events, {
-              name: 'CAPTURE',
-            })
+            const originalCaptures = filter(
+              capturedSession.payment?.data?.events,
+              {
+                name: 'CAPTURE',
+              },
+            )
 
             const notification = getNotificationRequestItem(
               originalCaptures[0].providerReference,
@@ -834,45 +1001,98 @@ medusaIntegrationTestRunner({
               EventCodeEnum.Capture,
               SuccessEnum.False,
             )
+
             const workflow = processNotificationWorkflow(container)
             await workflow.run({
               input: notification,
             })
 
-            const newPayment = await paymentService.retrievePayment(
-              payment.id,
+            const newCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const newSession = await paymentService.retrievePaymentSession(
+              session.id,
               {
-                relations: ['captures'],
+                relations: ['payment', 'payment.captures'],
               },
             )
 
-            const newCaptures = filter(newPayment.data?.events, {
+            const newCaptures = filter(newSession.payment?.data?.events, {
               name: 'CAPTURE',
             })
 
-            expect(originalPayment.captures).toHaveLength(1)
-            expect(newPayment.captures).toHaveLength(0)
-            expect(originalCaptures).toHaveLength(1)
+            expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(capturedCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(authorizedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(capturedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            ) // This is because of the Payment Module's bug.
+            expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
+            expect(authorizedSession.payment?.captured_at).toBeNull()
+            expect(capturedSession.payment?.captured_at).toBeDefined()
+            expect(newSession.payment?.captured_at).toBeNull()
+            expect(authorizedSession.payment?.captures).toHaveLength(0)
+            expect(capturedSession.payment?.captures).toHaveLength(1)
+            expect(newSession.payment?.captures).toHaveLength(0)
             expect(newCaptures).toHaveLength(1)
-            expect(originalCaptures[0].status).toBe('REQUESTED')
-            expect(newCaptures[0].status).toBe('FAILED')
+            expect(newCaptures[0].id).toEqual('MISSING')
+            expect(newCaptures[0].providerReference).toEqual(
+              originalCaptures[0].providerReference,
+            )
+            expect(newCaptures[0].merchantReference).toEqual(
+              originalCaptures[0].merchantReference,
+            )
+            expect(newCaptures[0].amount.value).toEqual(
+              originalCaptures[0].amount.value,
+            )
+            expect(newCaptures[0].amount.currency).toEqual(
+              originalCaptures[0].amount.currency,
+            )
+            expect(originalCaptures[0].status).toEqual('REQUESTED')
+            expect(newCaptures[0].status).toEqual('FAILED')
           })
 
           it('updates all payment data models to reflect the change after a success capture failed notification is processed with prior direct capture', async () => {
             const payment = await authorizePaymentSession(session.id)
 
+            const authorizedCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const authorizedSession =
+              await paymentService.retrievePaymentSession(session.id, {
+                relations: ['payment', 'payment.captures'],
+              })
+
             await paymentService.capturePayment({ payment_id: payment.id })
 
-            const originalPayment = await paymentService.retrievePayment(
-              payment.id,
+            const capturedCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const capturedSession = await paymentService.retrievePaymentSession(
+              session.id,
               {
-                relations: ['captures'],
+                relations: ['payment', 'payment.captures'],
               },
             )
 
-            const originalCaptures = filter(originalPayment.data?.events, {
-              name: 'CAPTURE',
-            })
+            const originalCaptures = filter(
+              capturedSession.payment?.data?.events,
+              {
+                name: 'CAPTURE',
+              },
+            )
 
             const notification = getNotificationRequestItem(
               originalCaptures[0].providerReference,
@@ -882,28 +1102,65 @@ medusaIntegrationTestRunner({
               EventCodeEnum.CaptureFailed,
               SuccessEnum.True,
             )
+
             const workflow = processNotificationWorkflow(container)
             await workflow.run({
               input: notification,
             })
 
-            const newPayment = await paymentService.retrievePayment(
-              payment.id,
+            const newCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const newSession = await paymentService.retrievePaymentSession(
+              session.id,
               {
-                relations: ['captures'],
+                relations: ['payment', 'payment.captures'],
               },
             )
 
-            const newCaptures = filter(newPayment.data?.events, {
+            const newCaptures = filter(newSession.payment?.data?.events, {
               name: 'CAPTURE',
             })
 
-            expect(originalPayment.captures).toHaveLength(1)
-            expect(newPayment.captures).toHaveLength(0)
-            expect(originalCaptures).toHaveLength(1)
+            expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(capturedCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(authorizedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(capturedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            ) // This is because of the Payment Module's bug.
+            expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
+            expect(authorizedSession.payment?.captured_at).toBeNull()
+            expect(capturedSession.payment?.captured_at).toBeDefined()
+            expect(newSession.payment?.captured_at).toBeNull()
+            expect(authorizedSession.payment?.captures).toHaveLength(0)
+            expect(capturedSession.payment?.captures).toHaveLength(1)
+            expect(newSession.payment?.captures).toHaveLength(0)
             expect(newCaptures).toHaveLength(1)
-            expect(originalCaptures[0].status).toBe('REQUESTED')
-            expect(newCaptures[0].status).toBe('FAILED')
+            expect(newCaptures[0].id).toEqual('MISSING')
+            expect(newCaptures[0].providerReference).toEqual(
+              originalCaptures[0].providerReference,
+            )
+            expect(newCaptures[0].merchantReference).toEqual(
+              originalCaptures[0].merchantReference,
+            )
+            expect(newCaptures[0].amount.value).toEqual(
+              originalCaptures[0].amount.value,
+            )
+            expect(newCaptures[0].amount.currency).toEqual(
+              originalCaptures[0].amount.currency,
+            )
+            expect(originalCaptures[0].status).toEqual('REQUESTED')
+            expect(newCaptures[0].status).toEqual('FAILED')
           })
         })
 
