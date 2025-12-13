@@ -101,8 +101,8 @@ medusaIntegrationTestRunner({
       })
 
       describe('Without Errors', () => {
-        describe('Test processing success cancellation notification', () => {
-          it('adds a cancellation data event to the data events property and updates the payment with new canceled_at date after a success cancellation notification is processed without prior direct cancellation', async () => {
+        describe('Test processing cancellation notification', () => {
+          it('updates all payment data models to reflect the change after a success cancellation notification is processed without prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
             const authorizedSession =
@@ -149,7 +149,54 @@ medusaIntegrationTestRunner({
             expect(newCancellations[0].status).toBe('SUCCEEDED')
           })
 
-          it('updates a cancellation data event after a success cancellation notification is processed with prior direct cancellation', async () => {
+          it('updates all payment data models to reflect the change after a success technical cancellation notification is processed without prior direct cancellation', async () => {
+            await authorizePaymentSession(session.id)
+
+            const authorizedSession =
+              await paymentService.retrievePaymentSession(session.id, {
+                relations: ['payment'],
+              })
+
+            const pspReference = 'pspReference'
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.TechnicalCancel,
+              SuccessEnum.True,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            await workflow.run({
+              input: notification,
+            })
+
+            const newSession = await paymentService.retrievePaymentSession(
+              session.id,
+              { relations: ['payment'] },
+            )
+
+            const newCancellations = filter(newSession.payment?.data?.events, {
+              name: 'CANCELLATION',
+            })
+
+            expect(authorizedSession.status).toBe(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(newSession.status).toBe(PaymentSessionStatus.CANCELED)
+            expect(authorizedSession.payment?.canceled_at).toBeNull()
+            expect(newSession.payment?.canceled_at).toBeDefined()
+            expect(newCancellations).toHaveLength(1)
+            expect(newCancellations[0].providerReference).toBe(pspReference)
+            expect(newCancellations[0].merchantReference).toBe(reference)
+            expect(newCancellations[0].amount.value).toBe(amount)
+            expect(newCancellations[0].amount.currency).toBe(currency)
+            expect(newCancellations[0].status).toBe('SUCCEEDED')
+          })
+
+          it('updates all payment data models to reflect the change after a success cancellation notification is processed with prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
             const authorizedSession =
@@ -205,10 +252,65 @@ medusaIntegrationTestRunner({
             expect(newCancellations).toHaveLength(1)
             expect(newCancellations[0].status).toBe('SUCCEEDED')
           })
-        })
 
-        describe('Test processing failed cancellation notification', () => {
-          it('adds a cancellation data event to the data events property after a failed cancellation notification is processed without prior direct cancellation', async () => {
+          it('updates all payment data models to reflect the change after a success technical cancellation notification is processed with prior direct cancellation', async () => {
+            await authorizePaymentSession(session.id)
+
+            const authorizedSession =
+              await paymentService.retrievePaymentSession(session.id, {
+                relations: ['payment'],
+              })
+
+            await paymentService.cancelPayment(authorizedSession.payment!.id)
+
+            const cancelledSession =
+              await paymentService.retrievePaymentSession(session.id, {
+                relations: ['payment'],
+              })
+
+            const pspReference = 'pspReference'
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.TechnicalCancel,
+              SuccessEnum.True,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            await workflow.run({
+              input: notification,
+            })
+
+            const newSession = await paymentService.retrievePaymentSession(
+              session.id,
+              { relations: ['payment'] },
+            )
+
+            const newCancellations = filter(newSession.payment?.data?.events, {
+              name: 'CANCELLATION',
+            })
+
+            expect(authorizedSession.status).toBe(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(cancelledSession.status).toBe(
+              PaymentSessionStatus.AUTHORIZED,
+            ) // This is becuase the Payment Module's bug.
+            expect(newSession.status).toBe(PaymentSessionStatus.CANCELED)
+            expect(authorizedSession.payment?.canceled_at).toBeNull()
+            expect(cancelledSession.payment?.canceled_at).toBeDefined()
+            expect(newSession.payment?.canceled_at).toBeDefined()
+            expect(newSession.payment?.canceled_at).toEqual(
+              cancelledSession.payment?.canceled_at,
+            )
+            expect(newCancellations).toHaveLength(1)
+            expect(newCancellations[0].status).toBe('SUCCEEDED')
+          })
+
+          it('updates all payment data models to reflect the change after a failed cancellation notification is processed without prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
             const authorizedSession =
@@ -255,7 +357,54 @@ medusaIntegrationTestRunner({
             expect(newCancellations[0].status).toBe('FAILED')
           })
 
-          it('updates a cancellation data event after a failed cancellation notification is processed with prior direct cancellation', async () => {
+          it('updates all payment data models to reflect the change after a failed technical cancellation notification is processed without prior direct cancellation', async () => {
+            await authorizePaymentSession(session.id)
+
+            const authorizedSession =
+              await paymentService.retrievePaymentSession(session.id, {
+                relations: ['payment'],
+              })
+
+            const pspReference = 'pspReference'
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.TechnicalCancel,
+              SuccessEnum.False,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            await workflow.run({
+              input: notification,
+            })
+
+            const newSession = await paymentService.retrievePaymentSession(
+              session.id,
+              { relations: ['payment'] },
+            )
+
+            const newCancellations = filter(newSession.payment?.data?.events, {
+              name: 'CANCELLATION',
+            })
+
+            expect(authorizedSession.status).toBe(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(newSession.status).toBe(PaymentSessionStatus.AUTHORIZED)
+            expect(authorizedSession.payment?.canceled_at).toBeNull()
+            expect(newSession.payment?.canceled_at).toBeNull()
+            expect(newCancellations).toHaveLength(1)
+            expect(newCancellations[0].providerReference).toBe(pspReference)
+            expect(newCancellations[0].merchantReference).toBe(reference)
+            expect(newCancellations[0].amount.value).toBe(amount)
+            expect(newCancellations[0].amount.currency).toBe(currency)
+            expect(newCancellations[0].status).toBe('FAILED')
+          })
+
+          it('updates all payment data models to reflect the change after a failed cancellation notification is processed with prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
             const authorizedSession =
@@ -312,10 +461,68 @@ medusaIntegrationTestRunner({
             expect(newCancellations[0].amount.currency).toBe(currency)
             expect(newCancellations[0].status).toBe('FAILED')
           })
+
+          it('updates all payment data models to reflect the change after a failed technical cancellation notification is processed with prior direct cancellation', async () => {
+            await authorizePaymentSession(session.id)
+
+            const authorizedSession =
+              await paymentService.retrievePaymentSession(session.id, {
+                relations: ['payment'],
+              })
+
+            await paymentService.cancelPayment(authorizedSession.payment!.id)
+
+            const cancelledSession =
+              await paymentService.retrievePaymentSession(session.id, {
+                relations: ['payment'],
+              })
+
+            const pspReference = 'pspReference'
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.TechnicalCancel,
+              SuccessEnum.False,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            await workflow.run({
+              input: notification,
+            })
+
+            const newSession = await paymentService.retrievePaymentSession(
+              session.id,
+              { relations: ['payment'] },
+            )
+
+            const newCancellations = filter(newSession.payment?.data?.events, {
+              name: 'CANCELLATION',
+            })
+
+            expect(authorizedSession.status).toBe(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(cancelledSession.status).toBe(
+              PaymentSessionStatus.AUTHORIZED,
+            ) // This is becuase the Payment Module's bug.
+            expect(newSession.status).toBe(PaymentSessionStatus.AUTHORIZED)
+            expect(authorizedSession.payment?.canceled_at).toBeNull()
+            expect(cancelledSession.payment?.canceled_at).toBeDefined()
+            expect(newSession.payment?.canceled_at).toBeNull()
+            expect(newCancellations).toHaveLength(1)
+            expect(newCancellations[0].providerReference).toBe(pspReference)
+            expect(newCancellations[0].merchantReference).toBe(reference)
+            expect(newCancellations[0].amount.value).toBe(amount)
+            expect(newCancellations[0].amount.currency).toBe(currency)
+            expect(newCancellations[0].status).toBe('FAILED')
+          })
         })
 
-        describe('Test processing success capture notification', () => {
-          it('adds a payment capture event to the data events property after a success capture notification is processed without prior direct capture', async () => {
+        describe('Test processing capture notification', () => {
+          it('updates all payment data models to reflect the change after a success capture notification is processed without prior direct capture', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             const pspReference = 'pspReference'
@@ -353,7 +560,7 @@ medusaIntegrationTestRunner({
             expect(newCaptures[0].status).toBe('SUCCEEDED')
           })
 
-          it('updates a payment capture event after a success capture notification is processed with prior direct capture', async () => {
+          it('updates all payment data models to reflect the change after a success capture notification is processed with prior direct capture', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -400,10 +607,8 @@ medusaIntegrationTestRunner({
             expect(originalCaptures[0].status).toBe('REQUESTED')
             expect(newCaptures[0].status).toBe('SUCCEEDED')
           })
-        })
 
-        describe('Test processing failed capture notification', () => {
-          it('preserves the data events property after a failed capture notification is processed without prior direct capture', async () => {
+          it('updates all payment data models to reflect the change after a failed capture notification is processed without prior direct capture', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             const pspReference = 'pspReference'
@@ -436,7 +641,7 @@ medusaIntegrationTestRunner({
             expect(newCaptures).toHaveLength(1)
           })
 
-          it('updates a payment capture event after a failed capture notification is processed with prior direct capture', async () => {
+          it('updates all payment data models to reflect the change after a failed capture notification is processed with prior direct capture', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -485,8 +690,8 @@ medusaIntegrationTestRunner({
           })
         })
 
-        describe('Test processing success refund notification', () => {
-          it('adds a payment refund event to the data events property after a success refund notification is processed without prior direct refund', async () => {
+        describe('Test processing refund notification', () => {
+          it('updates all payment data models to reflect the change after a success refund notification is processed without prior direct refund', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -535,7 +740,7 @@ medusaIntegrationTestRunner({
             expect(newRefunds[0].status).toBe('SUCCEEDED')
           })
 
-          it('updates a payment refund event after a success refund notification is processed with prior direct refund', async () => {
+          it('updates all payment data models to reflect the change after a success refund notification is processed with prior direct refund', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -582,10 +787,8 @@ medusaIntegrationTestRunner({
             expect(originalRefunds[0].status).toBe('REQUESTED')
             expect(newRefunds[0].status).toBe('SUCCEEDED')
           })
-        })
 
-        describe('Test processing failed refund notification', () => {
-          it('preserves the data events property after a failed refund notification is processed without prior direct refund', async () => {
+          it('updates all payment data models to reflect the change after a failed refund notification is processed without prior direct refund', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -628,7 +831,7 @@ medusaIntegrationTestRunner({
             expect(newRefunds).toHaveLength(1)
           })
 
-          it('updates a payment refund event after a failed refund notification is processed with prior direct refund', async () => {
+          it('updates all payment data models to reflect the change after a failed refund notification is processed with prior direct refund', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -732,8 +935,8 @@ medusaIntegrationTestRunner({
           workflowDef.handlers_.set('notificationProcessed', handler)
         })
 
-        describe('Test processing success cancellation notification', () => {
-          it('preserves the original data property after a success cancellation notification processing fails without prior direct cancellation', async () => {
+        describe('Test processing cancellation notification', () => {
+          it('preserves the original state of the payment data models after a success cancellation notification processing fails without prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
             const authorizedSession =
@@ -786,7 +989,7 @@ medusaIntegrationTestRunner({
             expect(newCancellations).toHaveLength(0)
           })
 
-          it('restores initial payment state after a success cancellation notification processing fails with prior direct cancellation', async () => {
+          it('preserves the original state of the payment data models after a success cancellation notification processing fails with prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
             const authorizedSession =
@@ -853,10 +1056,8 @@ medusaIntegrationTestRunner({
             )
             expect(newCancellations).toHaveLength(0)
           })
-        })
 
-        describe('Test processing failed cancellation notification', () => {
-          it('preserves the original data property after a failed cancellation notification processing fails without prior direct cancellation', async () => {
+          it('preserves the original state of the payment data models after a failed cancellation notification processing fails without prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
             const authorizedSession =
@@ -909,7 +1110,7 @@ medusaIntegrationTestRunner({
             expect(newCancellations).toHaveLength(0)
           })
 
-          it('restores initial payment state after a failed cancellation notification processing fails with prior direct cancellation', async () => {
+          it('preserves the original state of the payment data models after a failed cancellation notification processing fails with prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
             const authorizedSession =
@@ -977,8 +1178,8 @@ medusaIntegrationTestRunner({
           })
         })
 
-        describe('Test processing success capture notification', () => {
-          it('preserves the original data property after a success capture notification processing fails without prior direct capture', async () => {
+        describe('Test processing capture notification', () => {
+          it('preserves the original state of the payment data models after a success capture notification processing fails without prior direct capture', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             const pspReference = 'pspReference'
@@ -1023,7 +1224,7 @@ medusaIntegrationTestRunner({
             expect(newCaptures).toHaveLength(0)
           })
 
-          it('restores initial payment state after a success capture notification processing fails with prior direct capture', async () => {
+          it('preserves the original state of the payment data models after a success capture notification processing fails with prior direct capture', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -1081,10 +1282,8 @@ medusaIntegrationTestRunner({
             expect(originalCaptures[0].status).toBe('REQUESTED')
             expect(newCaptures[0].status).toBe('REQUESTED')
           })
-        })
 
-        describe('Test processing failed capture notification', () => {
-          it('preserves the original data property after a failed capture notification processing fails without prior direct capture', async () => {
+          it('preserves the original state of the payment data models after a failed capture notification processing fails without prior direct capture', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             const pspReference = 'pspReference'
@@ -1129,7 +1328,7 @@ medusaIntegrationTestRunner({
             expect(newCaptures).toHaveLength(0)
           })
 
-          it('restores initial payment state after a failed capture notification processing fails with prior direct capture', async () => {
+          it('preserves the original state of the payment data models after a failed capture notification processing fails with prior direct capture', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -1189,8 +1388,8 @@ medusaIntegrationTestRunner({
           })
         })
 
-        describe('Test processing success refund notification', () => {
-          it('preserves the original data property after a success refund notification processing fails without prior direct refund', async () => {
+        describe('Test processing refund notification', () => {
+          it('preserves the original state of the payment data models after a success refund notification processing fails without prior direct refund', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -1245,7 +1444,7 @@ medusaIntegrationTestRunner({
             expect(newRefunds).toHaveLength(0)
           })
 
-          it('restores initial payment state after a success refund notification processing fails with prior direct refund', async () => {
+          it('preserves the original state of the payment data models after a success refund notification processing fails with prior direct refund', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -1304,10 +1503,8 @@ medusaIntegrationTestRunner({
             expect(originalRefunds[0].status).toBe('REQUESTED')
             expect(newRefunds[0].status).toBe('REQUESTED')
           })
-        })
 
-        describe('Test processing failed refund notification', () => {
-          it('preserves the original data property after a failed refund notification processing fails without prior direct refund', async () => {
+          it('preserves the original state of the payment data models after a failed refund notification processing fails without prior direct refund', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -1362,7 +1559,7 @@ medusaIntegrationTestRunner({
             expect(newRefunds).toHaveLength(0)
           })
 
-          it('restores initial payment state after a failed refund notification processing fails with prior direct refund', async () => {
+          it('preserves the original state of the payment data models after a failed refund notification processing fails with prior direct refund', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
