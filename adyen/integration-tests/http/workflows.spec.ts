@@ -641,6 +641,39 @@ medusaIntegrationTestRunner({
             expect(newCaptures).toHaveLength(1)
           })
 
+          it('updates all payment data models to reflect the change after a success capture failed notification is processed without prior direct capture', async () => {
+            const payment = await authorizePaymentSession(session.id)
+
+            const pspReference = 'pspReference'
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.CaptureFailed,
+              SuccessEnum.True,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            await workflow.run({
+              input: notification,
+            })
+
+            const newPayment = await paymentService.retrievePayment(
+              payment.id,
+              {
+                relations: ['captures'],
+              },
+            )
+            const newCaptures = filter(newPayment.data?.events, {
+              name: 'CAPTURE',
+            })
+
+            expect(newPayment.captures).toHaveLength(0)
+            expect(newCaptures).toHaveLength(1)
+          })
+
           it('updates all payment data models to reflect the change after a failed capture notification is processed with prior direct capture', async () => {
             const payment = await authorizePaymentSession(session.id)
 
@@ -664,6 +697,54 @@ medusaIntegrationTestRunner({
               originalCaptures[0].amount.currency,
               EventCodeEnum.Capture,
               SuccessEnum.False,
+            )
+            const workflow = processNotificationWorkflow(container)
+            await workflow.run({
+              input: notification,
+            })
+
+            const newPayment = await paymentService.retrievePayment(
+              payment.id,
+              {
+                relations: ['captures'],
+              },
+            )
+
+            const newCaptures = filter(newPayment.data?.events, {
+              name: 'CAPTURE',
+            })
+
+            expect(originalPayment.captures).toHaveLength(1)
+            expect(newPayment.captures).toHaveLength(0)
+            expect(originalCaptures).toHaveLength(1)
+            expect(newCaptures).toHaveLength(1)
+            expect(originalCaptures[0].status).toBe('REQUESTED')
+            expect(newCaptures[0].status).toBe('FAILED')
+          })
+
+          it('updates all payment data models to reflect the change after a success capture failed notification is processed with prior direct capture', async () => {
+            const payment = await authorizePaymentSession(session.id)
+
+            await paymentService.capturePayment({ payment_id: payment.id })
+
+            const originalPayment = await paymentService.retrievePayment(
+              payment.id,
+              {
+                relations: ['captures'],
+              },
+            )
+
+            const originalCaptures = filter(originalPayment.data?.events, {
+              name: 'CAPTURE',
+            })
+
+            const notification = getNotificationRequestItem(
+              originalCaptures[0].providerReference,
+              originalCaptures[0].merchantReference,
+              originalCaptures[0].amount.value,
+              originalCaptures[0].amount.currency,
+              EventCodeEnum.CaptureFailed,
+              SuccessEnum.True,
             )
             const workflow = processNotificationWorkflow(container)
             await workflow.run({

@@ -1,4 +1,4 @@
-import { Types } from '@adyen/api-library'
+import type { Types } from '@adyen/api-library'
 import type { PaymentCollectionDTO } from '@medusajs/framework/types'
 import {
   ContainerRegistrationKeys,
@@ -12,12 +12,10 @@ import {
   type StepExecutionContext,
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
-import { filter, flatMap, map } from 'lodash'
+import { every, filter, flatMap, map } from 'lodash'
 import { roundToCurrencyPrecision } from '../../utils/formatters'
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
-const EventCodeEnum = Types.notification.NotificationRequestItem.EventCodeEnum
-const SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
 
 export const synchronizePaymentCollectionStepId =
   'synchronize-payment-collection-step'
@@ -26,14 +24,9 @@ const synchronizePaymentCollectionStepCall = async (
   notification: NotificationRequestItem,
   { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentCollectionDTO, NotificationRequestItem>> => {
-  const { merchantReference, eventCode, success } = notification
+  const { merchantReference } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
-
-  const isCancellation =
-    eventCode === EventCodeEnum.Cancellation ||
-    eventCode === EventCodeEnum.TechnicalCancel
-  const isCancellationSuccess = isCancellation && success === SuccessEnum.True
 
   const paymentSession = await paymentService.retrievePaymentSession(
     merchantReference,
@@ -78,6 +71,10 @@ const synchronizePaymentCollectionStepCall = async (
       'amount',
     ),
   )
+
+  const isCancelled = every(paymentSessions, {
+    status: PaymentSessionStatus.CANCELED,
+  })
   const capturedAmount = MathBN.add(...map(captures, 'amount'))
   const refundedAmount = MathBN.add(...map(refunds, 'amount'))
 
@@ -103,7 +100,7 @@ const synchronizePaymentCollectionStepCall = async (
       : PaymentCollectionStatus.PARTIALLY_AUTHORIZED
   }
 
-  if (isCancellationSuccess) {
+  if (isCancelled) {
     status = PaymentCollectionStatus.CANCELED
   }
 
