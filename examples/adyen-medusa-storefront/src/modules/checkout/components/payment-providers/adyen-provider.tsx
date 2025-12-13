@@ -19,6 +19,7 @@ interface Props {
 
 const card: CardConfiguration = {
   enableStoreDetails: true,
+  hasHolderName: true,
 }
 
 const dropinConfiguration: DropinConfiguration = {
