@@ -86,13 +86,13 @@ export const PaymentDataManager = (data: PaymentDTO['data']) => {
   const isAuthorised = (): boolean => {
     const authorisation = getAuthorisation()
     if (!authorisation) return false
-    return authorisation.status !== 'FAILED'
+    return authorisation.status === 'SUCCEEDED'
   }
 
   const isCancelled = (): boolean => {
     const cancellation = getCancellation()
     if (!cancellation) return false
-    return cancellation.status !== 'FAILED'
+    return cancellation.status === 'SUCCEEDED'
   }
 
   const setData = (newData: Partial<Data>): void => {

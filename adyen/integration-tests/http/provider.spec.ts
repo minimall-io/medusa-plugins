@@ -11,7 +11,8 @@ import type {
 } from '@medusajs/framework/types'
 import { Modules } from '@medusajs/framework/utils'
 import { medusaIntegrationTestRunner } from '@medusajs/test-utils'
-import { filter } from 'lodash'
+import { filter, find } from 'lodash'
+import type { Event } from '../../src/utils/types'
 import { getCardDetails, getCustomer, getProviderId } from './fixtures'
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -459,6 +460,25 @@ medusaIntegrationTestRunner({
           })
 
           payment = await paymentService.authorizePaymentSession(session.id, {})
+          const originalAuthorization = find(payment.data?.events, {
+            name: 'AUTHORISATION',
+          })
+          const newAuthorization = {
+            ...originalAuthorization,
+            status: 'SUCCEEDED',
+          }
+          const otherEvents = filter(
+            payment.data?.events,
+            (event: Event) => event.name !== 'AUTHORISATION',
+          )
+          const events = [...otherEvents, newAuthorization]
+
+          const data = { ...payment.data, events }
+          const paymentToUpdate = {
+            data,
+            id: payment.id,
+          }
+          await paymentService.updatePayment(paymentToUpdate)
           await delay(1000)
         })
 
