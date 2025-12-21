@@ -2,6 +2,7 @@ import { Types } from '@adyen/api-library'
 import type {
   IPaymentModuleService,
   MedusaContainer,
+  PaymentCollectionDTO,
   PaymentSessionDTO,
 } from '@medusajs/framework/types'
 import {
@@ -70,6 +71,24 @@ medusaIntegrationTestRunner({
         return await paymentService.retrievePayment(payment.id)
       }
 
+      const retrievePaymentData = async (
+        collectionId: string,
+        sessionId: string,
+        eventName?: string,
+      ): Promise<[PaymentCollectionDTO, PaymentSessionDTO, Event[]]> => {
+        const collection =
+          await paymentService.retrievePaymentCollection(collectionId)
+        const session = await paymentService.retrievePaymentSession(sessionId, {
+          relations: ['payment', 'payment.captures', 'payment.refunds'],
+        })
+        const events = session.payment?.data?.events || []
+        const filteredEvents = eventName
+          ? filter(events, { name: eventName })
+          : events
+
+        return [collection, session, filteredEvents]
+      }
+
       beforeAll(async () => {
         container = getContainer()
         paymentService = container.resolve(Modules.PAYMENT)
@@ -106,14 +125,11 @@ medusaIntegrationTestRunner({
           it('updates all payment data models to reflect the change after a success cancellation notification is processed without prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
-            const authorizedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
 
             const pspReference = 'pspReference'
 
@@ -131,19 +147,12 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newCancellations] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'CANCELLATION',
               )
-
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              { relations: ['payment'] },
-            )
-
-            const newCancellations = filter(newSession.payment?.data?.events, {
-              name: 'CANCELLATION',
-            })
 
             expect(authorizedCollection.status).toEqual(
               PaymentCollectionStatus.AUTHORIZED,
@@ -168,22 +177,19 @@ medusaIntegrationTestRunner({
           it('updates all payment data models to reflect the change after a success cancellation notification is processed with prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
-            const authorizedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
 
             await paymentService.cancelPayment(authorizedSession.payment!.id)
 
-            const cancelledSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
+            const [cancelledCollection, cancelledSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
 
             const pspReference = 'pspReference'
 
@@ -201,21 +207,17 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newCancellations] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'CANCELLATION',
               )
 
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              { relations: ['payment'] },
-            )
-
-            const newCancellations = filter(newSession.payment?.data?.events, {
-              name: 'CANCELLATION',
-            })
-
             expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(cancelledCollection.status).toEqual(
               PaymentCollectionStatus.AUTHORIZED,
             )
             expect(newCollection.status).toEqual(
@@ -245,15 +247,11 @@ medusaIntegrationTestRunner({
           it('updates all payment data models to reflect the change after a failed cancellation notification is processed without prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
-            const authorizedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
 
             const pspReference = 'pspReference'
 
@@ -271,19 +269,12 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newCancellations] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'CANCELLATION',
               )
-
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              { relations: ['payment'] },
-            )
-
-            const newCancellations = filter(newSession.payment?.data?.events, {
-              name: 'CANCELLATION',
-            })
 
             expect(authorizedCollection.status).toEqual(
               PaymentCollectionStatus.AUTHORIZED,
@@ -308,22 +299,19 @@ medusaIntegrationTestRunner({
           it('updates all payment data models to reflect the change after a failed cancellation notification is processed with prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
-            const authorizedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
 
             await paymentService.cancelPayment(authorizedSession.payment!.id)
 
-            const cancelledSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
+            const [cancelledCollection, cancelledSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
 
             const pspReference = 'pspReference'
 
@@ -341,21 +329,17 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newCancellations] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'CANCELLATION',
               )
 
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              { relations: ['payment'] },
-            )
-
-            const newCancellations = filter(newSession.payment?.data?.events, {
-              name: 'CANCELLATION',
-            })
-
             expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(cancelledCollection.status).toEqual(
               PaymentCollectionStatus.AUTHORIZED,
             )
             expect(newCollection.status).toEqual(
@@ -382,15 +366,11 @@ medusaIntegrationTestRunner({
           it('updates all payment data models to reflect the change after a success technical cancellation notification is processed without prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
-            const authorizedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
 
             const pspReference = 'pspReference'
 
@@ -408,19 +388,12 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newCancellations] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'CANCELLATION',
               )
-
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              { relations: ['payment'] },
-            )
-
-            const newCancellations = filter(newSession.payment?.data?.events, {
-              name: 'CANCELLATION',
-            })
 
             expect(authorizedCollection.status).toEqual(
               PaymentCollectionStatus.AUTHORIZED,
@@ -445,22 +418,19 @@ medusaIntegrationTestRunner({
           it('updates all payment data models to reflect the change after a success technical cancellation notification is processed with prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
-            const authorizedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
 
             await paymentService.cancelPayment(authorizedSession.payment!.id)
 
-            const cancelledSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
+            const [cancelledCollection, cancelledSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
 
             const pspReference = 'pspReference'
 
@@ -478,21 +448,17 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newCancellations] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'CANCELLATION',
               )
 
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              { relations: ['payment'] },
-            )
-
-            const newCancellations = filter(newSession.payment?.data?.events, {
-              name: 'CANCELLATION',
-            })
-
             expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(cancelledCollection.status).toEqual(
               PaymentCollectionStatus.AUTHORIZED,
             )
             expect(newCollection.status).toEqual(
@@ -522,15 +488,11 @@ medusaIntegrationTestRunner({
           it('updates all payment data models to reflect the change after a failed technical cancellation notification is processed without prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
-            const authorizedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
 
             const pspReference = 'pspReference'
 
@@ -548,19 +510,12 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newCancellations] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'CANCELLATION',
               )
-
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              { relations: ['payment'] },
-            )
-
-            const newCancellations = filter(newSession.payment?.data?.events, {
-              name: 'CANCELLATION',
-            })
 
             expect(authorizedCollection.status).toEqual(
               PaymentCollectionStatus.AUTHORIZED,
@@ -585,22 +540,19 @@ medusaIntegrationTestRunner({
           it('updates all payment data models to reflect the change after a failed technical cancellation notification is processed with prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
-            const authorizedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
 
             await paymentService.cancelPayment(authorizedSession.payment!.id)
 
-            const cancelledSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
+            const [cancelledCollection, cancelledSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
 
             const pspReference = 'pspReference'
 
@@ -618,21 +570,17 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newCancellations] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'CANCELLATION',
               )
 
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              { relations: ['payment'] },
-            )
-
-            const newCancellations = filter(newSession.payment?.data?.events, {
-              name: 'CANCELLATION',
-            })
-
             expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(cancelledCollection.status).toEqual(
               PaymentCollectionStatus.AUTHORIZED,
             )
             expect(newCollection.status).toEqual(
@@ -661,14 +609,11 @@ medusaIntegrationTestRunner({
           it('updates all payment data models to reflect the change after a success capture notification is processed without prior direct capture', async () => {
             await authorizePaymentSession(session.id)
 
-            const authorizedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment', 'payment.captures'],
-              })
 
             const pspReference = 'pspReference'
 
@@ -686,20 +631,12 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newCaptures] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'CAPTURE',
               )
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.captures'],
-              },
-            )
-
-            const newCaptures = filter(newSession.payment?.data?.events, {
-              name: 'CAPTURE',
-            })
 
             expect(authorizedCollection.status).toEqual(
               PaymentCollectionStatus.AUTHORIZED,
@@ -729,34 +666,20 @@ medusaIntegrationTestRunner({
           it('updates all payment data models to reflect the change after a success capture notification is processed with prior direct capture', async () => {
             const payment = await authorizePaymentSession(session.id)
 
-            const authorizedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment', 'payment.captures'],
-              })
 
             await paymentService.capturePayment({ payment_id: payment.id })
 
-            const capturedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [capturedCollection, capturedSession, originalCaptures] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'CAPTURE',
               )
-            const capturedSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.captures'],
-              },
-            )
-
-            const originalCaptures = filter(
-              capturedSession.payment?.data?.events,
-              {
-                name: 'CAPTURE',
-              },
-            )
 
             const notification = getNotificationRequestItem(
               originalCaptures[0].providerReference,
@@ -772,20 +695,12 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newCaptures] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'CAPTURE',
               )
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.captures'],
-              },
-            )
-
-            const newCaptures = filter(newSession.payment?.data?.events, {
-              name: 'CAPTURE',
-            })
 
             expect(authorizedCollection.status).toEqual(
               PaymentCollectionStatus.AUTHORIZED,
@@ -832,14 +747,11 @@ medusaIntegrationTestRunner({
           it('updates all payment data models to reflect the change after a failed capture notification is processed without prior direct capture', async () => {
             await authorizePaymentSession(session.id)
 
-            const authorizedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment', 'payment.captures'],
-              })
 
             const pspReference = 'pspReference'
 
@@ -857,20 +769,12 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newCaptures] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'CAPTURE',
               )
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.captures'],
-              },
-            )
-
-            const newCaptures = filter(newSession.payment?.data?.events, {
-              name: 'CAPTURE',
-            })
 
             expect(authorizedCollection.status).toEqual(
               PaymentCollectionStatus.AUTHORIZED,
@@ -898,34 +802,20 @@ medusaIntegrationTestRunner({
           it('updates all payment data models to reflect the change after a failed capture notification is processed with prior direct capture', async () => {
             const payment = await authorizePaymentSession(session.id)
 
-            const authorizedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment', 'payment.captures'],
-              })
 
             await paymentService.capturePayment({ payment_id: payment.id })
 
-            const capturedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [capturedCollection, capturedSession, originalCaptures] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'CAPTURE',
               )
-            const capturedSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.captures'],
-              },
-            )
-
-            const originalCaptures = filter(
-              capturedSession.payment?.data?.events,
-              {
-                name: 'CAPTURE',
-              },
-            )
 
             const notification = getNotificationRequestItem(
               originalCaptures[0].providerReference,
@@ -941,20 +831,12 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newCaptures] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'CAPTURE',
               )
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.captures'],
-              },
-            )
-
-            const newCaptures = filter(newSession.payment?.data?.events, {
-              name: 'CAPTURE',
-            })
 
             expect(authorizedCollection.status).toEqual(
               PaymentCollectionStatus.AUTHORIZED,
@@ -999,14 +881,11 @@ medusaIntegrationTestRunner({
           it('updates all payment data models to reflect the change after a success capture failed notification is processed without prior direct capture', async () => {
             await authorizePaymentSession(session.id)
 
-            const authorizedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment', 'payment.captures'],
-              })
 
             const pspReference = 'pspReference'
 
@@ -1024,20 +903,12 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newCaptures] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'CAPTURE',
               )
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.captures'],
-              },
-            )
-
-            const newCaptures = filter(newSession.payment?.data?.events, {
-              name: 'CAPTURE',
-            })
 
             expect(authorizedCollection.status).toEqual(
               PaymentCollectionStatus.AUTHORIZED,
@@ -1065,34 +936,20 @@ medusaIntegrationTestRunner({
           it('updates all payment data models to reflect the change after a success capture failed notification is processed with prior direct capture', async () => {
             const payment = await authorizePaymentSession(session.id)
 
-            const authorizedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment', 'payment.captures'],
-              })
 
             await paymentService.capturePayment({ payment_id: payment.id })
 
-            const capturedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [capturedCollection, capturedSession, originalCaptures] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'CAPTURE',
               )
-            const capturedSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.captures'],
-              },
-            )
-
-            const originalCaptures = filter(
-              capturedSession.payment?.data?.events,
-              {
-                name: 'CAPTURE',
-              },
-            )
 
             const notification = getNotificationRequestItem(
               originalCaptures[0].providerReference,
@@ -1108,20 +965,12 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newCaptures] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'CAPTURE',
               )
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.captures'],
-              },
-            )
-
-            const newCaptures = filter(newSession.payment?.data?.events, {
-              name: 'CAPTURE',
-            })
 
             expect(authorizedCollection.status).toEqual(
               PaymentCollectionStatus.AUTHORIZED,
@@ -1170,16 +1019,11 @@ medusaIntegrationTestRunner({
 
             await paymentService.capturePayment({ payment_id: payment.id })
 
-            const capturedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [capturedCollection, capturedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-            const capturedSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.refunds'],
-              },
-            )
 
             const pspReference = 'pspReference'
 
@@ -1197,20 +1041,12 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newRefunds] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'REFUND',
               )
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.refunds'],
-              },
-            )
-
-            const newRefunds = filter(newSession.payment?.data?.events, {
-              name: 'REFUND',
-            })
 
             expect(capturedCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
@@ -1241,36 +1077,20 @@ medusaIntegrationTestRunner({
 
             await paymentService.capturePayment({ payment_id: payment.id })
 
-            const capturedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [capturedCollection, capturedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-            const capturedSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.refunds'],
-              },
-            )
 
             await paymentService.refundPayment({ payment_id: payment.id })
 
-            const refundedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [refundedCollection, refundedSession, originalRefunds] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'REFUND',
               )
-            const refundedSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.refunds'],
-              },
-            )
-
-            const originalRefunds = filter(
-              refundedSession.payment?.data?.events,
-              {
-                name: 'REFUND',
-              },
-            )
 
             const notification = getNotificationRequestItem(
               originalRefunds[0].providerReference,
@@ -1286,20 +1106,12 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newRefunds] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'REFUND',
               )
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.refunds'],
-              },
-            )
-
-            const newRefunds = filter(newSession.payment?.data?.events, {
-              name: 'REFUND',
-            })
 
             expect(capturedCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
@@ -1348,16 +1160,11 @@ medusaIntegrationTestRunner({
 
             await paymentService.capturePayment({ payment_id: payment.id })
 
-            const capturedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [capturedCollection, capturedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-            const capturedSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.refunds'],
-              },
-            )
 
             const pspReference = 'pspReference'
 
@@ -1375,20 +1182,12 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newRefunds] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'REFUND',
               )
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.refunds'],
-              },
-            )
-
-            const newRefunds = filter(newSession.payment?.data?.events, {
-              name: 'REFUND',
-            })
 
             expect(capturedCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
@@ -1417,36 +1216,20 @@ medusaIntegrationTestRunner({
 
             await paymentService.capturePayment({ payment_id: payment.id })
 
-            const capturedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [capturedCollection, capturedSession] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
               )
-            const capturedSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.refunds'],
-              },
-            )
 
             await paymentService.refundPayment({ payment_id: payment.id })
 
-            const refundedCollection =
-              await paymentService.retrievePaymentCollection(
+            const [refundedCollection, refundedSession, originalRefunds] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'REFUND',
               )
-            const refundedSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.refunds'],
-              },
-            )
-
-            const originalRefunds = filter(
-              refundedSession.payment?.data?.events,
-              {
-                name: 'REFUND',
-              },
-            )
 
             const notification = getNotificationRequestItem(
               originalRefunds[0].providerReference,
@@ -1462,20 +1245,12 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newCollection =
-              await paymentService.retrievePaymentCollection(
+            const [newCollection, newSession, newRefunds] =
+              await retrievePaymentData(
                 session.payment_collection_id,
+                session.id,
+                'REFUND',
               )
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              {
-                relations: ['payment', 'payment.refunds'],
-              },
-            )
-
-            const newRefunds = filter(newSession.payment?.data?.events, {
-              name: 'REFUND',
-            })
 
             expect(capturedCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
