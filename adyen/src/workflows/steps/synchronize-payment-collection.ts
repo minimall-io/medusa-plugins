@@ -36,7 +36,7 @@ const synchronizePaymentCollectionStepInvoke = async (
     context,
   )
   logging.debug(
-    `${workflowId}/${stepName}/call/paymentSession ${JSON.stringify(paymentSession, null, 2)}`,
+    `${workflowId}/${stepName}/invoke/paymentSession ${JSON.stringify(paymentSession, null, 2)}`,
   )
 
   const paymentCollectionId = paymentSession.payment_collection_id
@@ -67,7 +67,7 @@ const synchronizePaymentCollectionStepInvoke = async (
       context,
     )
   logging.debug(
-    `${workflowId}/${stepName}/call/originalPaymentCollection ${JSON.stringify(originalPaymentCollection, null, 2)}`,
+    `${workflowId}/${stepName}/invoke/originalPaymentCollection ${JSON.stringify(originalPaymentCollection, null, 2)}`,
   )
 
   const paymentSessions = originalPaymentCollection.payment_sessions ?? []
@@ -172,7 +172,7 @@ const synchronizePaymentCollectionStepInvoke = async (
     context,
   )
   logging.debug(
-    `${workflowId}/${stepName}/call/newPaymentCollection ${JSON.stringify(newPaymentCollection, null, 2)}`,
+    `${workflowId}/${stepName}/invoke/newPaymentCollection ${JSON.stringify(newPaymentCollection, null, 2)}`,
   )
 
   return new StepResponse<PaymentCollectionDTO, PaymentCollectionDTO>(
