@@ -10,14 +10,14 @@ import {
 } from '@medusajs/framework/workflows-sdk'
 import { find } from 'lodash'
 import { PaymentDataManager } from '../../utils'
-import type { NotificationStepInput } from './types'
+import type { PaymentData } from './types'
 
 export const refundFailedStepId = 'refund-failed-step'
 
 const refundFailedStepInvoke = async (
-  input: NotificationStepInput,
+  input: PaymentData,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<undefined, NotificationStepInput>> => {
+): Promise<StepResponse<undefined, PaymentData>> => {
   const { notification, payment } = input
   const {
     amount: { currency, value },
@@ -73,11 +73,11 @@ const refundFailedStepInvoke = async (
 
   await paymentService.updatePayment(paymentToUpdate, context)
 
-  return new StepResponse<undefined, NotificationStepInput>(undefined, input)
+  return new StepResponse<undefined, PaymentData>(undefined, input)
 }
 
 const refundFailedStepCompensate = async (
-  input: NotificationStepInput,
+  input: PaymentData,
   { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<undefined>> => {
   const { payment, notification } = input

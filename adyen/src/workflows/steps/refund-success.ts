@@ -1,5 +1,3 @@
-import type { Types } from '@adyen/api-library'
-import type { PaymentDTO } from '@medusajs/framework/types'
 import {
   ContainerRegistrationKeys,
   MedusaError,
@@ -11,21 +9,14 @@ import {
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
 import { getWholeUnit, PaymentDataManager } from '../../utils'
-import type { NotificationStepInput } from './types'
-
-type NotificationRequestItem = Types.notification.NotificationRequestItem
-
-interface RefundSuccessStepCompensateInput {
-  originalPayment: PaymentDTO
-  notification: NotificationRequestItem
-}
+import type { PaymentData } from './types'
 
 export const refundSuccessStepId = 'refund-success-step'
 
 const refundSuccessStepInvoke = async (
-  input: NotificationStepInput,
+  input: PaymentData,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<undefined, NotificationStepInput>> => {
+): Promise<StepResponse<undefined, PaymentData>> => {
   const { notification, payment } = input
   const {
     amount: { value, currency },
@@ -99,11 +90,11 @@ const refundSuccessStepInvoke = async (
     await paymentService.refundPayment(paymentRefundToCreate, context)
   }
 
-  return new StepResponse<undefined, NotificationStepInput>(undefined, input)
+  return new StepResponse<undefined, PaymentData>(undefined, input)
 }
 
 const refundSuccessStepCompensate = async (
-  input: NotificationStepInput,
+  input: PaymentData,
   { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<undefined>> => {
   const { payment, notification } = input

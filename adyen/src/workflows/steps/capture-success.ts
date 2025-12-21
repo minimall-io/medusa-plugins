@@ -9,14 +9,14 @@ import {
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
 import { getWholeUnit, PaymentDataManager } from '../../utils'
-import type { NotificationStepInput } from './types'
+import type { PaymentData } from './types'
 
 export const captureSuccessStepId = 'capture-success-step'
 
 const captureSuccessStepInvoke = async (
-  input: NotificationStepInput,
+  input: PaymentData,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<undefined, NotificationStepInput>> => {
+): Promise<StepResponse<undefined, PaymentData>> => {
   const { notification, payment } = input
   const {
     amount: { value, currency },
@@ -90,11 +90,11 @@ const captureSuccessStepInvoke = async (
     await paymentService.capturePayment(paymentCaptureToCreate, context)
   }
 
-  return new StepResponse<undefined, NotificationStepInput>(undefined, input)
+  return new StepResponse<undefined, PaymentData>(undefined, input)
 }
 
 const captureSuccessStepCompensate = async (
-  input: NotificationStepInput,
+  input: PaymentData,
   { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<undefined>> => {
   const { payment, notification } = input

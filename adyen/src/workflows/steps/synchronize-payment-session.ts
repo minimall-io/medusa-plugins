@@ -9,15 +9,15 @@ import {
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
 import { PaymentDataManager } from '../../utils'
-import type { NotificationStepInput } from './types'
+import type { PaymentData } from './types'
 
 export const synchronizePaymentSessionStepId =
   'synchronize-payment-session-step'
 
 const synchronizePaymentSessionStepInvoke = async (
-  input: NotificationStepInput,
+  input: PaymentData,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<undefined, NotificationStepInput>> => {
+): Promise<StepResponse<undefined, PaymentData>> => {
   const { session } = input
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -61,11 +61,11 @@ const synchronizePaymentSessionStepInvoke = async (
 
   await paymentService.updatePaymentSession(paymentSessionToUpdate, context)
 
-  return new StepResponse<undefined, NotificationStepInput>(undefined, input)
+  return new StepResponse<undefined, PaymentData>(undefined, input)
 }
 
 const synchronizePaymentSessionStepCompensate = async (
-  input: NotificationStepInput,
+  input: PaymentData,
   { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<undefined>> => {
   const { session } = input

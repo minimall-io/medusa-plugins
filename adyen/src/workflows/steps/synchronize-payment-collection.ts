@@ -12,15 +12,15 @@ import {
 } from '@medusajs/framework/workflows-sdk'
 import { every, filter, flatMap, map } from 'lodash'
 import { roundToCurrencyPrecision } from '../../utils/formatters'
-import type { NotificationStepInput } from './types'
+import type { PaymentData } from './types'
 
 export const synchronizePaymentCollectionStepId =
   'synchronize-payment-collection-step'
 
 const synchronizePaymentCollectionStepInvoke = async (
-  input: NotificationStepInput,
+  input: PaymentData,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<undefined, NotificationStepInput>> => {
+): Promise<StepResponse<undefined, PaymentData>> => {
   const { collection } = input
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -94,11 +94,11 @@ const synchronizePaymentCollectionStepInvoke = async (
     context,
   )
 
-  return new StepResponse<undefined, NotificationStepInput>(undefined, input)
+  return new StepResponse<undefined, PaymentData>(undefined, input)
 }
 
 const synchronizePaymentCollectionStepCompensate = async (
-  input: NotificationStepInput,
+  input: PaymentData,
   { container, workflowId, stepName, context }: StepExecutionContext,
 ): Promise<StepResponse<undefined>> => {
   const { collection } = input

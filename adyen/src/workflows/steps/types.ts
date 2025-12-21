@@ -9,7 +9,7 @@ import type {
 
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 
-export interface NotificationStepInput {
+export interface PaymentData {
   notification: NotificationRequestItem
   collection: PaymentCollectionDTO
   session: PaymentSessionDTO

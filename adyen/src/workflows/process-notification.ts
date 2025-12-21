@@ -1,16 +1,12 @@
 import { Types } from '@adyen/api-library'
-import { useQueryGraphStep } from '@medusajs/core-flows'
-import type { PaymentCollectionDTO } from '@medusajs/framework/types'
 import {
   createHook,
   createWorkflow,
   type Hook,
-  transform,
   type WorkflowData,
   WorkflowResponse,
   when,
 } from '@medusajs/framework/workflows-sdk'
-import { find } from 'lodash'
 import {
   authorisationFailedStep,
   authorisationSuccessStep,
@@ -18,7 +14,7 @@ import {
   cancellationSuccessStep,
   captureFailedStep,
   captureSuccessStep,
-  type NotificationStepInput,
+  getPaymentDataStep,
   refundFailedStep,
   refundSuccessStep,
   synchronizePaymentCollectionStep,
@@ -28,11 +24,6 @@ import {
 type NotificationRequestItem = Types.notification.NotificationRequestItem
 const EventCodeEnum = Types.notification.NotificationRequestItem.EventCodeEnum
 const SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
-
-interface TransformInput {
-  notification: NotificationRequestItem
-  paymentCollections: PaymentCollectionDTO[]
-}
 
 type Hooks = [
   Hook<'validateNotification', WorkflowData<NotificationRequestItem>, unknown>,
@@ -96,18 +87,6 @@ const isRefundFailed = ({
   (eventCode === EventCodeEnum.RefundFailed && success === SuccessEnum.True) ||
   (eventCode === EventCodeEnum.RefundedReversed && success === SuccessEnum.True)
 
-const getStepInput = (data: TransformInput): NotificationStepInput => {
-  const { paymentCollections, notification } = data
-  const collection = paymentCollections[0]
-  const session = find(collection.payment_sessions, {
-    id: notification.merchantReference,
-  })
-  const payment = session?.payment
-  const captures = payment?.captures
-  const refunds = payment?.refunds
-  return { captures, collection, notification, payment, refunds, session }
-}
-
 export const processNotificationWorkflow = createWorkflow(
   processNotificationWorkflowId,
   (notification: WorkflowData<NotificationRequestItem>) => {
@@ -116,65 +95,48 @@ export const processNotificationWorkflow = createWorkflow(
       notification,
     )
 
-    const { data: paymentCollections } = useQueryGraphStep({
-      entity: 'payment_collection',
-      fields: [
-        '*',
-        'payment_sessions.*',
-        'payment_sessions.payment.*',
-        'payment_sessions.payment.captures.*',
-        'payment_sessions.payment.refunds.*',
-      ],
-      filters: {
-        id: notification.merchantReference,
-      },
-    })
-
-    const input = transform<TransformInput, NotificationStepInput>(
-      { notification, paymentCollections },
-      getStepInput,
-    )
+    const paymentData = getPaymentDataStep(notification)
 
     when('authorisation-success', notification, isAuthorisationSuccess).then(
       () => {
-        authorisationSuccessStep(input)
+        authorisationSuccessStep(paymentData)
       },
     )
 
     when('authorisation-failed', notification, isAuthorisationFailed).then(
       () => {
-        authorisationFailedStep(input)
+        authorisationFailedStep(paymentData)
       },
     )
 
     when('cancellation-success', notification, isCancellationSuccess).then(
       () => {
-        cancellationSuccessStep(input)
+        cancellationSuccessStep(paymentData)
       },
     )
 
     when('cancellation-failed', notification, isCancellationFailed).then(() => {
-      cancellationFailedStep(input)
+      cancellationFailedStep(paymentData)
     })
 
     when('capture-success', notification, isCaptureSuccess).then(() => {
-      captureSuccessStep(input)
+      captureSuccessStep(paymentData)
     })
 
     when('capture-failed', notification, isCatureFailed).then(() => {
-      captureFailedStep(input)
+      captureFailedStep(paymentData)
     })
 
     when('refund-success', notification, isRefundSuccess).then(() => {
-      refundSuccessStep(input)
+      refundSuccessStep(paymentData)
     })
 
     when('refund-failed', notification, isRefundFailed).then(() => {
-      refundFailedStep(input)
+      refundFailedStep(paymentData)
     })
 
-    synchronizePaymentSessionStep(input)
-    synchronizePaymentCollectionStep(input)
+    synchronizePaymentSessionStep(paymentData)
+    synchronizePaymentCollectionStep(paymentData)
 
     const notificationProcessed = createHook(
       'notificationProcessed',
