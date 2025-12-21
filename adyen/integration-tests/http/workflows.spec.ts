@@ -1170,10 +1170,14 @@ medusaIntegrationTestRunner({
 
             await paymentService.capturePayment({ payment_id: payment.id })
 
-            const originalPayment = await paymentService.retrievePayment(
-              payment.id,
+            const capturedCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const capturedSession = await paymentService.retrievePaymentSession(
+              session.id,
               {
-                relations: ['refunds'],
+                relations: ['payment', 'payment.refunds'],
               },
             )
 
@@ -1193,43 +1197,80 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newPayment = await paymentService.retrievePayment(
-              payment.id,
+            const newCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const newSession = await paymentService.retrievePaymentSession(
+              session.id,
               {
-                relations: ['refunds'],
+                relations: ['payment', 'payment.refunds'],
               },
             )
 
-            const newRefunds = filter(newPayment.data?.events, {
+            const newRefunds = filter(newSession.payment?.data?.events, {
               name: 'REFUND',
             })
 
-            expect(originalPayment.refunds).toHaveLength(0)
-            expect(newPayment.refunds).toHaveLength(1)
+            expect(capturedCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            // This is because of the Payment Module's bug.
+            expect(capturedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(newSession.status).toEqual(PaymentSessionStatus.CAPTURED)
+            expect(capturedSession.payment?.refunds).toHaveLength(0)
+            expect(newSession.payment?.refunds).toHaveLength(1)
             expect(newRefunds).toHaveLength(1)
-            expect(newRefunds[0].providerReference).toBe(pspReference)
-            expect(newRefunds[0].merchantReference).toBe(reference)
-            expect(newRefunds[0].amount.value).toBe(amount)
-            expect(newRefunds[0].amount.currency).toBe(currency)
-            expect(newRefunds[0].status).toBe('SUCCEEDED')
+            expect(newRefunds[0].id).toEqual(
+              newSession.payment?.refunds?.[0].id,
+            )
+            expect(newRefunds[0].providerReference).toEqual(pspReference)
+            expect(newRefunds[0].merchantReference).toEqual(reference)
+            expect(newRefunds[0].amount.value).toEqual(amount)
+            expect(newRefunds[0].amount.currency).toEqual(currency)
+            expect(newRefunds[0].status).toEqual('SUCCEEDED')
           })
 
           it('updates all payment data models to reflect the change after a success refund notification is processed with prior direct refund', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
-            await paymentService.refundPayment({ payment_id: payment.id })
 
-            const originalPayment = await paymentService.retrievePayment(
-              payment.id,
+            const capturedCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const capturedSession = await paymentService.retrievePaymentSession(
+              session.id,
               {
-                relations: ['refunds'],
+                relations: ['payment', 'payment.refunds'],
               },
             )
 
-            const originalRefunds = filter(originalPayment.data?.events, {
-              name: 'REFUND',
-            })
+            await paymentService.refundPayment({ payment_id: payment.id })
+
+            const refundedCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const refundedSession = await paymentService.retrievePaymentSession(
+              session.id,
+              {
+                relations: ['payment', 'payment.refunds'],
+              },
+            )
+
+            const originalRefunds = filter(
+              refundedSession.payment?.data?.events,
+              {
+                name: 'REFUND',
+              },
+            )
 
             const notification = getNotificationRequestItem(
               originalRefunds[0].providerReference,
@@ -1239,27 +1280,67 @@ medusaIntegrationTestRunner({
               EventCodeEnum.Refund,
               SuccessEnum.True,
             )
+
             const workflow = processNotificationWorkflow(container)
             await workflow.run({
               input: notification,
             })
 
-            const newPayment = await paymentService.retrievePayment(
-              payment.id,
+            const newCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const newSession = await paymentService.retrievePaymentSession(
+              session.id,
               {
-                relations: ['refunds'],
+                relations: ['payment', 'payment.refunds'],
               },
             )
-            const newRefunds = filter(newPayment.data?.events, {
+
+            const newRefunds = filter(newSession.payment?.data?.events, {
               name: 'REFUND',
             })
 
-            expect(originalPayment.refunds).toHaveLength(1)
-            expect(newPayment.refunds).toHaveLength(1)
-            expect(originalRefunds).toHaveLength(1)
+            expect(capturedCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            expect(refundedCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            // This is because of the Payment Module's bug.
+            expect(capturedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            // This is because of the Payment Module's bug.
+            expect(refundedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(newSession.status).toEqual(PaymentSessionStatus.CAPTURED)
+
+            expect(capturedSession.payment?.refunds).toHaveLength(0)
+            expect(refundedSession.payment?.refunds).toHaveLength(1)
+            expect(newSession.payment?.refunds).toHaveLength(1)
             expect(newRefunds).toHaveLength(1)
-            expect(originalRefunds[0].status).toBe('REQUESTED')
-            expect(newRefunds[0].status).toBe('SUCCEEDED')
+            expect(newRefunds[0].id).toEqual(
+              newSession.payment?.refunds?.[0].id,
+            )
+            expect(newRefunds[0].providerReference).toEqual(
+              originalRefunds[0].providerReference,
+            )
+            expect(newRefunds[0].merchantReference).toEqual(
+              originalRefunds[0].merchantReference,
+            )
+            expect(newRefunds[0].amount.value).toEqual(
+              originalRefunds[0].amount.value,
+            )
+            expect(newRefunds[0].amount.currency).toEqual(
+              originalRefunds[0].amount.currency,
+            )
+            expect(originalRefunds[0].status).toEqual('REQUESTED')
+            expect(newRefunds[0].status).toEqual('SUCCEEDED')
           })
 
           it('updates all payment data models to reflect the change after a failed refund notification is processed without prior direct refund', async () => {
@@ -1267,10 +1348,14 @@ medusaIntegrationTestRunner({
 
             await paymentService.capturePayment({ payment_id: payment.id })
 
-            const originalPayment = await paymentService.retrievePayment(
-              payment.id,
+            const capturedCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const capturedSession = await paymentService.retrievePaymentSession(
+              session.id,
               {
-                relations: ['refunds'],
+                relations: ['payment', 'payment.refunds'],
               },
             )
 
@@ -1290,37 +1375,78 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newPayment = await paymentService.retrievePayment(
-              payment.id,
+            const newCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const newSession = await paymentService.retrievePaymentSession(
+              session.id,
               {
-                relations: ['refunds'],
+                relations: ['payment', 'payment.refunds'],
               },
             )
-            const newRefunds = filter(newPayment.data?.events, {
+
+            const newRefunds = filter(newSession.payment?.data?.events, {
               name: 'REFUND',
             })
 
-            expect(originalPayment.refunds).toHaveLength(0)
-            expect(newPayment.refunds).toHaveLength(0)
+            expect(capturedCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            // This is because of the Payment Module's bug.
+            expect(capturedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(newSession.status).toEqual(PaymentSessionStatus.CAPTURED)
+            expect(capturedSession.payment?.refunds).toHaveLength(0)
+            expect(newSession.payment?.refunds).toHaveLength(0)
             expect(newRefunds).toHaveLength(1)
+            expect(newRefunds[0].id).toEqual('MISSING')
+            expect(newRefunds[0].providerReference).toEqual(pspReference)
+            expect(newRefunds[0].merchantReference).toEqual(reference)
+            expect(newRefunds[0].amount.value).toEqual(amount)
+            expect(newRefunds[0].amount.currency).toEqual(currency)
+            expect(newRefunds[0].status).toEqual('FAILED')
           })
 
           it('updates all payment data models to reflect the change after a failed refund notification is processed with prior direct refund', async () => {
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
-            await paymentService.refundPayment({ payment_id: payment.id })
 
-            const originalPayment = await paymentService.retrievePayment(
-              payment.id,
+            const capturedCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const capturedSession = await paymentService.retrievePaymentSession(
+              session.id,
               {
-                relations: ['refunds'],
+                relations: ['payment', 'payment.refunds'],
               },
             )
 
-            const originalRefunds = filter(originalPayment.data?.events, {
-              name: 'REFUND',
-            })
+            await paymentService.refundPayment({ payment_id: payment.id })
+
+            const refundedCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const refundedSession = await paymentService.retrievePaymentSession(
+              session.id,
+              {
+                relations: ['payment', 'payment.refunds'],
+              },
+            )
+
+            const originalRefunds = filter(
+              refundedSession.payment?.data?.events,
+              {
+                name: 'REFUND',
+              },
+            )
 
             const notification = getNotificationRequestItem(
               originalRefunds[0].providerReference,
@@ -1336,23 +1462,59 @@ medusaIntegrationTestRunner({
               input: notification,
             })
 
-            const newPayment = await paymentService.retrievePayment(
-              payment.id,
+            const newCollection =
+              await paymentService.retrievePaymentCollection(
+                session.payment_collection_id,
+              )
+            const newSession = await paymentService.retrievePaymentSession(
+              session.id,
               {
-                relations: ['refunds'],
+                relations: ['payment', 'payment.refunds'],
               },
             )
 
-            const newRefunds = filter(newPayment.data?.events, {
+            const newRefunds = filter(newSession.payment?.data?.events, {
               name: 'REFUND',
             })
 
-            expect(originalPayment.refunds).toHaveLength(1)
-            expect(newPayment.refunds).toHaveLength(0)
-            expect(originalRefunds).toHaveLength(1)
+            expect(capturedCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            expect(refundedCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            // This is because of the Payment Module's bug.
+            expect(capturedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            // This is because of the Payment Module's bug.
+            expect(refundedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(newSession.status).toEqual(PaymentSessionStatus.CAPTURED)
+
+            expect(capturedSession.payment?.refunds).toHaveLength(0)
+            expect(refundedSession.payment?.refunds).toHaveLength(1)
+            expect(newSession.payment?.refunds).toHaveLength(0)
             expect(newRefunds).toHaveLength(1)
-            expect(originalRefunds[0].status).toBe('REQUESTED')
-            expect(newRefunds[0].status).toBe('FAILED')
+            expect(newRefunds[0].id).toEqual('MISSING')
+            expect(newRefunds[0].providerReference).toEqual(
+              originalRefunds[0].providerReference,
+            )
+            expect(newRefunds[0].merchantReference).toEqual(
+              originalRefunds[0].merchantReference,
+            )
+            expect(newRefunds[0].amount.value).toEqual(
+              originalRefunds[0].amount.value,
+            )
+            expect(newRefunds[0].amount.currency).toEqual(
+              originalRefunds[0].amount.currency,
+            )
+            expect(originalRefunds[0].status).toEqual('REQUESTED')
+            expect(newRefunds[0].status).toEqual('FAILED')
           })
         })
       })
