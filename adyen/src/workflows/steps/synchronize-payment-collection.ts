@@ -29,7 +29,23 @@ const synchronizePaymentCollectionStepInvoke = async (
     `${workflowId}/${stepName}/invoke/collection ${JSON.stringify(collection, null, 2)}`,
   )
 
-  const paymentSessions = collection.payment_sessions ?? []
+  const newCollection = await paymentService.retrievePaymentCollection(
+    collection.id,
+    {
+      relations: [
+        'payment_sessions.*',
+        'payment_sessions.payment.*',
+        'payment_sessions.payment.captures.*',
+        'payment_sessions.payment.refunds.*',
+      ],
+    },
+    context,
+  )
+  logging.debug(
+    `${workflowId}/${stepName}/invoke/newCollection ${JSON.stringify(newCollection, null, 2)}`,
+  )
+
+  const paymentSessions = newCollection.payment_sessions ?? []
   const captures = flatMap(paymentSessions, 'payment.captures') ?? []
   const refunds = flatMap(paymentSessions, 'payment.refunds') ?? []
 
@@ -55,8 +71,11 @@ const synchronizePaymentCollectionStepInvoke = async (
 
   if (MathBN.gt(authorizedAmount, 0)) {
     status = MathBN.gte(
-      roundToCurrencyPrecision(authorizedAmount, collection.currency_code),
-      roundToCurrencyPrecision(collection.amount, collection.currency_code),
+      roundToCurrencyPrecision(authorizedAmount, newCollection.currency_code),
+      roundToCurrencyPrecision(
+        newCollection.amount,
+        newCollection.currency_code,
+      ),
     )
       ? PaymentCollectionStatus.AUTHORIZED
       : PaymentCollectionStatus.PARTIALLY_AUTHORIZED
@@ -72,8 +91,11 @@ const synchronizePaymentCollectionStepInvoke = async (
 
   if (
     MathBN.gte(
-      roundToCurrencyPrecision(capturedAmount, collection.currency_code),
-      roundToCurrencyPrecision(collection.amount, collection.currency_code),
+      roundToCurrencyPrecision(capturedAmount, newCollection.currency_code),
+      roundToCurrencyPrecision(
+        newCollection.amount,
+        newCollection.currency_code,
+      ),
     )
   ) {
     status = PaymentCollectionStatus.COMPLETED

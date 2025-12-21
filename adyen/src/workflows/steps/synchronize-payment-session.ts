@@ -26,12 +26,23 @@ const synchronizePaymentSessionStepInvoke = async (
     `${workflowId}/${stepName}/invoke/session ${JSON.stringify(session, null, 2)}`,
   )
 
-  const { id, amount, currency_code, payment } = session
+  const newSession = await paymentService.retrievePaymentSession(
+    session.id,
+    {
+      relations: ['payment.*', 'payment.captures.*', 'payment.refunds.*'],
+    },
+    context,
+  )
+  logging.debug(
+    `${workflowId}/${stepName}/invoke/newSession ${JSON.stringify(newSession, null, 2)}`,
+  )
+
+  const { id, amount, currency_code, payment } = newSession
 
   const dataManager = PaymentDataManager(payment?.data)
 
   let status = PaymentSessionStatus.PENDING
-  let authorized_at = session.authorized_at
+  let authorized_at = newSession.authorized_at
 
   if (payment) {
     status = PaymentSessionStatus.AUTHORIZED
