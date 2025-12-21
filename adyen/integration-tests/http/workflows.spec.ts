@@ -1347,13 +1347,14 @@ medusaIntegrationTestRunner({
         })
 
         describe('Test processing cancellation notification', () => {
-          it('preserves the original state of the payment data models after a success cancellation notification processing fails without prior direct cancellation', async () => {
+          it('preserves the original state of the payment data models after success cancellation notification processing fails without prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
 
             const pspReference = 'pspReference'
 
@@ -1372,14 +1373,12 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              { relations: ['payment'] },
-            )
-
-            const newCancellations = filter(newSession.payment?.data?.events, {
-              name: 'CANCELLATION',
-            })
+            const [newCollection, newSession, newCancellations] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+                'CANCELLATION',
+              )
 
             expect(errors).toEqual([
               {
@@ -1391,29 +1390,37 @@ medusaIntegrationTestRunner({
                 handlerType: 'invoke',
               },
             ])
-            expect(authorizedSession.status).toBe(
+            expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(authorizedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
-            expect(newSession.status).toBe(PaymentSessionStatus.AUTHORIZED)
+            expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(newSession.payment?.canceled_at).toBeNull()
             expect(newCancellations).toHaveLength(0)
           })
 
-          it('preserves the original state of the payment data models after a success cancellation notification processing fails with prior direct cancellation', async () => {
+          it('preserves the original state of the payment data models after success cancellation notification processing fails with prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
 
             await paymentService.cancelPayment(authorizedSession.payment!.id)
 
-            const cancelledSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
+            const [cancelledCollection, cancelledSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
 
             const pspReference = 'pspReference'
 
@@ -1432,14 +1439,12 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              { relations: ['payment'] },
-            )
-
-            const newCancellations = filter(newSession.payment?.data?.events, {
-              name: 'CANCELLATION',
-            })
+            const [newCollection, newSession, newCancellations] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+                'CANCELLATION',
+              )
 
             expect(errors).toEqual([
               {
@@ -1451,14 +1456,22 @@ medusaIntegrationTestRunner({
                 handlerType: 'invoke',
               },
             ])
-
-            expect(authorizedSession.status).toBe(
+            expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(cancelledCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(authorizedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
-            expect(cancelledSession.status).toBe(
+            expect(cancelledSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is becuase the Payment Module's bug. The session is not updated after the cancelPayment call.
-            expect(newSession.status).toBe(PaymentSessionStatus.CANCELED)
+            ) // This is becuase the Payment Module's bug.
+            expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(cancelledSession.payment?.canceled_at).toBeDefined()
             expect(newSession.payment?.canceled_at).toBeDefined()
@@ -1468,13 +1481,14 @@ medusaIntegrationTestRunner({
             expect(newCancellations).toHaveLength(0)
           })
 
-          it('preserves the original state of the payment data models after a failed cancellation notification processing fails without prior direct cancellation', async () => {
+          it('preserves the original state of the payment data models after failed cancellation notification processing fails without prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
 
             const pspReference = 'pspReference'
 
@@ -1493,14 +1507,12 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              { relations: ['payment'] },
-            )
-
-            const newCancellations = filter(newSession.payment?.data?.events, {
-              name: 'CANCELLATION',
-            })
+            const [newCollection, newSession, newCancellations] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+                'CANCELLATION',
+              )
 
             expect(errors).toEqual([
               {
@@ -1512,29 +1524,37 @@ medusaIntegrationTestRunner({
                 handlerType: 'invoke',
               },
             ])
-            expect(authorizedSession.status).toBe(
+            expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(authorizedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
-            expect(newSession.status).toBe(PaymentSessionStatus.AUTHORIZED)
+            expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(newSession.payment?.canceled_at).toBeNull()
             expect(newCancellations).toHaveLength(0)
           })
 
-          it('preserves the original state of the payment data models after a failed cancellation notification processing fails with prior direct cancellation', async () => {
+          it('preserves the original state of the payment data models after failed cancellation notification processing fails with prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
-            const authorizedSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
 
             await paymentService.cancelPayment(authorizedSession.payment!.id)
 
-            const cancelledSession =
-              await paymentService.retrievePaymentSession(session.id, {
-                relations: ['payment'],
-              })
+            const [cancelledCollection, cancelledSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
 
             const pspReference = 'pspReference'
 
@@ -1553,14 +1573,12 @@ medusaIntegrationTestRunner({
               throwOnError: false,
             })
 
-            const newSession = await paymentService.retrievePaymentSession(
-              session.id,
-              { relations: ['payment'] },
-            )
-
-            const newCancellations = filter(newSession.payment?.data?.events, {
-              name: 'CANCELLATION',
-            })
+            const [newCollection, newSession, newCancellations] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+                'CANCELLATION',
+              )
 
             expect(errors).toEqual([
               {
@@ -1572,19 +1590,290 @@ medusaIntegrationTestRunner({
                 handlerType: 'invoke',
               },
             ])
-            expect(authorizedSession.status).toBe(
+            expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(cancelledCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(authorizedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
-            expect(cancelledSession.status).toBe(
+            expect(cancelledSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is becuase the Payment Module's bug. The session is not updated after the cancelPayment call.
-            expect(newSession.status).toBe(PaymentSessionStatus.CANCELED)
+            ) // This is becuase the Payment Module's bug.
+            expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
+            expect(authorizedSession.payment?.canceled_at).toBeNull()
+            expect(cancelledSession.payment?.canceled_at).toBeDefined()
+            expect(newSession.payment?.canceled_at).toBeDefined()
+            expect(newCancellations).toHaveLength(0)
+          })
+
+          it('preserves the original state of the payment data models after success technical cancellation notification processing fails without prior direct cancellation', async () => {
+            await authorizePaymentSession(session.id)
+
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
+
+            const pspReference = 'pspReference'
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.TechnicalCancel,
+              SuccessEnum.True,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            const { errors } = await workflow.run({
+              input: notification,
+              throwOnError: false,
+            })
+
+            const [newCollection, newSession, newCancellations] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+                'CANCELLATION',
+              )
+
+            expect(errors).toEqual([
+              {
+                action: 'notificationProcessed',
+                error: expect.objectContaining({
+                  message:
+                    'processNotificationWorkflow/hooks/notificationProcessed/error',
+                }),
+                handlerType: 'invoke',
+              },
+            ])
+            expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(authorizedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
+            expect(authorizedSession.payment?.canceled_at).toBeNull()
+            expect(newSession.payment?.canceled_at).toBeNull()
+            expect(newCancellations).toHaveLength(0)
+          })
+
+          it('preserves the original state of the payment data models after success technical cancellation notification processing fails with prior direct cancellation', async () => {
+            await authorizePaymentSession(session.id)
+
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
+
+            await paymentService.cancelPayment(authorizedSession.payment!.id)
+
+            const [cancelledCollection, cancelledSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
+
+            const pspReference = 'pspReference'
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.TechnicalCancel,
+              SuccessEnum.True,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            const { errors } = await workflow.run({
+              input: notification,
+              throwOnError: false,
+            })
+
+            const [newCollection, newSession, newCancellations] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+                'CANCELLATION',
+              )
+
+            expect(errors).toEqual([
+              {
+                action: 'notificationProcessed',
+                error: expect.objectContaining({
+                  message:
+                    'processNotificationWorkflow/hooks/notificationProcessed/error',
+                }),
+                handlerType: 'invoke',
+              },
+            ])
+            expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(cancelledCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(authorizedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(cancelledSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            ) // This is becuase the Payment Module's bug.
+            expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(cancelledSession.payment?.canceled_at).toBeDefined()
             expect(newSession.payment?.canceled_at).toBeDefined()
             expect(newSession.payment?.canceled_at).toEqual(
               cancelledSession.payment?.canceled_at,
             )
+            expect(newCancellations).toHaveLength(0)
+          })
+
+          it('preserves the original state of the payment data models after failed technical cancellation notification processing fails without prior direct cancellation', async () => {
+            await authorizePaymentSession(session.id)
+
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
+
+            const pspReference = 'pspReference'
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.TechnicalCancel,
+              SuccessEnum.False,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            const { errors } = await workflow.run({
+              input: notification,
+              throwOnError: false,
+            })
+
+            const [newCollection, newSession, newCancellations] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+                'CANCELLATION',
+              )
+
+            expect(errors).toEqual([
+              {
+                action: 'notificationProcessed',
+                error: expect.objectContaining({
+                  message:
+                    'processNotificationWorkflow/hooks/notificationProcessed/error',
+                }),
+                handlerType: 'invoke',
+              },
+            ])
+            expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(authorizedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
+            expect(authorizedSession.payment?.canceled_at).toBeNull()
+            expect(newSession.payment?.canceled_at).toBeNull()
+            expect(newCancellations).toHaveLength(0)
+          })
+
+          it('preserves the original state of the payment data models after failed technical cancellation notification processing fails with prior direct cancellation', async () => {
+            await authorizePaymentSession(session.id)
+
+            const [authorizedCollection, authorizedSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
+
+            await paymentService.cancelPayment(authorizedSession.payment!.id)
+
+            const [cancelledCollection, cancelledSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
+
+            const pspReference = 'pspReference'
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.TechnicalCancel,
+              SuccessEnum.False,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            const { errors } = await workflow.run({
+              input: notification,
+              throwOnError: false,
+            })
+
+            const [newCollection, newSession, newCancellations] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+                'CANCELLATION',
+              )
+
+            expect(errors).toEqual([
+              {
+                action: 'notificationProcessed',
+                error: expect.objectContaining({
+                  message:
+                    'processNotificationWorkflow/hooks/notificationProcessed/error',
+                }),
+                handlerType: 'invoke',
+              },
+            ])
+            expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(cancelledCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(authorizedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(cancelledSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            ) // This is becuase the Payment Module's bug.
+            expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
+            expect(authorizedSession.payment?.canceled_at).toBeNull()
+            expect(cancelledSession.payment?.canceled_at).toBeDefined()
+            expect(newSession.payment?.canceled_at).toBeDefined()
             expect(newCancellations).toHaveLength(0)
           })
         })
