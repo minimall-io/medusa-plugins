@@ -36,14 +36,15 @@ const synchronizePaymentSessionStepCall = async (
     `${workflowId}/${stepName}/call/originalPaymentSession ${JSON.stringify(originalPaymentSession, null, 2)}`,
   )
 
-  const originalPayment = originalPaymentSession.payment
+  const { id, amount, currency_code, payment } = originalPaymentSession
+
+  const dataManager = PaymentDataManager(payment?.data)
 
   let status = PaymentSessionStatus.PENDING
   let authorized_at = originalPaymentSession.authorized_at
 
-  if (originalPayment) {
+  if (payment) {
     status = PaymentSessionStatus.AUTHORIZED
-    const dataManager = PaymentDataManager(originalPayment.data)
     const authorisation = dataManager.getAuthorisation()
     if (authorisation?.status === 'FAILED') {
       status = PaymentSessionStatus.ERROR
@@ -51,17 +52,20 @@ const synchronizePaymentSessionStepCall = async (
     }
   }
 
-  if (originalPayment?.captured_at) {
+  if (payment?.captured_at) {
     status = PaymentSessionStatus.CAPTURED
   }
 
-  if (originalPayment?.canceled_at) {
+  if (payment?.canceled_at) {
     status = PaymentSessionStatus.CANCELED
   }
 
   const paymentSessionToUpdate = {
-    ...originalPaymentSession,
+    amount,
     authorized_at,
+    currency_code,
+    data: dataManager.getData(),
+    id,
     status,
   }
 
