@@ -1,5 +1,3 @@
-import type { Types } from '@adyen/api-library'
-import type { PaymentCollectionDTO } from '@medusajs/framework/types'
 import {
   ContainerRegistrationKeys,
   MathBN,
@@ -14,55 +12,26 @@ import {
 } from '@medusajs/framework/workflows-sdk'
 import { every, filter, flatMap, map } from 'lodash'
 import { roundToCurrencyPrecision } from '../../utils/formatters'
-
-type NotificationRequestItem = Types.notification.NotificationRequestItem
+import type { NotificationStepInput } from './types'
 
 export const synchronizePaymentCollectionStepId =
   'synchronize-payment-collection-step'
 
 const synchronizePaymentCollectionStepInvoke = async (
-  notification: NotificationRequestItem,
+  input: NotificationStepInput,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<PaymentCollectionDTO, PaymentCollectionDTO>> => {
-  const { merchantReference } = notification
+): Promise<StepResponse<undefined, NotificationStepInput>> => {
+  const { collection } = input
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
-  const paymentSession = await paymentService.retrievePaymentSession(
-    merchantReference,
-    {
-      select: ['payment_collection_id'],
-    },
-    context,
-  )
   logging.debug(
-    `${workflowId}/${stepName}/invoke/paymentSession ${JSON.stringify(paymentSession, null, 2)}`,
+    `${workflowId}/${stepName}/invoke/collection ${JSON.stringify(collection, null, 2)}`,
   )
 
-  const paymentCollectionId = paymentSession.payment_collection_id
-
-  const originalPaymentCollection =
-    await paymentService.retrievePaymentCollection(
-      paymentCollectionId,
-      {
-        relations: [
-          'payment_sessions.amount',
-          'payment_sessions.raw_amount',
-          'payments.captures.amount',
-          'payments.captures.raw_amount',
-          'payments.refunds.amount',
-          'payments.refunds.raw_amount',
-        ],
-      },
-      context,
-    )
-  logging.debug(
-    `${workflowId}/${stepName}/invoke/originalPaymentCollection ${JSON.stringify(originalPaymentCollection, null, 2)}`,
-  )
-
-  const paymentSessions = originalPaymentCollection.payment_sessions ?? []
-  const captures = flatMap(originalPaymentCollection.payments, 'captures') ?? []
-  const refunds = flatMap(originalPaymentCollection.payments, 'refunds') ?? []
+  const paymentSessions = collection.payment_sessions ?? []
+  const captures = flatMap(paymentSessions, 'payment.captures') ?? []
+  const refunds = flatMap(paymentSessions, 'payment.refunds') ?? []
 
   const authorizedAmount = MathBN.add(
     ...map(
@@ -86,14 +55,8 @@ const synchronizePaymentCollectionStepInvoke = async (
 
   if (MathBN.gt(authorizedAmount, 0)) {
     status = MathBN.gte(
-      roundToCurrencyPrecision(
-        authorizedAmount,
-        originalPaymentCollection.currency_code,
-      ),
-      roundToCurrencyPrecision(
-        originalPaymentCollection.amount,
-        originalPaymentCollection.currency_code,
-      ),
+      roundToCurrencyPrecision(authorizedAmount, collection.currency_code),
+      roundToCurrencyPrecision(collection.amount, collection.currency_code),
     )
       ? PaymentCollectionStatus.AUTHORIZED
       : PaymentCollectionStatus.PARTIALLY_AUTHORIZED
@@ -109,14 +72,8 @@ const synchronizePaymentCollectionStepInvoke = async (
 
   if (
     MathBN.gte(
-      roundToCurrencyPrecision(
-        capturedAmount,
-        originalPaymentCollection.currency_code,
-      ),
-      roundToCurrencyPrecision(
-        originalPaymentCollection.amount,
-        originalPaymentCollection.currency_code,
-      ),
+      roundToCurrencyPrecision(capturedAmount, collection.currency_code),
+      roundToCurrencyPrecision(collection.amount, collection.currency_code),
     )
   ) {
     status = PaymentCollectionStatus.COMPLETED
@@ -132,44 +89,24 @@ const synchronizePaymentCollectionStepInvoke = async (
   }
 
   await paymentService.updatePaymentCollections(
-    paymentCollectionId,
+    collection.id,
     paymentCollectionToUpdate,
     context,
   )
 
-  const newPaymentCollection = await paymentService.retrievePaymentCollection(
-    paymentCollectionId,
-    {
-      relations: [
-        'payment_sessions.amount',
-        'payment_sessions.raw_amount',
-        'payments.captures.amount',
-        'payments.captures.raw_amount',
-        'payments.refunds.amount',
-        'payments.refunds.raw_amount',
-      ],
-    },
-    context,
-  )
-  logging.debug(
-    `${workflowId}/${stepName}/invoke/newPaymentCollection ${JSON.stringify(newPaymentCollection, null, 2)}`,
-  )
-
-  return new StepResponse<PaymentCollectionDTO, PaymentCollectionDTO>(
-    newPaymentCollection,
-    originalPaymentCollection,
-  )
+  return new StepResponse<undefined, NotificationStepInput>(undefined, input)
 }
 
 const synchronizePaymentCollectionStepCompensate = async (
-  originalPaymentCollection: PaymentCollectionDTO,
+  input: NotificationStepInput,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<PaymentCollectionDTO>> => {
+): Promise<StepResponse<undefined>> => {
+  const { collection } = input
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
   logging.debug(
-    `${workflowId}/${stepName}/compensate/originalPaymentCollection ${JSON.stringify(originalPaymentCollection, null, 2)}`,
+    `${workflowId}/${stepName}/compensate/collection ${JSON.stringify(collection, null, 2)}`,
   )
 
   const {
@@ -178,8 +115,7 @@ const synchronizePaymentCollectionStepCompensate = async (
     completed_at,
     refunded_amount,
     status,
-    id,
-  } = originalPaymentCollection
+  } = collection
 
   const paymentCollectionToUpdate = {
     authorized_amount,
@@ -190,31 +126,12 @@ const synchronizePaymentCollectionStepCompensate = async (
   }
 
   await paymentService.updatePaymentCollections(
-    id,
+    collection.id,
     paymentCollectionToUpdate,
     context,
   )
 
-  const restoredPaymentCollection =
-    await paymentService.retrievePaymentCollection(
-      id,
-      {
-        relations: [
-          'payment_sessions.amount',
-          'payment_sessions.raw_amount',
-          'payments.captures.amount',
-          'payments.captures.raw_amount',
-          'payments.refunds.amount',
-          'payments.refunds.raw_amount',
-        ],
-      },
-      context,
-    )
-  logging.debug(
-    `${workflowId}/${stepName}/compensate/restoredPaymentCollection ${JSON.stringify(restoredPaymentCollection, null, 2)}`,
-  )
-
-  return new StepResponse<PaymentCollectionDTO>(restoredPaymentCollection)
+  return new StepResponse<undefined>()
 }
 
 const synchronizePaymentCollectionStep = createStep(

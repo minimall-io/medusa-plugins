@@ -1,5 +1,3 @@
-import type { Types } from '@adyen/api-library'
-import type { PaymentSessionDTO } from '@medusajs/framework/types'
 import {
   ContainerRegistrationKeys,
   Modules,
@@ -11,37 +9,29 @@ import {
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
 import { PaymentDataManager } from '../../utils'
-
-type NotificationRequestItem = Types.notification.NotificationRequestItem
+import type { NotificationStepInput } from './types'
 
 export const synchronizePaymentSessionStepId =
   'synchronize-payment-session-step'
 
 const synchronizePaymentSessionStepInvoke = async (
-  notification: NotificationRequestItem,
+  input: NotificationStepInput,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<PaymentSessionDTO, PaymentSessionDTO>> => {
-  const { merchantReference } = notification
+): Promise<StepResponse<undefined, NotificationStepInput>> => {
+  const { session } = input
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
-  const originalPaymentSession = await paymentService.retrievePaymentSession(
-    merchantReference,
-    {
-      relations: ['payment'],
-    },
-    context,
-  )
   logging.debug(
-    `${workflowId}/${stepName}/invoke/originalPaymentSession ${JSON.stringify(originalPaymentSession, null, 2)}`,
+    `${workflowId}/${stepName}/invoke/session ${JSON.stringify(session, null, 2)}`,
   )
 
-  const { id, amount, currency_code, payment } = originalPaymentSession
+  const { id, amount, currency_code, payment } = session
 
   const dataManager = PaymentDataManager(payment?.data)
 
   let status = PaymentSessionStatus.PENDING
-  let authorized_at = originalPaymentSession.authorized_at
+  let authorized_at = session.authorized_at
 
   if (payment) {
     status = PaymentSessionStatus.AUTHORIZED
@@ -71,36 +61,22 @@ const synchronizePaymentSessionStepInvoke = async (
 
   await paymentService.updatePaymentSession(paymentSessionToUpdate, context)
 
-  const newPaymentSession = await paymentService.retrievePaymentSession(
-    originalPaymentSession.id,
-    {
-      relations: ['payment'],
-    },
-    context,
-  )
-  logging.debug(
-    `${workflowId}/${stepName}/invoke/newPaymentSession ${JSON.stringify(newPaymentSession, null, 2)}`,
-  )
-
-  return new StepResponse<PaymentSessionDTO, PaymentSessionDTO>(
-    newPaymentSession,
-    originalPaymentSession,
-  )
+  return new StepResponse<undefined, NotificationStepInput>(undefined, input)
 }
 
 const synchronizePaymentSessionStepCompensate = async (
-  originalPaymentSession: PaymentSessionDTO,
+  input: NotificationStepInput,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<PaymentSessionDTO>> => {
+): Promise<StepResponse<undefined>> => {
+  const { session } = input
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
   logging.debug(
-    `${workflowId}/${stepName}/compensate/originalPaymentSession ${JSON.stringify(originalPaymentSession, null, 2)}`,
+    `${workflowId}/${stepName}/compensate/session ${JSON.stringify(session, null, 2)}`,
   )
 
-  const { id, amount, currency_code, payment, authorized_at, status } =
-    originalPaymentSession
+  const { id, amount, currency_code, payment, authorized_at, status } = session
 
   const dataManager = PaymentDataManager(payment?.data)
 
@@ -115,18 +91,7 @@ const synchronizePaymentSessionStepCompensate = async (
 
   await paymentService.updatePaymentSession(paymentSessionToUpdate, context)
 
-  const restoredPaymentSession = await paymentService.retrievePaymentSession(
-    originalPaymentSession.id,
-    {
-      relations: ['payment'],
-    },
-    context,
-  )
-  logging.debug(
-    `${workflowId}/${stepName}/compensate/restoredPaymentSession ${JSON.stringify(restoredPaymentSession, null, 2)}`,
-  )
-
-  return new StepResponse<PaymentSessionDTO>(restoredPaymentSession)
+  return new StepResponse<undefined>()
 }
 
 const synchronizePaymentSessionStep = createStep(

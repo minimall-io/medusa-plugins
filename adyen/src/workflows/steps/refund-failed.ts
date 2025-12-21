@@ -1,5 +1,3 @@
-import type { Types } from '@adyen/api-library'
-import type { PaymentDTO } from '@medusajs/framework/types'
 import {
   ContainerRegistrationKeys,
   MedusaError,
@@ -12,20 +10,15 @@ import {
 } from '@medusajs/framework/workflows-sdk'
 import { find } from 'lodash'
 import { PaymentDataManager } from '../../utils'
-
-type NotificationRequestItem = Types.notification.NotificationRequestItem
-
-interface RefundFailedStepCompensateInput {
-  originalPayment: PaymentDTO
-  notification: NotificationRequestItem
-}
+import type { NotificationStepInput } from './types'
 
 export const refundFailedStepId = 'refund-failed-step'
 
 const refundFailedStepInvoke = async (
-  notification: NotificationRequestItem,
+  input: NotificationStepInput,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<PaymentDTO, RefundFailedStepCompensateInput>> => {
+): Promise<StepResponse<undefined, NotificationStepInput>> => {
+  const { notification, payment } = input
   const {
     amount: { currency, value },
     merchantReference,
@@ -43,20 +36,11 @@ const refundFailedStepInvoke = async (
     )
   }
 
-  const [originalPayment] = await paymentService.listPayments(
-    {
-      payment_session_id: merchantReference,
-    },
-    {
-      relations: ['refunds'],
-    },
-    context,
-  )
   logging.debug(
-    `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
+    `${workflowId}/${stepName}/invoke/payment ${JSON.stringify(payment, null, 2)}`,
   )
 
-  const dataManager = PaymentDataManager(originalPayment.data)
+  const dataManager = PaymentDataManager(payment.data)
 
   if (!dataManager.isAuthorised()) {
     throw new MedusaError(
@@ -84,43 +68,30 @@ const refundFailedStepInvoke = async (
 
   const paymentToUpdate = {
     data: dataManager.getData(),
-    id: originalPayment.id,
+    id: payment.id,
   }
 
   await paymentService.updatePayment(paymentToUpdate, context)
 
-  const newPayment = await paymentService.retrievePayment(
-    originalPayment.id,
-    {
-      relations: ['refunds'],
-    },
-    context,
-  )
-  logging.debug(
-    `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
-  )
-
-  return new StepResponse<PaymentDTO, RefundFailedStepCompensateInput>(
-    newPayment,
-    { notification, originalPayment },
-  )
+  return new StepResponse<undefined, NotificationStepInput>(undefined, input)
 }
 
 const refundFailedStepCompensate = async (
-  { originalPayment, notification }: RefundFailedStepCompensateInput,
+  input: NotificationStepInput,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<PaymentDTO>> => {
+): Promise<StepResponse<undefined>> => {
+  const { payment, notification } = input
   const { pspReference } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
   logging.debug(
-    `${workflowId}/${stepName}/compensate/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
+    `${workflowId}/${stepName}/compensate/payment ${JSON.stringify(payment, null, 2)}`,
   )
 
-  const dataManager = PaymentDataManager(originalPayment.data)
+  const dataManager = PaymentDataManager(payment.data)
   const originalDataRefund = dataManager.getEvent(pspReference)
   const originalPaymentRefund = find(
-    originalPayment.refunds,
+    payment.refunds,
     (refund) => refund.id === originalDataRefund?.id,
   )
 
@@ -128,35 +99,24 @@ const refundFailedStepCompensate = async (
     dataManager.setData({ webhook: originalDataRefund })
     const paymentToUpdate = {
       data: dataManager.getData(),
-      id: originalPayment.id,
+      id: payment.id,
     }
     await paymentService.updatePayment(paymentToUpdate, context)
     const paymentRefundToCreate = {
       amount: originalPaymentRefund.amount,
       created_by: originalPaymentRefund.created_by,
-      payment_id: originalPayment.id,
+      payment_id: payment.id,
     }
     await paymentService.refundPayment(paymentRefundToCreate, context)
   } else {
     const paymentToUpdate = {
       data: dataManager.getData(),
-      id: originalPayment.id,
+      id: payment.id,
     }
     await paymentService.updatePayment(paymentToUpdate, context)
   }
 
-  const restoredPayment = await paymentService.retrievePayment(
-    originalPayment.id,
-    {
-      relations: ['refunds'],
-    },
-    context,
-  )
-  logging.debug(
-    `${workflowId}/${stepName}/compensate/restoredPayment ${JSON.stringify(restoredPayment, null, 2)}`,
-  )
-
-  return new StepResponse<PaymentDTO>(restoredPayment)
+  return new StepResponse<undefined>()
 }
 
 const refundFailedStep = createStep(

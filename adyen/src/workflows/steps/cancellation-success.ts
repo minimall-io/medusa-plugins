@@ -1,5 +1,3 @@
-import type { Types } from '@adyen/api-library'
-import type { PaymentDTO } from '@medusajs/framework/types'
 import {
   ContainerRegistrationKeys,
   MedusaError,
@@ -11,15 +9,15 @@ import {
   StepResponse,
 } from '@medusajs/framework/workflows-sdk'
 import { PaymentDataManager } from '../../utils'
-
-type NotificationRequestItem = Types.notification.NotificationRequestItem
+import type { NotificationStepInput } from './types'
 
 export const cancellationSuccessStepId = 'cancellation-success-step'
 
 const cancellationSuccessStepInvoke = async (
-  notification: NotificationRequestItem,
+  input: NotificationStepInput,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<PaymentDTO, PaymentDTO>> => {
+): Promise<StepResponse<undefined, NotificationStepInput>> => {
+  const { notification, payment } = input
   const {
     merchantReference,
     pspReference: providerReference,
@@ -28,18 +26,11 @@ const cancellationSuccessStepInvoke = async (
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
-  const [originalPayment] = await paymentService.listPayments(
-    {
-      payment_session_id: merchantReference,
-    },
-    undefined,
-    context,
-  )
   logging.debug(
-    `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
+    `${workflowId}/${stepName}/invoke/payment ${JSON.stringify(payment, null, 2)}`,
   )
 
-  const dataManager = PaymentDataManager(originalPayment.data)
+  const dataManager = PaymentDataManager(payment.data)
 
   if (!dataManager.isAuthorised()) {
     throw new MedusaError(
@@ -63,56 +54,39 @@ const cancellationSuccessStepInvoke = async (
   })
 
   const paymentToUpdate = {
-    canceled_at: originalPayment.canceled_at ?? date,
+    canceled_at: payment.canceled_at ?? date,
     data: dataManager.getData(),
-    id: originalPayment.id,
+    id: payment.id,
   }
 
   await paymentService.updatePayment(paymentToUpdate, context)
 
-  const newPayment = await paymentService.retrievePayment(
-    originalPayment.id,
-    undefined,
-    context,
-  )
-  logging.debug(
-    `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
-  )
-
-  return new StepResponse<PaymentDTO, PaymentDTO>(newPayment, originalPayment)
+  return new StepResponse<undefined, NotificationStepInput>(undefined, input)
 }
 
 const cancellationSuccessStepCompensate = async (
-  originalPayment: PaymentDTO,
+  input: NotificationStepInput,
   stepExecutionContext: StepExecutionContext,
-): Promise<StepResponse<PaymentDTO>> => {
+): Promise<StepResponse<undefined>> => {
+  const { payment } = input
   const { container, workflowId, stepName, context } = stepExecutionContext
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
   logging.debug(
-    `${workflowId}/${stepName}/compensate/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
+    `${workflowId}/${stepName}/compensate/payment ${JSON.stringify(payment, null, 2)}`,
   )
 
-  const dataManager = PaymentDataManager(originalPayment.data)
+  const dataManager = PaymentDataManager(payment.data)
 
   const paymentToUpdate = {
-    canceled_at: originalPayment.canceled_at,
+    canceled_at: payment.canceled_at,
     data: dataManager.getData(),
-    id: originalPayment.id,
+    id: payment.id,
   }
 
   await paymentService.updatePayment(paymentToUpdate, context)
 
-  const restoredPayment = await paymentService.retrievePayment(
-    originalPayment.id,
-    undefined,
-    context,
-  )
-  logging.debug(
-    `${workflowId}/${stepName}/compensate/restoredPayment ${JSON.stringify(restoredPayment, null, 2)}`,
-  )
-
-  return new StepResponse<PaymentDTO>(restoredPayment)
+  return new StepResponse<undefined>()
 }
 
 const cancellationSuccessStep = createStep(

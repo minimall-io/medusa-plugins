@@ -1,5 +1,3 @@
-import type { Types } from '@adyen/api-library'
-import type { PaymentDTO } from '@medusajs/framework/types'
 import {
   ContainerRegistrationKeys,
   MedusaError,
@@ -12,20 +10,15 @@ import {
 } from '@medusajs/framework/workflows-sdk'
 import { find } from 'lodash'
 import { PaymentDataManager } from '../../utils'
-
-type NotificationRequestItem = Types.notification.NotificationRequestItem
-
-interface CaptureFailedStepCompensateInput {
-  originalPayment: PaymentDTO
-  notification: NotificationRequestItem
-}
+import type { NotificationStepInput } from './types'
 
 export const captureFailedStepId = 'capture-failed-step'
 
 const captureFailedStepInvoke = async (
-  notification: NotificationRequestItem,
+  input: NotificationStepInput,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<PaymentDTO, CaptureFailedStepCompensateInput>> => {
+): Promise<StepResponse<undefined, NotificationStepInput>> => {
+  const { notification, payment } = input
   const {
     amount: { currency, value },
     merchantReference,
@@ -43,20 +36,11 @@ const captureFailedStepInvoke = async (
     )
   }
 
-  const [originalPayment] = await paymentService.listPayments(
-    {
-      payment_session_id: merchantReference,
-    },
-    {
-      relations: ['captures'],
-    },
-    context,
-  )
   logging.debug(
-    `${workflowId}/${stepName}/invoke/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
+    `${workflowId}/${stepName}/invoke/payment ${JSON.stringify(payment, null, 2)}`,
   )
 
-  const dataManager = PaymentDataManager(originalPayment.data)
+  const dataManager = PaymentDataManager(payment.data)
 
   if (!dataManager.isAuthorised()) {
     throw new MedusaError(
@@ -85,43 +69,30 @@ const captureFailedStepInvoke = async (
   const paymentToUpdate = {
     captured_at: undefined,
     data: dataManager.getData(),
-    id: originalPayment.id,
+    id: payment.id,
   }
 
   await paymentService.updatePayment(paymentToUpdate, context)
 
-  const newPayment = await paymentService.retrievePayment(
-    originalPayment.id,
-    {
-      relations: ['captures'],
-    },
-    context,
-  )
-  logging.debug(
-    `${workflowId}/${stepName}/invoke/newPayment ${JSON.stringify(newPayment, null, 2)}`,
-  )
-
-  return new StepResponse<PaymentDTO, CaptureFailedStepCompensateInput>(
-    newPayment,
-    { notification, originalPayment },
-  )
+  return new StepResponse<undefined, NotificationStepInput>(undefined, input)
 }
 
 const captureFailedStepCompensate = async (
-  { originalPayment, notification }: CaptureFailedStepCompensateInput,
+  input: NotificationStepInput,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<PaymentDTO>> => {
+): Promise<StepResponse<undefined>> => {
+  const { payment, notification } = input
   const { pspReference } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
   logging.debug(
-    `${workflowId}/${stepName}/compensate/originalPayment ${JSON.stringify(originalPayment, null, 2)}`,
+    `${workflowId}/${stepName}/compensate/payment ${JSON.stringify(payment, null, 2)}`,
   )
 
-  const dataManager = PaymentDataManager(originalPayment.data)
+  const dataManager = PaymentDataManager(payment.data)
   const originalDataCapture = dataManager.getEvent(pspReference)
   const originalPaymentCapture = find(
-    originalPayment.captures,
+    payment.captures,
     (capture) => capture.id === originalDataCapture?.id,
   )
 
@@ -129,36 +100,25 @@ const captureFailedStepCompensate = async (
     dataManager.setData({ webhook: originalDataCapture })
     const paymentToUpdate = {
       data: dataManager.getData(),
-      id: originalPayment.id,
+      id: payment.id,
     }
     await paymentService.updatePayment(paymentToUpdate, context)
     const paymentCaptureToCreate = {
       amount: originalPaymentCapture.amount,
       captured_by: originalPaymentCapture.created_by,
-      payment_id: originalPayment.id,
+      payment_id: payment.id,
     }
     await paymentService.capturePayment(paymentCaptureToCreate, context)
   } else {
     const paymentToUpdate = {
-      captured_at: originalPayment.captured_at,
+      captured_at: payment.captured_at,
       data: dataManager.getData(),
-      id: originalPayment.id,
+      id: payment.id,
     }
     await paymentService.updatePayment(paymentToUpdate, context)
   }
 
-  const restoredPayment = await paymentService.retrievePayment(
-    originalPayment.id,
-    {
-      relations: ['captures'],
-    },
-    context,
-  )
-  logging.debug(
-    `${workflowId}/${stepName}/compensate/restoredPayment ${JSON.stringify(restoredPayment, null, 2)}`,
-  )
-
-  return new StepResponse<PaymentDTO>(restoredPayment)
+  return new StepResponse<undefined>()
 }
 
 const captureFailedStep = createStep(
