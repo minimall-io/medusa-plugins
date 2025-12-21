@@ -53,16 +53,6 @@ const synchronizePaymentCollectionStepInvoke = async (
           'payments.refunds.amount',
           'payments.refunds.raw_amount',
         ],
-        select: [
-          'amount',
-          'raw_amount',
-          'status',
-          'currency_code',
-          'authorized_amount',
-          'captured_amount',
-          'completed_at',
-          'refunded_amount',
-        ],
       },
       context,
     )
@@ -158,16 +148,6 @@ const synchronizePaymentCollectionStepInvoke = async (
         'payments.refunds.amount',
         'payments.refunds.raw_amount',
       ],
-      select: [
-        'amount',
-        'raw_amount',
-        'status',
-        'currency_code',
-        'authorized_amount',
-        'captured_amount',
-        'completed_at',
-        'refunded_amount',
-      ],
     },
     context,
   )
@@ -227,21 +207,11 @@ const synchronizePaymentCollectionStepCompensate = async (
           'payments.refunds.amount',
           'payments.refunds.raw_amount',
         ],
-        select: [
-          'amount',
-          'raw_amount',
-          'status',
-          'currency_code',
-          'authorized_amount',
-          'captured_amount',
-          'completed_at',
-          'refunded_amount',
-        ],
       },
       context,
     )
   logging.debug(
-    `${workflowId}/${stepName}/compensate/newPaymentCollection ${JSON.stringify(restoredPaymentCollection, null, 2)}`,
+    `${workflowId}/${stepName}/compensate/restoredPaymentCollection ${JSON.stringify(restoredPaymentCollection, null, 2)}`,
   )
 
   return new StepResponse<PaymentCollectionDTO>(restoredPaymentCollection)
