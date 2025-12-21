@@ -20,10 +20,10 @@ type NotificationRequestItem = Types.notification.NotificationRequestItem
 export const synchronizePaymentCollectionStepId =
   'synchronize-payment-collection-step'
 
-const synchronizePaymentCollectionStepCall = async (
+const synchronizePaymentCollectionStepInvoke = async (
   notification: NotificationRequestItem,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<PaymentCollectionDTO, NotificationRequestItem>> => {
+): Promise<StepResponse<PaymentCollectionDTO, PaymentCollectionDTO>> => {
   const { merchantReference } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -53,7 +53,16 @@ const synchronizePaymentCollectionStepCall = async (
           'payments.refunds.amount',
           'payments.refunds.raw_amount',
         ],
-        select: ['amount', 'raw_amount', 'status', 'currency_code'],
+        select: [
+          'amount',
+          'raw_amount',
+          'status',
+          'currency_code',
+          'authorized_amount',
+          'captured_amount',
+          'completed_at',
+          'refunded_amount',
+        ],
       },
       context,
     )
@@ -149,7 +158,16 @@ const synchronizePaymentCollectionStepCall = async (
         'payments.refunds.amount',
         'payments.refunds.raw_amount',
       ],
-      select: ['amount', 'raw_amount', 'status', 'currency_code'],
+      select: [
+        'amount',
+        'raw_amount',
+        'status',
+        'currency_code',
+        'authorized_amount',
+        'captured_amount',
+        'completed_at',
+        'refunded_amount',
+      ],
     },
     context,
   )
@@ -157,16 +175,82 @@ const synchronizePaymentCollectionStepCall = async (
     `${workflowId}/${stepName}/call/newPaymentCollection ${JSON.stringify(newPaymentCollection, null, 2)}`,
   )
 
-  return new StepResponse<PaymentCollectionDTO, NotificationRequestItem>(
+  return new StepResponse<PaymentCollectionDTO, PaymentCollectionDTO>(
     newPaymentCollection,
-    notification,
+    originalPaymentCollection,
   )
+}
+
+const synchronizePaymentCollectionStepCompensate = async (
+  originalPaymentCollection: PaymentCollectionDTO,
+  { container, workflowId, stepName, context }: StepExecutionContext,
+): Promise<StepResponse<PaymentCollectionDTO>> => {
+  const paymentService = container.resolve(Modules.PAYMENT)
+  const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
+
+  logging.debug(
+    `${workflowId}/${stepName}/compensate/originalPaymentCollection ${JSON.stringify(originalPaymentCollection, null, 2)}`,
+  )
+
+  const {
+    authorized_amount,
+    captured_amount,
+    completed_at,
+    refunded_amount,
+    status,
+    id,
+  } = originalPaymentCollection
+
+  const paymentCollectionToUpdate = {
+    authorized_amount,
+    captured_amount,
+    completed_at,
+    refunded_amount,
+    status,
+  }
+
+  await paymentService.updatePaymentCollections(
+    id,
+    paymentCollectionToUpdate,
+    context,
+  )
+
+  const restoredPaymentCollection =
+    await paymentService.retrievePaymentCollection(
+      id,
+      {
+        relations: [
+          'payment_sessions.amount',
+          'payment_sessions.raw_amount',
+          'payments.captures.amount',
+          'payments.captures.raw_amount',
+          'payments.refunds.amount',
+          'payments.refunds.raw_amount',
+        ],
+        select: [
+          'amount',
+          'raw_amount',
+          'status',
+          'currency_code',
+          'authorized_amount',
+          'captured_amount',
+          'completed_at',
+          'refunded_amount',
+        ],
+      },
+      context,
+    )
+  logging.debug(
+    `${workflowId}/${stepName}/compensate/newPaymentCollection ${JSON.stringify(restoredPaymentCollection, null, 2)}`,
+  )
+
+  return new StepResponse<PaymentCollectionDTO>(restoredPaymentCollection)
 }
 
 const synchronizePaymentCollectionStep = createStep(
   synchronizePaymentCollectionStepId,
-  synchronizePaymentCollectionStepCall,
-  synchronizePaymentCollectionStepCall,
+  synchronizePaymentCollectionStepInvoke,
+  synchronizePaymentCollectionStepCompensate,
 )
 
 export default synchronizePaymentCollectionStep
