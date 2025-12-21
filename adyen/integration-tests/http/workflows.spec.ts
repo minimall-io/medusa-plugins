@@ -1291,6 +1291,280 @@ medusaIntegrationTestRunner({
             expect(originalRefunds[0].status).toEqual('REQUESTED')
             expect(newRefunds[0].status).toEqual('FAILED')
           })
+
+          it('updates all payment data models to reflect the change after a success refund failed notification is processed without prior direct refund', async () => {
+            const payment = await authorizePaymentSession(session.id)
+
+            await paymentService.capturePayment({ payment_id: payment.id })
+
+            const [capturedCollection, capturedSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
+
+            const pspReference = 'pspReference'
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.RefundFailed,
+              SuccessEnum.True,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            await workflow.run({
+              input: notification,
+            })
+
+            const [newCollection, newSession, newRefunds] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+                'REFUND',
+              )
+
+            expect(capturedCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            // This is because of the Payment Module's bug.
+            expect(capturedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(newSession.status).toEqual(PaymentSessionStatus.CAPTURED)
+            expect(capturedSession.payment?.refunds).toHaveLength(0)
+            expect(newSession.payment?.refunds).toHaveLength(0)
+            expect(newRefunds).toHaveLength(1)
+            expect(newRefunds[0].id).toEqual('MISSING')
+            expect(newRefunds[0].providerReference).toEqual(pspReference)
+            expect(newRefunds[0].merchantReference).toEqual(reference)
+            expect(newRefunds[0].amount.value).toEqual(amount)
+            expect(newRefunds[0].amount.currency).toEqual(currency)
+            expect(newRefunds[0].status).toEqual('FAILED')
+          })
+
+          it('updates all payment data models to reflect the change after a success refund failed notification is processed with prior direct refund', async () => {
+            const payment = await authorizePaymentSession(session.id)
+
+            await paymentService.capturePayment({ payment_id: payment.id })
+
+            const [capturedCollection, capturedSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
+
+            await paymentService.refundPayment({ payment_id: payment.id })
+
+            const [refundedCollection, refundedSession, originalRefunds] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+                'REFUND',
+              )
+
+            const notification = getNotificationRequestItem(
+              originalRefunds[0].providerReference,
+              originalRefunds[0].merchantReference,
+              originalRefunds[0].amount.value,
+              originalRefunds[0].amount.currency,
+              EventCodeEnum.RefundFailed,
+              SuccessEnum.True,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            await workflow.run({
+              input: notification,
+            })
+
+            const [newCollection, newSession, newRefunds] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+                'REFUND',
+              )
+
+            expect(capturedCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            expect(refundedCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            // This is because of the Payment Module's bug.
+            expect(capturedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            // This is because of the Payment Module's bug.
+            expect(refundedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(newSession.status).toEqual(PaymentSessionStatus.CAPTURED)
+
+            expect(capturedSession.payment?.refunds).toHaveLength(0)
+            expect(refundedSession.payment?.refunds).toHaveLength(1)
+            expect(newSession.payment?.refunds).toHaveLength(0)
+            expect(newRefunds).toHaveLength(1)
+            expect(newRefunds[0].id).toEqual('MISSING')
+            expect(newRefunds[0].providerReference).toEqual(
+              originalRefunds[0].providerReference,
+            )
+            expect(newRefunds[0].merchantReference).toEqual(
+              originalRefunds[0].merchantReference,
+            )
+            expect(newRefunds[0].amount.value).toEqual(
+              originalRefunds[0].amount.value,
+            )
+            expect(newRefunds[0].amount.currency).toEqual(
+              originalRefunds[0].amount.currency,
+            )
+            expect(originalRefunds[0].status).toEqual('REQUESTED')
+            expect(newRefunds[0].status).toEqual('FAILED')
+          })
+
+          it('updates all payment data models to reflect the change after a success refund reversed notification is processed without prior direct refund', async () => {
+            const payment = await authorizePaymentSession(session.id)
+
+            await paymentService.capturePayment({ payment_id: payment.id })
+
+            const [capturedCollection, capturedSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
+
+            const pspReference = 'pspReference'
+
+            const notification = getNotificationRequestItem(
+              pspReference,
+              reference,
+              amount,
+              currency,
+              EventCodeEnum.RefundedReversed,
+              SuccessEnum.True,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            await workflow.run({
+              input: notification,
+            })
+
+            const [newCollection, newSession, newRefunds] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+                'REFUND',
+              )
+
+            expect(capturedCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            // This is because of the Payment Module's bug.
+            expect(capturedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(newSession.status).toEqual(PaymentSessionStatus.CAPTURED)
+            expect(capturedSession.payment?.refunds).toHaveLength(0)
+            expect(newSession.payment?.refunds).toHaveLength(0)
+            expect(newRefunds).toHaveLength(1)
+            expect(newRefunds[0].id).toEqual('MISSING')
+            expect(newRefunds[0].providerReference).toEqual(pspReference)
+            expect(newRefunds[0].merchantReference).toEqual(reference)
+            expect(newRefunds[0].amount.value).toEqual(amount)
+            expect(newRefunds[0].amount.currency).toEqual(currency)
+            expect(newRefunds[0].status).toEqual('FAILED')
+          })
+
+          it('updates all payment data models to reflect the change after a success refund reversed notification is processed with prior direct refund', async () => {
+            const payment = await authorizePaymentSession(session.id)
+
+            await paymentService.capturePayment({ payment_id: payment.id })
+
+            const [capturedCollection, capturedSession] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+              )
+
+            await paymentService.refundPayment({ payment_id: payment.id })
+
+            const [refundedCollection, refundedSession, originalRefunds] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+                'REFUND',
+              )
+
+            const notification = getNotificationRequestItem(
+              originalRefunds[0].providerReference,
+              originalRefunds[0].merchantReference,
+              originalRefunds[0].amount.value,
+              originalRefunds[0].amount.currency,
+              EventCodeEnum.RefundedReversed,
+              SuccessEnum.True,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            await workflow.run({
+              input: notification,
+            })
+
+            const [newCollection, newSession, newRefunds] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+                'REFUND',
+              )
+
+            expect(capturedCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            expect(refundedCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.COMPLETED,
+            )
+            // This is because of the Payment Module's bug.
+            expect(capturedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            // This is because of the Payment Module's bug.
+            expect(refundedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(newSession.status).toEqual(PaymentSessionStatus.CAPTURED)
+
+            expect(capturedSession.payment?.refunds).toHaveLength(0)
+            expect(refundedSession.payment?.refunds).toHaveLength(1)
+            expect(newSession.payment?.refunds).toHaveLength(0)
+            expect(newRefunds).toHaveLength(1)
+            expect(newRefunds[0].id).toEqual('MISSING')
+            expect(newRefunds[0].providerReference).toEqual(
+              originalRefunds[0].providerReference,
+            )
+            expect(newRefunds[0].merchantReference).toEqual(
+              originalRefunds[0].merchantReference,
+            )
+            expect(newRefunds[0].amount.value).toEqual(
+              originalRefunds[0].amount.value,
+            )
+            expect(newRefunds[0].amount.currency).toEqual(
+              originalRefunds[0].amount.currency,
+            )
+            expect(originalRefunds[0].status).toEqual('REQUESTED')
+            expect(newRefunds[0].status).toEqual('FAILED')
+          })
         })
       })
 
