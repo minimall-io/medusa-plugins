@@ -17,10 +17,10 @@ type NotificationRequestItem = Types.notification.NotificationRequestItem
 export const synchronizePaymentSessionStepId =
   'synchronize-payment-session-step'
 
-const synchronizePaymentSessionStepCall = async (
+const synchronizePaymentSessionStepInvoke = async (
   notification: NotificationRequestItem,
   { container, workflowId, stepName, context }: StepExecutionContext,
-): Promise<StepResponse<PaymentSessionDTO, NotificationRequestItem>> => {
+): Promise<StepResponse<PaymentSessionDTO, PaymentSessionDTO>> => {
   const { merchantReference } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
   const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -33,7 +33,7 @@ const synchronizePaymentSessionStepCall = async (
     context,
   )
   logging.debug(
-    `${workflowId}/${stepName}/call/originalPaymentSession ${JSON.stringify(originalPaymentSession, null, 2)}`,
+    `${workflowId}/${stepName}/invoke/originalPaymentSession ${JSON.stringify(originalPaymentSession, null, 2)}`,
   )
 
   const { id, amount, currency_code, payment } = originalPaymentSession
@@ -79,19 +79,60 @@ const synchronizePaymentSessionStepCall = async (
     context,
   )
   logging.debug(
-    `${workflowId}/${stepName}/call/newPaymentSession ${JSON.stringify(newPaymentSession, null, 2)}`,
+    `${workflowId}/${stepName}/invoke/newPaymentSession ${JSON.stringify(newPaymentSession, null, 2)}`,
   )
 
-  return new StepResponse<PaymentSessionDTO, NotificationRequestItem>(
+  return new StepResponse<PaymentSessionDTO, PaymentSessionDTO>(
     newPaymentSession,
-    notification,
+    originalPaymentSession,
   )
+}
+
+const synchronizePaymentSessionStepCompensate = async (
+  originalPaymentSession: PaymentSessionDTO,
+  { container, workflowId, stepName, context }: StepExecutionContext,
+): Promise<StepResponse<PaymentSessionDTO>> => {
+  const paymentService = container.resolve(Modules.PAYMENT)
+  const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
+
+  logging.debug(
+    `${workflowId}/${stepName}/compensate/originalPaymentSession ${JSON.stringify(originalPaymentSession, null, 2)}`,
+  )
+
+  const { id, amount, currency_code, payment, authorized_at, status } =
+    originalPaymentSession
+
+  const dataManager = PaymentDataManager(payment?.data)
+
+  const paymentSessionToUpdate = {
+    amount,
+    authorized_at,
+    currency_code,
+    data: dataManager.getData(),
+    id,
+    status,
+  }
+
+  await paymentService.updatePaymentSession(paymentSessionToUpdate, context)
+
+  const restoredPaymentSession = await paymentService.retrievePaymentSession(
+    originalPaymentSession.id,
+    {
+      relations: ['payment'],
+    },
+    context,
+  )
+  logging.debug(
+    `${workflowId}/${stepName}/compensate/restoredPaymentSession ${JSON.stringify(restoredPaymentSession, null, 2)}`,
+  )
+
+  return new StepResponse<PaymentSessionDTO>(restoredPaymentSession)
 }
 
 const synchronizePaymentSessionStep = createStep(
   synchronizePaymentSessionStepId,
-  synchronizePaymentSessionStepCall,
-  synchronizePaymentSessionStepCall,
+  synchronizePaymentSessionStepInvoke,
+  synchronizePaymentSessionStepCompensate,
 )
 
 export default synchronizePaymentSessionStep
