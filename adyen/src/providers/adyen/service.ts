@@ -114,18 +114,29 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const stringData = JSON.stringify(data, null, 2)
     const message = `${title}: ${stringData}`
     switch (loggingLevel) {
-      case 'error':
-        return this.logger_.error(message)
-      case 'warn':
-        return this.logger_.warn(message)
-      case 'info':
-        return this.logger_.info(message)
-      case 'http':
-        return this.logger_.http(message)
-      case 'verbose':
-        return this.logger_.verbose(message)
+      case 'error': {
+        this.logger_.error(message)
+        return
+      }
+      case 'warn': {
+        this.logger_.warn(message)
+        return
+      }
+      case 'info': {
+        this.logger_.info(message)
+        return
+      }
+      case 'http': {
+        this.logger_.http(message)
+        return
+      }
+      case 'verbose': {
+        this.logger_.verbose(message)
+        return
+      }
       case 'debug': {
-        return this.logger_.debug(message)
+        this.logger_.debug(message)
+        return
       }
       default:
         return
