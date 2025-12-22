@@ -42,14 +42,12 @@ const synchronizePaymentSessionStepInvoke = async (
   const dataManager = PaymentDataManager(payment?.data)
 
   let status = PaymentSessionStatus.PENDING
-  let authorized_at = newSession.authorized_at
 
   if (payment) {
     status = PaymentSessionStatus.AUTHORIZED
     const authorisation = dataManager.getAuthorisation()
     if (authorisation?.status === 'FAILED') {
       status = PaymentSessionStatus.ERROR
-      authorized_at = undefined
     }
   }
 
@@ -63,7 +61,6 @@ const synchronizePaymentSessionStepInvoke = async (
 
   const paymentSessionToUpdate = {
     amount,
-    authorized_at,
     currency_code,
     data: dataManager.getData(),
     id,
@@ -87,13 +84,12 @@ const synchronizePaymentSessionStepCompensate = async (
     `${workflowId}/${stepName}/compensate/session ${JSON.stringify(session, null, 2)}`,
   )
 
-  const { id, amount, currency_code, payment, authorized_at, status } = session
+  const { id, amount, currency_code, payment, status } = session
 
   const dataManager = PaymentDataManager(payment?.data)
 
   const paymentSessionToUpdate = {
     amount,
-    authorized_at,
     currency_code,
     data: dataManager.getData(),
     id,
