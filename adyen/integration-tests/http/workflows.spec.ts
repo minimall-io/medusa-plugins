@@ -135,13 +135,11 @@ medusaIntegrationTestRunner({
               'AUTHORISATION',
             )
 
-            const pspReference = 'pspReference'
-
             const notification = getNotificationRequestItem(
-              pspReference,
-              reference,
-              amount,
-              currency,
+              originalAuthorisations[0].providerReference,
+              originalAuthorisations[0].merchantReference,
+              originalAuthorisations[0].amount.value,
+              originalAuthorisations[0].amount.currency,
               EventCodeEnum.Authorisation,
               SuccessEnum.True,
             )
@@ -174,10 +172,18 @@ medusaIntegrationTestRunner({
               authorizedSession.authorized_at,
             )
             expect(newAuthorisations).toHaveLength(1)
-            expect(newAuthorisations[0].providerReference).toEqual(pspReference)
-            expect(newAuthorisations[0].merchantReference).toEqual(reference)
-            expect(newAuthorisations[0].amount.value).toEqual(amount)
-            expect(newAuthorisations[0].amount.currency).toEqual(currency)
+            expect(newAuthorisations[0].providerReference).toEqual(
+              originalAuthorisations[0].providerReference,
+            )
+            expect(newAuthorisations[0].merchantReference).toEqual(
+              originalAuthorisations[0].merchantReference,
+            )
+            expect(newAuthorisations[0].amount.value).toEqual(
+              originalAuthorisations[0].amount.value,
+            )
+            expect(newAuthorisations[0].amount.currency).toEqual(
+              originalAuthorisations[0].amount.currency,
+            )
             expect(originalAuthorisations[0].status).toEqual('REQUESTED')
             expect(newAuthorisations[0].status).toEqual('SUCCEEDED')
           })
@@ -195,13 +201,11 @@ medusaIntegrationTestRunner({
               'AUTHORISATION',
             )
 
-            const pspReference = 'pspReference'
-
             const notification = getNotificationRequestItem(
-              pspReference,
-              reference,
-              amount,
-              currency,
+              originalAuthorisations[0].providerReference,
+              originalAuthorisations[0].merchantReference,
+              originalAuthorisations[0].amount.value,
+              originalAuthorisations[0].amount.currency,
               EventCodeEnum.Authorisation,
               SuccessEnum.False,
             )
@@ -231,10 +235,18 @@ medusaIntegrationTestRunner({
             expect(authorizedSession.authorized_at).toBeDefined()
             expect(newSession.authorized_at).toBeDefined() // updatePaymentSession ignores the authorized_at field
             expect(newAuthorisations).toHaveLength(1)
-            expect(newAuthorisations[0].providerReference).toEqual(pspReference)
-            expect(newAuthorisations[0].merchantReference).toEqual(reference)
-            expect(newAuthorisations[0].amount.value).toEqual(amount)
-            expect(newAuthorisations[0].amount.currency).toEqual(currency)
+            expect(newAuthorisations[0].providerReference).toEqual(
+              originalAuthorisations[0].providerReference,
+            )
+            expect(newAuthorisations[0].merchantReference).toEqual(
+              originalAuthorisations[0].merchantReference,
+            )
+            expect(newAuthorisations[0].amount.value).toEqual(
+              originalAuthorisations[0].amount.value,
+            )
+            expect(newAuthorisations[0].amount.currency).toEqual(
+              originalAuthorisations[0].amount.currency,
+            )
             expect(originalAuthorisations[0].status).toEqual('REQUESTED')
             expect(newAuthorisations[0].status).toEqual('FAILED')
           })
@@ -1737,6 +1749,159 @@ medusaIntegrationTestRunner({
           }
 
           workflowDef.handlers_.set('notificationProcessed', handler)
+        })
+
+        describe('Test processing authorisation notification', () => {
+          it('preserves the original state of the payment data models after success authorisation notification processing fails with prior direct authorisation', async () => {
+            await paymentService.authorizePaymentSession(session.id, {})
+
+            const [
+              authorizedCollection,
+              authorizedSession,
+              originalAuthorisations,
+            ] = await retrievePaymentData(
+              session.payment_collection_id,
+              session.id,
+              'AUTHORISATION',
+            )
+
+            const notification = getNotificationRequestItem(
+              originalAuthorisations[0].providerReference,
+              originalAuthorisations[0].merchantReference,
+              originalAuthorisations[0].amount.value,
+              originalAuthorisations[0].amount.currency,
+              EventCodeEnum.Authorisation,
+              SuccessEnum.True,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            const { errors } = await workflow.run({
+              input: notification,
+              throwOnError: false,
+            })
+
+            const [newCollection, newSession, newAuthorisations] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+                'AUTHORISATION',
+              )
+
+            expect(errors).toEqual([
+              {
+                action: 'notificationProcessed',
+                error: expect.objectContaining({
+                  message:
+                    'processNotificationWorkflow/hooks/notificationProcessed/error',
+                }),
+                handlerType: 'invoke',
+              },
+            ])
+            expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(authorizedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
+            expect(authorizedSession.authorized_at).toBeDefined()
+            expect(newSession.authorized_at).toBeDefined()
+            expect(newSession.authorized_at).toEqual(
+              authorizedSession.authorized_at,
+            )
+            expect(newAuthorisations).toHaveLength(1)
+            expect(newAuthorisations[0].providerReference).toEqual(
+              originalAuthorisations[0].providerReference,
+            )
+            expect(newAuthorisations[0].merchantReference).toEqual(
+              originalAuthorisations[0].merchantReference,
+            )
+            expect(newAuthorisations[0].amount.value).toEqual(
+              originalAuthorisations[0].amount.value,
+            )
+            expect(newAuthorisations[0].amount.currency).toEqual(
+              originalAuthorisations[0].amount.currency,
+            )
+            expect(originalAuthorisations[0].status).toEqual('REQUESTED')
+            expect(newAuthorisations[0].status).toEqual('REQUESTED')
+          })
+
+          it('preserves the original state of the payment data models after failed authorisation notification processing fails with prior direct authorisation', async () => {
+            await paymentService.authorizePaymentSession(session.id, {})
+
+            const [
+              authorizedCollection,
+              authorizedSession,
+              originalAuthorisations,
+            ] = await retrievePaymentData(
+              session.payment_collection_id,
+              session.id,
+              'AUTHORISATION',
+            )
+
+            const notification = getNotificationRequestItem(
+              originalAuthorisations[0].providerReference,
+              originalAuthorisations[0].merchantReference,
+              originalAuthorisations[0].amount.value,
+              originalAuthorisations[0].amount.currency,
+              EventCodeEnum.Authorisation,
+              SuccessEnum.False,
+            )
+
+            const workflow = processNotificationWorkflow(container)
+            const { errors } = await workflow.run({
+              input: notification,
+              throwOnError: false,
+            })
+
+            const [newCollection, newSession, newAuthorisations] =
+              await retrievePaymentData(
+                session.payment_collection_id,
+                session.id,
+                'AUTHORISATION',
+              )
+
+            expect(errors).toEqual([
+              {
+                action: 'notificationProcessed',
+                error: expect.objectContaining({
+                  message:
+                    'processNotificationWorkflow/hooks/notificationProcessed/error',
+                }),
+                handlerType: 'invoke',
+              },
+            ])
+            expect(authorizedCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(newCollection.status).toEqual(
+              PaymentCollectionStatus.AUTHORIZED,
+            )
+            expect(authorizedSession.status).toEqual(
+              PaymentSessionStatus.AUTHORIZED,
+            )
+            expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
+            expect(authorizedSession.authorized_at).toBeDefined()
+            expect(newSession.authorized_at).toBeDefined() // updatePaymentSession ignores the authorized_at field
+            expect(newAuthorisations).toHaveLength(1)
+            expect(newAuthorisations[0].providerReference).toEqual(
+              originalAuthorisations[0].providerReference,
+            )
+            expect(newAuthorisations[0].merchantReference).toEqual(
+              originalAuthorisations[0].merchantReference,
+            )
+            expect(newAuthorisations[0].amount.value).toEqual(
+              originalAuthorisations[0].amount.value,
+            )
+            expect(newAuthorisations[0].amount.currency).toEqual(
+              originalAuthorisations[0].amount.currency,
+            )
+            expect(originalAuthorisations[0].status).toEqual('REQUESTED')
+            expect(newAuthorisations[0].status).toEqual('REQUESTED')
+          })
         })
 
         describe('Test processing cancellation notification', () => {
