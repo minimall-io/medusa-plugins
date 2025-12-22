@@ -168,6 +168,32 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     }
   }
 
+  // https://docs.adyen.com/online-payments/build-your-integration/payment-result-codes/
+  protected getAuthorisationStatus(
+    code?: Types.checkout.PaymentResponse.ResultCodeEnum,
+  ): 'REQUESTED' | 'SUCCEEDED' | 'FAILED' {
+    const codes = Types.checkout.PaymentResponse.ResultCodeEnum
+    switch (code) {
+      case codes.Authorised:
+        return 'SUCCEEDED'
+      case codes.Cancelled:
+        return 'FAILED'
+      case codes.Received:
+        return 'REQUESTED'
+      case codes.Pending:
+      case codes.PresentToShopper:
+      case codes.ChallengeShopper:
+      case codes.IdentifyShopper:
+      case codes.RedirectShopper:
+        return 'REQUESTED'
+      case codes.Error:
+      case codes.Refused:
+        return 'FAILED'
+      default:
+        return 'FAILED' // Default to error for unhandled cases
+    }
+  }
+
   protected validateHMAC(
     notification: Types.notification.NotificationRequestItem,
   ): boolean {
@@ -217,7 +243,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       merchantReference: response.merchantReference || reference,
       name: 'AUTHORISATION',
       providerReference: response.pspReference!,
-      status: 'REQUESTED', // TODO: Handle other statuses
+      status: this.getAuthorisationStatus(response.resultCode),
     })
 
     const data = dataManager.getData()
@@ -411,7 +437,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const id = reference
     const idempotencyKey = `${reference}_cancellation`
 
-    // Currently not used due to the Payment Module's bug.
     if (webhook) {
       dataManager.setEvent({ ...webhook, id })
       dataManager.setData({ webhook: undefined })

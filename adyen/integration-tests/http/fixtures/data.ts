@@ -69,15 +69,6 @@ export const getCardDetails = (
     type: TypeEnum.Scheme,
   }
 
-  // const unencryptedCardDetails = {
-  //   type: TypeEnum.Scheme,
-  //   number: `test_${cardNumber}`,
-  //   expiryMonth: `test_${expiryMonth}`,
-  //   expiryYear: `test_${expiryYear}`,
-  //   cvc: `test_${securityCode}`,
-  //   holderName: holderName,
-  // }
-
   const unencryptedCardDetails = {
     cvc: securityCode,
     expiryMonth: expiryMonth,

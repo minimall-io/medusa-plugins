@@ -179,7 +179,6 @@ medusaIntegrationTestRunner({
         it('returns session amount data property when updatePaymentSession is called', async () => {
           const originalAmount = session.data!.amount as Types.checkout.Amount
 
-          // trying to update the amount to half of the original amount
           const alteredValue = Number(collection.amount) / 2
           const alteredAmount = {
             currency: collection.currency_code,
