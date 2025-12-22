@@ -54,15 +54,11 @@ const getPaymentDataStepInvoke = async (
   }
 
   const payment = session.payment
-  const captures = payment.captures ?? []
-  const refunds = payment.refunds ?? []
 
   const paymentData = {
-    captures,
     collection,
     notification,
     payment,
-    refunds,
     session,
   }
 
