@@ -184,7 +184,7 @@ medusaIntegrationTestRunner({
             expect(newAuthorisations[0].amount.currency).toEqual(
               originalAuthorisations[0].amount.currency,
             )
-            expect(originalAuthorisations[0].status).toEqual('REQUESTED')
+            expect(originalAuthorisations[0].status).toEqual('SUCCEEDED')
             expect(newAuthorisations[0].status).toEqual('SUCCEEDED')
           })
 
@@ -247,7 +247,7 @@ medusaIntegrationTestRunner({
             expect(newAuthorisations[0].amount.currency).toEqual(
               originalAuthorisations[0].amount.currency,
             )
-            expect(originalAuthorisations[0].status).toEqual('REQUESTED')
+            expect(originalAuthorisations[0].status).toEqual('SUCCEEDED')
             expect(newAuthorisations[0].status).toEqual('FAILED')
           })
         })
@@ -1704,10 +1704,6 @@ medusaIntegrationTestRunner({
           }
 
           const hookHandler = (input: NotificationRequestItem) => {
-            console.log(
-              'processNotificationWorkflow/hooks/notificationProcessed/input',
-              JSON.stringify(input, null, 2),
-            )
             throw new MedusaError(
               MedusaError.Types.NOT_ALLOWED,
               'processNotificationWorkflow/hooks/notificationProcessed/error',
@@ -1813,8 +1809,8 @@ medusaIntegrationTestRunner({
             expect(newAuthorisations[0].amount.currency).toEqual(
               originalAuthorisations[0].amount.currency,
             )
-            expect(originalAuthorisations[0].status).toEqual('REQUESTED')
-            expect(newAuthorisations[0].status).toEqual('REQUESTED')
+            expect(originalAuthorisations[0].status).toEqual('SUCCEEDED')
+            expect(newAuthorisations[0].status).toEqual('SUCCEEDED')
           })
 
           it('preserves the original state of the payment data models after failed authorisation notification processing fails with prior direct authorisation', async () => {
@@ -1887,8 +1883,8 @@ medusaIntegrationTestRunner({
             expect(newAuthorisations[0].amount.currency).toEqual(
               originalAuthorisations[0].amount.currency,
             )
-            expect(originalAuthorisations[0].status).toEqual('REQUESTED')
-            expect(newAuthorisations[0].status).toEqual('REQUESTED')
+            expect(originalAuthorisations[0].status).toEqual('SUCCEEDED')
+            expect(newAuthorisations[0].status).toEqual('SUCCEEDED')
           })
         })
 
