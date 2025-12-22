@@ -233,7 +233,7 @@ medusaIntegrationTestRunner({
             )
             expect(newSession.status).toEqual(PaymentSessionStatus.ERROR)
             expect(authorizedSession.authorized_at).toBeDefined()
-            expect(newSession.authorized_at).toBeDefined() // updatePaymentSession ignores the authorized_at field
+            expect(newSession.authorized_at).toBeDefined()
             expect(newAuthorisations).toHaveLength(1)
             expect(newAuthorisations[0].providerReference).toEqual(
               originalAuthorisations[0].providerReference,
@@ -359,7 +359,7 @@ medusaIntegrationTestRunner({
             )
             expect(cancelledSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is becuase the Payment Module's bug.
+            )
             expect(newSession.status).toEqual(PaymentSessionStatus.CANCELED)
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(cancelledSession.payment?.canceled_at).toBeDefined()
@@ -481,7 +481,7 @@ medusaIntegrationTestRunner({
             )
             expect(cancelledSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is becuase the Payment Module's bug.
+            )
             expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(cancelledSession.payment?.canceled_at).toBeDefined()
@@ -600,7 +600,7 @@ medusaIntegrationTestRunner({
             )
             expect(cancelledSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is becuase the Payment Module's bug.
+            )
             expect(newSession.status).toEqual(PaymentSessionStatus.CANCELED)
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(cancelledSession.payment?.canceled_at).toBeDefined()
@@ -722,7 +722,7 @@ medusaIntegrationTestRunner({
             )
             expect(cancelledSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is becuase the Payment Module's bug.
+            )
             expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(cancelledSession.payment?.canceled_at).toBeDefined()
@@ -847,7 +847,7 @@ medusaIntegrationTestRunner({
             )
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is because of the Payment Module's bug.
+            )
             expect(newSession.status).toEqual(PaymentSessionStatus.CAPTURED)
             expect(authorizedSession.payment?.captured_at).toBeNull()
             expect(capturedSession.payment?.captured_at).toBeDefined()
@@ -983,7 +983,7 @@ medusaIntegrationTestRunner({
             )
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is because of the Payment Module's bug.
+            )
             expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
             expect(authorizedSession.payment?.captured_at).toBeNull()
             expect(capturedSession.payment?.captured_at).toBeDefined()
@@ -1117,7 +1117,7 @@ medusaIntegrationTestRunner({
             )
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is because of the Payment Module's bug.
+            )
             expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
             expect(authorizedSession.payment?.captured_at).toBeNull()
             expect(capturedSession.payment?.captured_at).toBeDefined()
@@ -1185,7 +1185,6 @@ medusaIntegrationTestRunner({
             expect(newCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
             )
-            // This is because of the Payment Module's bug.
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
@@ -1253,11 +1252,9 @@ medusaIntegrationTestRunner({
             expect(newCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
             )
-            // This is because of the Payment Module's bug.
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
-            // This is because of the Payment Module's bug.
             expect(refundedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
@@ -1326,7 +1323,6 @@ medusaIntegrationTestRunner({
             expect(newCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
             )
-            // This is because of the Payment Module's bug.
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
@@ -1392,11 +1388,9 @@ medusaIntegrationTestRunner({
             expect(newCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
             )
-            // This is because of the Payment Module's bug.
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
-            // This is because of the Payment Module's bug.
             expect(refundedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
@@ -1463,7 +1457,6 @@ medusaIntegrationTestRunner({
             expect(newCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
             )
-            // This is because of the Payment Module's bug.
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
@@ -1529,11 +1522,9 @@ medusaIntegrationTestRunner({
             expect(newCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
             )
-            // This is because of the Payment Module's bug.
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
-            // This is because of the Payment Module's bug.
             expect(refundedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
@@ -1600,7 +1591,6 @@ medusaIntegrationTestRunner({
             expect(newCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
             )
-            // This is because of the Payment Module's bug.
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
@@ -1666,11 +1656,9 @@ medusaIntegrationTestRunner({
             expect(newCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
             )
-            // This is because of the Payment Module's bug.
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
-            // This is because of the Payment Module's bug.
             expect(refundedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
@@ -1885,7 +1873,7 @@ medusaIntegrationTestRunner({
             )
             expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
             expect(authorizedSession.authorized_at).toBeDefined()
-            expect(newSession.authorized_at).toBeDefined() // updatePaymentSession ignores the authorized_at field
+            expect(newSession.authorized_at).toBeDefined()
             expect(newAuthorisations).toHaveLength(1)
             expect(newAuthorisations[0].providerReference).toEqual(
               originalAuthorisations[0].providerReference,
@@ -2028,7 +2016,7 @@ medusaIntegrationTestRunner({
             )
             expect(cancelledSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is becuase the Payment Module's bug.
+            )
             expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(cancelledSession.payment?.canceled_at).toBeDefined()
@@ -2162,7 +2150,7 @@ medusaIntegrationTestRunner({
             )
             expect(cancelledSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is becuase the Payment Module's bug.
+            )
             expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(cancelledSession.payment?.canceled_at).toBeDefined()
@@ -2293,7 +2281,7 @@ medusaIntegrationTestRunner({
             )
             expect(cancelledSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is becuase the Payment Module's bug.
+            )
             expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(cancelledSession.payment?.canceled_at).toBeDefined()
@@ -2427,7 +2415,7 @@ medusaIntegrationTestRunner({
             )
             expect(cancelledSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is becuase the Payment Module's bug.
+            )
             expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(cancelledSession.payment?.canceled_at).toBeDefined()
@@ -2561,7 +2549,7 @@ medusaIntegrationTestRunner({
             )
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is because of the Payment Module's bug.
+            )
             expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
             expect(authorizedSession.payment?.captured_at).toBeNull()
             expect(capturedSession.payment?.captured_at).toBeDefined()
@@ -2713,7 +2701,7 @@ medusaIntegrationTestRunner({
             )
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is because of the Payment Module's bug.
+            )
             expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
             expect(authorizedSession.payment?.captured_at).toBeNull()
             expect(capturedSession.payment?.captured_at).toBeDefined()
@@ -2865,7 +2853,7 @@ medusaIntegrationTestRunner({
             )
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
-            ) // This is because of the Payment Module's bug.
+            )
             expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
             expect(authorizedSession.payment?.captured_at).toBeNull()
             expect(capturedSession.payment?.captured_at).toBeDefined()
@@ -2946,7 +2934,6 @@ medusaIntegrationTestRunner({
             expect(newCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
             )
-            // This is because of the Payment Module's bug.
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
@@ -3017,11 +3004,9 @@ medusaIntegrationTestRunner({
             expect(newCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
             )
-            // This is because of the Payment Module's bug.
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
-            // This is because of the Payment Module's bug.
             expect(refundedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
@@ -3101,7 +3086,6 @@ medusaIntegrationTestRunner({
             expect(newCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
             )
-            // This is because of the Payment Module's bug.
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
@@ -3172,11 +3156,9 @@ medusaIntegrationTestRunner({
             expect(newCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
             )
-            // This is because of the Payment Module's bug.
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
-            // This is because of the Payment Module's bug.
             expect(refundedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
@@ -3256,7 +3238,6 @@ medusaIntegrationTestRunner({
             expect(newCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
             )
-            // This is because of the Payment Module's bug.
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
@@ -3327,11 +3308,9 @@ medusaIntegrationTestRunner({
             expect(newCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
             )
-            // This is because of the Payment Module's bug.
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
-            // This is because of the Payment Module's bug.
             expect(refundedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
@@ -3411,7 +3390,6 @@ medusaIntegrationTestRunner({
             expect(newCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
             )
-            // This is because of the Payment Module's bug.
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
@@ -3482,11 +3460,9 @@ medusaIntegrationTestRunner({
             expect(newCollection.status).toEqual(
               PaymentCollectionStatus.COMPLETED,
             )
-            // This is because of the Payment Module's bug.
             expect(capturedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
-            // This is because of the Payment Module's bug.
             expect(refundedSession.status).toEqual(
               PaymentSessionStatus.AUTHORIZED,
             )
