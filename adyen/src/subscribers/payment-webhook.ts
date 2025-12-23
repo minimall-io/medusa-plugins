@@ -60,8 +60,6 @@ export default async function paymentWebhookhandler({
 
   const { validNotifications } = processedEvent.data
 
-  console.log('paymentWebhookhandler/validNotifications', validNotifications)
-
   validNotifications.forEach((notification) => {
     processNotificationWorkflow(container).run({
       input: notification,
