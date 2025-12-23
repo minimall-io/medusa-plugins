@@ -13,12 +13,12 @@ export const RecurringProcessingModelEnumSchema = z.nativeEnum(
 )
 
 export const OptionsSchema = z.object({
+  apiInitialRetryDelay: z.number().optional(),
   apiKey: z.string(),
+  apiMaxRetries: z.number().optional(),
   environment: EnvironmentEnumSchema.optional(),
   hmacKey: z.string(),
-  initialRetryDelay: z.number().optional(),
   liveEndpointUrlPrefix: z.string(),
-  maxRetries: z.number().optional(),
   merchantAccount: z.string(),
   recurringProcessingModel: RecurringProcessingModelEnumSchema.optional(),
   shopperInteraction: ShopperInteractionEnumSchema.optional(),
