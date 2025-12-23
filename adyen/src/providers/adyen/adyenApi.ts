@@ -30,10 +30,10 @@ interface AdyenErrorContext extends Error {
  * - Transform Adyen errors to MedusaError
  * - Preserve full type safety
  */
-export class RetryableCheckoutAPI {
-  private readonly checkout_: CheckoutAPI
-  private readonly logger_: Logger
-  private readonly options_: RetryOptions
+export class AdyenAPI {
+  private readonly _checkout: CheckoutAPI
+  private readonly log: Logger
+  private readonly options: RetryOptions
   public readonly checkout: CheckoutAPI
 
   constructor(options: Options, logger: Logger) {
@@ -50,12 +50,12 @@ export class RetryableCheckoutAPI {
       environment,
       liveEndpointUrlPrefix,
     })
-    this.checkout_ = new CheckoutAPI(client)
-    this.options_ = { ...options, apiInitialRetryDelay, apiMaxRetries }
-    this.logger_ = logger
+    this._checkout = new CheckoutAPI(client)
+    this.options = { ...options, apiInitialRetryDelay, apiMaxRetries }
+    this.log = logger
 
     // Store a proxied version that maintains type safety
-    this.checkout = this.createProxy<CheckoutAPI>(this.checkout_)
+    this.checkout = this.createProxy<CheckoutAPI>(this._checkout)
   }
 
   private createProxy<T extends object>(target: T): T {
@@ -102,7 +102,7 @@ export class RetryableCheckoutAPI {
   private async retryWithBackoff<T>(fn: () => Promise<T>): Promise<T> {
     let lastError: Error
 
-    const { apiInitialRetryDelay, apiMaxRetries } = this.options_
+    const { apiInitialRetryDelay, apiMaxRetries } = this.options
 
     for (let attempt = 0; attempt <= apiMaxRetries; attempt += 1) {
       try {
@@ -128,13 +128,13 @@ export class RetryableCheckoutAPI {
 
   private transformError(error: unknown): MedusaError {
     if (error instanceof MedusaError) {
-      this.logger_.error(error.message, error)
+      this.log.error(error.message, error)
       return error
     }
 
     if (error instanceof Error) {
       const message = `Adyen payment error: ${error.message}`
-      this.logger_.error(message, error)
+      this.log.error(message, error)
       return new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
         message,
@@ -146,7 +146,7 @@ export class RetryableCheckoutAPI {
     if (error instanceof HttpClientException) {
       const context = this.extractErrorContext(error)
       const message = `Adyen payment error: ${context.message}`
-      this.logger_.error(message, error)
+      this.log.error(message, error)
       return new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
         message,
@@ -156,7 +156,7 @@ export class RetryableCheckoutAPI {
     }
 
     const message = `Unknown error: ${error}`
-    this.logger_.error(message, error as Error)
+    this.log.error(message, error as Error)
     return new MedusaError(
       MedusaError.Types.UNEXPECTED_STATE,
       message,
@@ -185,8 +185,8 @@ export class RetryableCheckoutAPI {
   }
 
   get unwrapped(): CheckoutAPI {
-    return this.checkout_
+    return this._checkout
   }
 }
 
-export default RetryableCheckoutAPI
+export default AdyenAPI

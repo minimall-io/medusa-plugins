@@ -1,4 +1,4 @@
-import { CheckoutAPI, Client, hmacValidator, Types } from '@adyen/api-library'
+import { type CheckoutAPI, hmacValidator, Types } from '@adyen/api-library'
 import { EnvironmentEnum } from '@adyen/api-library/lib/src/config'
 import type {
   AuthorizePaymentInput,
@@ -45,6 +45,7 @@ import {
   PaymentDataManager,
   validateOptions,
 } from '../../utils'
+import AdyenAPI from './adyenApi'
 
 interface Shopper
   extends Pick<
@@ -80,10 +81,10 @@ interface InjectedDependencies extends Record<string, unknown> {
 
 class AdyenProviderService extends AbstractPaymentProvider<Options> {
   static readonly identifier: string = 'adyen'
-  protected readonly options_: Options
-  protected logger_: Logger
-  protected checkout: CheckoutAPI
-  protected hmac: hmacValidator
+  private readonly options_: Options
+  private readonly logger_: Logger
+  private readonly checkout: CheckoutAPI
+  private readonly hmac: hmacValidator
 
   static validateOptions(options: Options): void {
     validateOptions(options)
@@ -94,19 +95,12 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.logger_ = container.logger
     this.options_ = options
 
-    const { apiKey, liveEndpointUrlPrefix } = options
-    const environment = options.environment || EnvironmentEnum.TEST
-
-    const client = new Client({
-      apiKey,
-      environment,
-      liveEndpointUrlPrefix,
-    })
-    this.checkout = new CheckoutAPI(client)
+    const adyenAPI = new AdyenAPI(options, container.logger)
+    this.checkout = adyenAPI.checkout
     this.hmac = new hmacValidator()
   }
 
-  protected log(title: string, data: any, level?: keyof Logger): void {
+  private log(title: string, data: any, level?: keyof Logger): void {
     const { environment } = this.options_
     const defaultLoggingLevel =
       environment === EnvironmentEnum.TEST ? 'debug' : null
@@ -143,7 +137,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     }
   }
 
-  protected getAmount(
+  private getAmount(
     amount: BigNumberInput,
     currency: string,
   ): Types.checkout.Amount {
@@ -154,7 +148,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   }
 
   // https://docs.adyen.com/online-payments/build-your-integration/payment-result-codes/
-  protected getSessionStatus(
+  private getSessionStatus(
     code?: Types.checkout.PaymentResponse.ResultCodeEnum,
   ): PaymentSessionStatus {
     const codes = Types.checkout.PaymentResponse.ResultCodeEnum
@@ -180,7 +174,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   }
 
   // https://docs.adyen.com/online-payments/build-your-integration/payment-result-codes/
-  protected getAuthorisationStatus(
+  private getAuthorisationStatus(
     code?: Types.checkout.PaymentResponse.ResultCodeEnum,
   ): 'REQUESTED' | 'SUCCEEDED' | 'FAILED' {
     const codes = Types.checkout.PaymentResponse.ResultCodeEnum
@@ -205,14 +199,14 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     }
   }
 
-  protected validateHMAC(
+  private validateHMAC(
     notification: Types.notification.NotificationRequestItem,
   ): boolean {
     const { hmacKey } = this.options_
     return this.hmac.validateHMAC(notification, hmacKey)
   }
 
-  protected getAuthorisation(
+  private getAuthorisation(
     dataManager: ReturnType<typeof PaymentDataManager>,
   ): Event {
     if (!dataManager.isAuthorised()) {
@@ -225,7 +219,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     return dataManager.getAuthorisation()!
   }
 
-  protected handleAuthorisationResponse(
+  private handleAuthorisationResponse(
     response: Types.checkout.PaymentResponse,
     inputData: AuthorizePaymentInputData,
     reference: string,
