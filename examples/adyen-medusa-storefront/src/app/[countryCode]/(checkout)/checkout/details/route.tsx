@@ -11,7 +11,6 @@ export const GET = async (request: NextRequest) => {
   const searchParams = request.nextUrl.searchParams
   const cartId = searchParams.get('cartId')
   const sessionId = searchParams.get('sessionId')
-  console.log('checkout/details/searchParams', searchParams)
   if (!sessionId) {
     return new NextResponse('Missing sessionId', { status: 400 })
   }
@@ -35,7 +34,6 @@ export const GET = async (request: NextRequest) => {
 
 
   const data = { detailsRequest: { details: { ...actionData, ...details } } }
-  console.log('checkout/details/data', data)
 
   await updatePaymentSession(sessionId, data)
   const response = await placeOrder(cartId)

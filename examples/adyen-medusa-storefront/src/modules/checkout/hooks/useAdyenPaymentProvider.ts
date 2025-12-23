@@ -1,9 +1,7 @@
 import type {
   AdyenCheckoutError,
   OnChangeData,
-  PaymentCompletedData,
   PaymentData,
-  PaymentFailedData,
   PaymentMethodsResponse,
 } from '@adyen/adyen-web'
 import {
@@ -73,7 +71,6 @@ const useAdyenPaymentProvider = (
         paymentData,
       )
       const data = { request }
-      console.log('useAdyenPayment/onUpdate/data', data)
       await updatePaymentSession(session.id, data)
     } catch (error: any) {
       setError(error.message)
@@ -86,7 +83,6 @@ const useAdyenPaymentProvider = (
       setError(null)
       const providerId = session.provider_id
       const response = await placeOrder()
-      console.log('useAdyenPayment/onPay/response', response)
       const newSession = getProviderSession(
         response.payment_collection,
         providerId,
@@ -103,16 +99,7 @@ const useAdyenPaymentProvider = (
     setError(error.message)
   }, [])
 
-  const onPaymentCompleted = useCallback((data: PaymentCompletedData) => {
-    console.log('useAdyenPayment/onPaymentCompleted/data', data)
-  }, [])
-
-  const onPaymentFailed = useCallback((data: PaymentFailedData) => {
-    console.log('useAdyenPayment/onPaymentFailed/data', data)
-  }, [])
-
   const onChange = useCallback((state: OnChangeData) => {
-    console.log('useAdyenPayment/onChange/state', state)
     const { data, isValid, errors } = state
     setPaymentData(data)
     setReady(isValid)
@@ -138,8 +125,6 @@ const useAdyenPaymentProvider = (
       locale: 'en-US', // TODO: Extract local from the user.
       onChange,
       onError,
-      onPaymentCompleted,
-      onPaymentFailed,
       paymentMethodsResponse,
     }
   }, [session, countryCode])

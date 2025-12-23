@@ -16,7 +16,6 @@ const handleGetRedirectAction = (action: Action) => {
 }
 
 const handlePostRedirectAction = (action: Action) => {
-  console.log('useAdyenPayment/handleRedirectAction/action', action)
   if (action.type === 'redirect' && action.url && action.method === 'POST') {
     const form = document.createElement('form')
     form.method = 'POST'
