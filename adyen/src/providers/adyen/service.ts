@@ -1,4 +1,4 @@
-import { type CheckoutAPI, hmacValidator, Types } from '@adyen/api-library'
+import { Types } from '@adyen/api-library'
 import { EnvironmentEnum } from '@adyen/api-library/lib/src/config'
 import type {
   AuthorizePaymentInput,
@@ -83,8 +83,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   static readonly identifier: string = 'adyen'
   private readonly options_: Options
   private readonly logger_: Logger
-  private readonly checkout: CheckoutAPI
-  private readonly hmac: hmacValidator
+  private readonly adyenAPI: AdyenAPI
 
   static validateOptions(options: Options): void {
     validateOptions(options)
@@ -95,9 +94,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     this.logger_ = container.logger
     this.options_ = options
 
-    const adyenAPI = new AdyenAPI(options, container.logger)
-    this.checkout = adyenAPI.checkout
-    this.hmac = new hmacValidator()
+    this.adyenAPI = new AdyenAPI(options, container.logger)
   }
 
   private log(title: string, data: any, level?: keyof Logger): void {
@@ -199,13 +196,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     }
   }
 
-  private validateHMAC(
-    notification: Types.notification.NotificationRequestItem,
-  ): boolean {
-    const { hmacKey } = this.options_
-    return this.hmac.validateHMAC(notification, hmacKey)
-  }
-
   private getAuthorisation(
     dataManager: ReturnType<typeof PaymentDataManager>,
   ): Event {
@@ -267,7 +257,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const idempotencyKey = shopperReference
 
     const response =
-      await this.checkout.RecurringApi.getTokensForStoredPaymentDetails(
+      await this.adyenAPI.checkout.RecurringApi.getTokensForStoredPaymentDetails(
         shopperReference,
         merchantAccount,
         { idempotencyKey },
@@ -301,10 +291,10 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       shopperReference,
     }
 
-    const response = await this.checkout.RecurringApi.storedPaymentMethods(
-      request,
-      { idempotencyKey },
-    )
+    const response =
+      await this.adyenAPI.checkout.RecurringApi.storedPaymentMethods(request, {
+        idempotencyKey,
+      })
 
     const data = { ...response }
     const output = { data, id: response.id! }
@@ -337,7 +327,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       merchantAccount,
     }
 
-    const response = await this.checkout.PaymentsApi.paymentMethods(request)
+    const response =
+      await this.adyenAPI.checkout.PaymentsApi.paymentMethods(request)
 
     const data = {
       ...input.data,
@@ -397,7 +388,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
     if (detailsRequest) {
       this.log('authorizePayment/detailsRequest', detailsRequest)
-      const response = await this.checkout.PaymentsApi.paymentsDetails(
+      const response = await this.adyenAPI.checkout.PaymentsApi.paymentsDetails(
         detailsRequest,
         { idempotencyKey: `${reference}_payment_details` },
       )
@@ -423,9 +414,12 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
     this.log('authorizePayment/request', request)
 
-    const response = await this.checkout.PaymentsApi.payments(request, {
-      idempotencyKey: `${reference}_payment`,
-    })
+    const response = await this.adyenAPI.checkout.PaymentsApi.payments(
+      request,
+      {
+        idempotencyKey: `${reference}_payment`,
+      },
+    )
 
     this.log('authorizePayment/response', response)
 
@@ -459,7 +453,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     }
 
     const response =
-      await this.checkout.ModificationsApi.cancelAuthorisedPaymentByPspReference(
+      await this.adyenAPI.checkout.ModificationsApi.cancelAuthorisedPaymentByPspReference(
         pspReference,
         request,
         { idempotencyKey },
@@ -518,7 +512,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     }
 
     const response =
-      await this.checkout.ModificationsApi.captureAuthorisedPayment(
+      await this.adyenAPI.checkout.ModificationsApi.captureAuthorisedPayment(
         pspReference,
         request,
         { idempotencyKey },
@@ -576,11 +570,12 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       reference,
     }
 
-    const response = await this.checkout.ModificationsApi.refundCapturedPayment(
-      pspReference,
-      request,
-      { idempotencyKey },
-    )
+    const response =
+      await this.adyenAPI.checkout.ModificationsApi.refundCapturedPayment(
+        pspReference,
+        request,
+        { idempotencyKey },
+      )
 
     const date = new Date().toISOString()
     dataManager.setEvent({
@@ -644,7 +639,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const idempotencyKey = shopperReference
 
     const response =
-      await this.checkout.RecurringApi.getTokensForStoredPaymentDetails(
+      await this.adyenAPI.checkout.RecurringApi.getTokensForStoredPaymentDetails(
         shopperReference,
         merchantAccount,
         { idempotencyKey },
@@ -655,7 +650,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const promises = methods.map((method) => {
       if (!method.id) return Promise.resolve()
       const idempotencyKey = `${shopperReference}_${method.id}`
-      return this.checkout.RecurringApi.deleteTokenForStoredPaymentDetails(
+      return this.adyenAPI.checkout.RecurringApi.deleteTokenForStoredPaymentDetails(
         method.id!,
         shopperReference,
         merchantAccount,
@@ -678,7 +673,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     const validNotifications: Types.notification.NotificationRequestItem[] = []
     notificationItems.forEach((notificationItem) => {
       const notification = notificationItem.NotificationRequestItem
-      if (this.validateHMAC(notification)) {
+      if (this.adyenAPI.validateHMAC(notification)) {
         validNotifications.push(notification)
       } else {
         this.log('getWebhookActionAndData/invalidNotification', notification)

@@ -1,10 +1,18 @@
-import { CheckoutAPI, Client, HttpClientException } from '@adyen/api-library'
+import {
+  CheckoutAPI,
+  Client,
+  HttpClientException,
+  hmacValidator,
+  type Types,
+} from '@adyen/api-library'
 import { EnvironmentEnum } from '@adyen/api-library/lib/src/config'
 import type { Logger } from '@medusajs/framework/types'
 import { MedusaError } from '@medusajs/framework/utils'
 import type { Options } from '../../utils'
 
-interface RetryOptions extends Options {
+type NotificationRequestItem = Types.notification.NotificationRequestItem
+
+interface AdyenAPIOptions extends Options {
   apiInitialRetryDelay: number
   apiMaxRetries: number
 }
@@ -21,6 +29,9 @@ interface AdyenErrorContext extends Error {
   invalidFields?: string[]
 }
 
+const API_INITIAL_RETRY_DELAY = 1000
+const API_MAX_RETRIES = 3
+
 /**
  * Wraps Adyen CheckoutAPI with automatic retry logic and error transformation.
  * Uses Proxy to intercept method calls on CheckoutAPI and its nested API objects.
@@ -33,15 +44,16 @@ interface AdyenErrorContext extends Error {
 export class AdyenAPI {
   private readonly _checkout: CheckoutAPI
   private readonly log: Logger
-  private readonly options: RetryOptions
+  private readonly options: AdyenAPIOptions
   public readonly checkout: CheckoutAPI
+  private readonly hmac: hmacValidator
 
   constructor(options: Options, logger: Logger) {
     const {
       apiKey,
       liveEndpointUrlPrefix,
-      apiInitialRetryDelay = 1000,
-      apiMaxRetries = 3,
+      apiInitialRetryDelay = API_INITIAL_RETRY_DELAY,
+      apiMaxRetries = API_MAX_RETRIES,
       environment = EnvironmentEnum.TEST,
     } = options
 
@@ -53,6 +65,7 @@ export class AdyenAPI {
     this._checkout = new CheckoutAPI(client)
     this.options = { ...options, apiInitialRetryDelay, apiMaxRetries }
     this.log = logger
+    this.hmac = new hmacValidator()
 
     // Store a proxied version that maintains type safety
     this.checkout = this.createProxy<CheckoutAPI>(this._checkout)
@@ -186,6 +199,11 @@ export class AdyenAPI {
 
   get unwrapped(): CheckoutAPI {
     return this._checkout
+  }
+
+  public validateHMAC(notification: NotificationRequestItem): boolean {
+    const { hmacKey } = this.options
+    return this.hmac.validateHMAC(notification, hmacKey)
   }
 }
 
