@@ -17,18 +17,6 @@ interface AdyenAPIOptions extends Options {
   apiMaxRetries: number
 }
 
-/**
- * Error context extracted from Adyen errors
- */
-interface AdyenErrorContext extends Error {
-  statusCode?: number
-  errorCode?: string
-  pspReference?: string
-  errorType?: string
-  detail?: string
-  invalidFields?: string[]
-}
-
 const API_INITIAL_RETRY_DELAY = 1000
 const API_MAX_RETRIES = 3
 
@@ -140,9 +128,16 @@ export class AdyenAPI {
   }
 
   private transformError(error: unknown): MedusaError {
-    if (error instanceof MedusaError) {
-      this.log.error(error.message, error)
-      return error
+    if (error instanceof HttpClientException) {
+      const message = `Adyen payment error: ${error.message}`
+      const { statusCode, errorCode } = error
+      this.log.error(message)
+      return new MedusaError(
+        MedusaError.Types.UNEXPECTED_STATE,
+        message,
+        undefined,
+        { errorCode, statusCode },
+      )
     }
 
     if (error instanceof Error) {
@@ -156,16 +151,9 @@ export class AdyenAPI {
       )
     }
 
-    if (error instanceof HttpClientException) {
-      const context = this.extractErrorContext(error)
-      const message = `Adyen payment error: ${context.message}`
-      this.log.error(message, error)
-      return new MedusaError(
-        MedusaError.Types.UNEXPECTED_STATE,
-        message,
-        undefined,
-        context,
-      )
+    if (error instanceof MedusaError) {
+      this.log.error(error.message, error)
+      return error
     }
 
     const message = `Unknown error: ${error}`
@@ -178,25 +166,6 @@ export class AdyenAPI {
     )
   }
 
-  private extractErrorContext(error: HttpClientException): AdyenErrorContext {
-    let context: AdyenErrorContext = { ...error }
-
-    if (error.responseBody) {
-      try {
-        const parsed = JSON.parse(error.responseBody) as any
-        context = { ...context, ...parsed }
-      } catch {
-        context = { ...error, ...context }
-      }
-    }
-
-    if (error.apiError) {
-      context = { ...context, ...error.apiError }
-    }
-
-    return context
-  }
-
   get unwrapped(): CheckoutAPI {
     return this._checkout
   }
@@ -207,8 +176,10 @@ export class AdyenAPI {
     const { hmacKey } = this.options
     const isValid = this.hmac.validateHMAC(notification, hmacKey)
     if (!isValid) {
+      const baseNotification = { ...notification, additionalData: null }
+      const baseNotificationString = JSON.stringify(baseNotification, null, 2)
       this.log.error(
-        `Invalid notification: ${JSON.stringify(notification, null, 2)}`,
+        `Invalid Adyen Webhook Notification: ${baseNotificationString}`,
       )
     }
     return isValid
