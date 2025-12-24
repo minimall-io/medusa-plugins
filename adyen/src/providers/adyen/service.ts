@@ -1,5 +1,4 @@
 import { Types } from '@adyen/api-library'
-import { EnvironmentEnum } from '@adyen/api-library/lib/src/config'
 import type {
   AuthorizePaymentInput,
   AuthorizePaymentOutput,
@@ -81,8 +80,7 @@ interface InjectedDependencies extends Record<string, unknown> {
 
 class AdyenProviderService extends AbstractPaymentProvider<Options> {
   static readonly identifier: string = 'adyen'
-  private readonly options_: Options
-  private readonly logger_: Logger
+  private readonly options: Options
   private readonly adyenAPI: AdyenAPI
 
   static validateOptions(options: Options): void {
@@ -91,47 +89,8 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
   constructor(container: InjectedDependencies, options: Options) {
     super(container, options)
-    this.logger_ = container.logger
-    this.options_ = options
-
+    this.options = options
     this.adyenAPI = new AdyenAPI(options, container.logger)
-  }
-
-  private log(title: string, data: any, level?: keyof Logger): void {
-    const { environment } = this.options_
-    const defaultLoggingLevel =
-      environment === EnvironmentEnum.TEST ? 'debug' : null
-    const loggingLevel = level || defaultLoggingLevel
-    const stringData = JSON.stringify(data, null, 2)
-    const message = `${title}: ${stringData}`
-    switch (loggingLevel) {
-      case 'error': {
-        this.logger_.error(message)
-        return
-      }
-      case 'warn': {
-        this.logger_.warn(message)
-        return
-      }
-      case 'info': {
-        this.logger_.info(message)
-        return
-      }
-      case 'http': {
-        this.logger_.http(message)
-        return
-      }
-      case 'verbose': {
-        this.logger_.verbose(message)
-        return
-      }
-      case 'debug': {
-        this.logger_.debug(message)
-        return
-      }
-      default:
-        return
-    }
   }
 
   private getAmount(
@@ -225,7 +184,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
         reference,
       }
       const output = { data, status: 'requires_more' as const }
-      this.log('handleAuthorisationResponse/action/output', output)
       return output
     }
 
@@ -243,15 +201,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
     const data = dataManager.getData()
     const output = { data, status }
-    this.log('handleAuthorisationResponse/output', output)
     return output
   }
 
   public async listPaymentMethods(
     input: ListPaymentMethodsInput,
   ): Promise<ListPaymentMethodsOutput> {
-    this.log('listPaymentMethods/input', input)
-    const { merchantAccount } = this.options_
+    const { merchantAccount } = this.options
     const shopper = input.context?.account_holder?.data as Shopper
     const shopperReference = shopper.shopperReference!
     const idempotencyKey = shopperReference
@@ -268,21 +224,19 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       data: method as Record<string, unknown>,
       id: method.id || index.toString(),
     }))
-    this.log('listPaymentMethods/output', output)
     return output
   }
 
   public async savePaymentMethod(
     input: SavePaymentMethodInput,
   ): Promise<SavePaymentMethodOutput> {
-    this.log('savePaymentMethod/input', input)
-    const { merchantAccount } = this.options_
+    const { merchantAccount } = this.options
     const inputData = input.data as unknown as SavePaymentMethodInputData
     const shopper = input.context?.account_holder?.data as Shopper
     const shopperReference = shopper.shopperReference!
     const idempotencyKey = shopperReference
     const recurringProcessingModel =
-      this.options_.recurringProcessingModel ||
+      this.options.recurringProcessingModel ||
       inputData.request.recurringProcessingModel
     const request: Types.checkout.StoredPaymentMethodRequest = {
       ...inputData.request,
@@ -298,7 +252,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
     const data = { ...response }
     const output = { data, id: response.id! }
-    this.log('savePaymentMethod/output', output)
     return output
   }
 
@@ -314,8 +267,7 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async initiatePayment(
     input: InitiatePaymentInput,
   ): Promise<InitiatePaymentOutput> {
-    this.log('initiatePayment/input', input)
-    const { merchantAccount } = this.options_
+    const { merchantAccount } = this.options
     const inputData = input.data as unknown as InitiatePaymentInputData
     const sessionId = input.context!.idempotency_key!
     const shopper = input.context?.account_holder?.data as Shopper
@@ -337,7 +289,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       shopper,
     }
     const output = { data, id: sessionId }
-    this.log('initiatePayment/output', output)
     return output
   }
 
@@ -353,26 +304,22 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
   public async updatePayment(
     input: UpdatePaymentInput,
   ): Promise<UpdatePaymentOutput> {
-    this.log('updatePayment/input', input)
     const amount = this.getAmount(input.amount, input.currency_code)
     const data = { ...input.data, amount }
     const output = { data }
-    this.log('updatePayment/output', output)
     return output
   }
 
   public async deletePayment(
     input: DeletePaymentInput,
   ): Promise<DeletePaymentOutput> {
-    this.log('deletePayment/input', input)
     return { data: {} }
   }
 
   public async authorizePayment(
     input: AuthorizePaymentInput,
   ): Promise<AuthorizePaymentOutput> {
-    this.log('authorizePayment/input', input)
-    const { merchantAccount } = this.options_
+    const { merchantAccount } = this.options
     const inputData = input.data as unknown as AuthorizePaymentInputData
     const shopper = inputData.shopper || {}
     const amount = inputData.amount
@@ -387,20 +334,18 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     }
 
     if (detailsRequest) {
-      this.log('authorizePayment/detailsRequest', detailsRequest)
       const response = await this.adyenAPI.checkout.PaymentsApi.paymentsDetails(
         detailsRequest,
         { idempotencyKey: `${reference}_payment_details` },
       )
-      this.log('authorizePayment/detailsResponse', response)
       return this.handleAuthorisationResponse(response, inputData, reference)
     }
 
     const recurringProcessingModel =
-      this.options_.recurringProcessingModel ||
+      this.options.recurringProcessingModel ||
       inputData.request.recurringProcessingModel
     const shopperInteraction =
-      this.options_.shopperInteraction || inputData.request.shopperInteraction
+      this.options.shopperInteraction || inputData.request.shopperInteraction
 
     const request: Types.checkout.PaymentRequest = {
       ...inputData.request,
@@ -412,8 +357,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       shopperInteraction,
     }
 
-    this.log('authorizePayment/request', request)
-
     const response = await this.adyenAPI.checkout.PaymentsApi.payments(
       request,
       {
@@ -421,16 +364,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       },
     )
 
-    this.log('authorizePayment/response', response)
-
     return this.handleAuthorisationResponse(response, inputData, reference)
   }
 
   public async cancelPayment(
     input: CancelPaymentInput,
   ): Promise<CancelPaymentOutput> {
-    this.log('cancelPayment/input', input)
-    const { merchantAccount } = this.options_
+    const { merchantAccount } = this.options
     const dataManager = PaymentDataManager(input.data)
     const { reference, webhook, amount } = dataManager.getData()
     const id = reference
@@ -441,7 +381,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       dataManager.setData({ webhook: undefined })
       const data = dataManager.getData()
       const output = { data }
-      this.log('cancelPayment/output', output)
       return output
     }
 
@@ -472,15 +411,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
 
     const data = dataManager.getData()
     const output = { data }
-    this.log('cancelPayment/output', output)
     return output
   }
 
   public async capturePayment(
     input: CapturePaymentInput,
   ): Promise<CapturePaymentOutput> {
-    this.log('capturePayment/input', input)
-    const { merchantAccount } = this.options_
+    const { merchantAccount } = this.options
     const dataManager = PaymentDataManager(input.data)
     const { webhook, reference } = dataManager.getData()
     const idempotencyKey = input.context?.idempotency_key // Payment Capture ID
@@ -489,7 +426,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     if (!id) {
       const data = dataManager.getData()
       const output = { data }
-      this.log('capturePayment/output', output)
       return output
     }
 
@@ -498,7 +434,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       dataManager.setData({ webhook: undefined })
       const data = dataManager.getData()
       const output = { data }
-      this.log('capturePayment/output', output)
       return output
     }
 
@@ -530,15 +465,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     })
     const data = dataManager.getData()
     const output = { data }
-    this.log('capturePayment/output', output)
     return output
   }
 
   public async refundPayment(
     input: RefundPaymentInput,
   ): Promise<RefundPaymentOutput> {
-    this.log('refundPayment/input', input)
-    const { merchantAccount } = this.options_
+    const { merchantAccount } = this.options
     const dataManager = PaymentDataManager(input.data)
     const { webhook, reference } = dataManager.getData()
     const idempotencyKey = input.context?.idempotency_key // Payment Refund ID
@@ -547,7 +480,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     if (!id) {
       const data = dataManager.getData()
       const output = { data }
-      this.log('refundPayment/output', output)
       return output
     }
 
@@ -556,7 +488,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       dataManager.setData({ webhook: undefined })
       const data = dataManager.getData()
       const output = { data }
-      this.log('refundPayment/output', output)
       return output
     }
 
@@ -589,14 +520,12 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     })
     const data = dataManager.getData()
     const output = { data }
-    this.log('refundPayment/output', output)
     return output
   }
 
   public async createAccountHolder(
     input: CreateAccountHolderInput,
   ): Promise<CreateAccountHolderOutput> {
-    this.log('createAccountHolder/input', input)
     const {
       id,
       email,
@@ -625,15 +554,13 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       telephoneNumber,
     }
     const output = { data, id }
-    this.log('createAccountHolder/output', output)
     return output
   }
 
   public async deleteAccountHolder(
     input: DeleteAccountHolderInput,
   ): Promise<DeleteAccountHolderOutput> {
-    this.log('deleteAccountHolder/input', input)
-    const { merchantAccount } = this.options_
+    const { merchantAccount } = this.options
     const shopper = input.context.account_holder.data as Shopper
     const shopperReference = shopper.shopperReference!
     const idempotencyKey = shopperReference
@@ -659,24 +586,20 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
     })
     await Promise.all(promises)
 
-    this.log('deleteAccountHolder/storedPaymentMethods', methods)
     return { data: {} }
   }
 
   public async getWebhookActionAndData(
     input: ProviderWebhookPayload['payload'],
   ): Promise<WebhookActionResult> {
-    this.log('getWebhookActionAndData/input', input)
     const providerIdentifier = AdyenProviderService.identifier
     const inputData = input.data as unknown as ProviderWebhookPayloadData
     const { notificationItems } = inputData
     const validNotifications: Types.notification.NotificationRequestItem[] = []
     notificationItems.forEach((notificationItem) => {
       const notification = notificationItem.NotificationRequestItem
-      if (this.adyenAPI.validateHMAC(notification)) {
+      if (this.adyenAPI.validateWebhookNotification(notification)) {
         validNotifications.push(notification)
-      } else {
-        this.log('getWebhookActionAndData/invalidNotification', notification)
       }
     })
     const data = {
@@ -686,7 +609,6 @@ class AdyenProviderService extends AbstractPaymentProvider<Options> {
       validNotifications,
     }
     const output = { action: PaymentActions.NOT_SUPPORTED, data }
-    this.log('getWebhookActionAndData/output', output)
     return output
   }
 }

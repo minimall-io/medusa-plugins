@@ -201,9 +201,17 @@ export class AdyenAPI {
     return this._checkout
   }
 
-  public validateHMAC(notification: NotificationRequestItem): boolean {
+  public validateWebhookNotification(
+    notification: NotificationRequestItem,
+  ): boolean {
     const { hmacKey } = this.options
-    return this.hmac.validateHMAC(notification, hmacKey)
+    const isValid = this.hmac.validateHMAC(notification, hmacKey)
+    if (!isValid) {
+      this.log.error(
+        `Invalid notification: ${JSON.stringify(notification, null, 2)}`,
+      )
+    }
+    return isValid
   }
 }
 

@@ -1,9 +1,5 @@
 import type { Types } from '@adyen/api-library'
-import {
-  ContainerRegistrationKeys,
-  MedusaError,
-  Modules,
-} from '@medusajs/framework/utils'
+import { MedusaError, Modules } from '@medusajs/framework/utils'
 import {
   createStep,
   type StepExecutionContext,
@@ -17,11 +13,10 @@ export const getPaymentDataStepId = 'get-payment-data-step'
 
 const getPaymentDataStepInvoke = async (
   notification: NotificationRequestItem,
-  { container, workflowId, stepName, context }: StepExecutionContext,
+  { container, context }: StepExecutionContext,
 ): Promise<StepResponse<PaymentData>> => {
   const { merchantReference } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
-  const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
   const session = await paymentService.retrievePaymentSession(
     merchantReference,
@@ -61,10 +56,6 @@ const getPaymentDataStepInvoke = async (
     payment,
     session,
   }
-
-  logging.debug(
-    `${workflowId}/${stepName}/invoke/paymentData ${JSON.stringify(paymentData, null, 2)}`,
-  )
 
   return new StepResponse<PaymentData>(paymentData)
 }
