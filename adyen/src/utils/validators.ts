@@ -14,8 +14,10 @@ export const getValidator =
         throw new MedusaError(MedusaError.Types.INVALID_DATA, errorMessage)
       } else if (error instanceof z.ZodError) {
         throw new MedusaError(MedusaError.Types.INVALID_DATA, error.message)
+      } else if (error instanceof Error) {
+        throw new MedusaError(MedusaError.Types.INVALID_DATA, error.message)
       } else {
-        throw new MedusaError(MedusaError.Types.INVALID_DATA, error)
+        throw new MedusaError(MedusaError.Types.INVALID_DATA, String(error))
       }
     }
   }
