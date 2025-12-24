@@ -1,5 +1,4 @@
 import {
-  ContainerRegistrationKeys,
   MathBN,
   Modules,
   PaymentCollectionStatus,
@@ -19,15 +18,10 @@ export const synchronizePaymentCollectionStepId =
 
 const synchronizePaymentCollectionStepInvoke = async (
   input: PaymentData,
-  { container, workflowId, stepName, context }: StepExecutionContext,
+  { container, context }: StepExecutionContext,
 ): Promise<StepResponse<undefined, PaymentData>> => {
   const { collection } = input
   const paymentService = container.resolve(Modules.PAYMENT)
-  const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
-
-  logging.debug(
-    `${workflowId}/${stepName}/invoke/collection ${JSON.stringify(collection, null, 2)}`,
-  )
 
   const newCollection = await paymentService.retrievePaymentCollection(
     collection.id,
@@ -40,9 +34,6 @@ const synchronizePaymentCollectionStepInvoke = async (
       ],
     },
     context,
-  )
-  logging.debug(
-    `${workflowId}/${stepName}/invoke/newCollection ${JSON.stringify(newCollection, null, 2)}`,
   )
 
   const paymentSessions = newCollection.payment_sessions ?? []
@@ -121,15 +112,10 @@ const synchronizePaymentCollectionStepInvoke = async (
 
 const synchronizePaymentCollectionStepCompensate = async (
   input: PaymentData,
-  { container, workflowId, stepName, context }: StepExecutionContext,
+  { container, context }: StepExecutionContext,
 ): Promise<StepResponse<undefined>> => {
   const { collection } = input
   const paymentService = container.resolve(Modules.PAYMENT)
-  const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
-
-  logging.debug(
-    `${workflowId}/${stepName}/compensate/collection ${JSON.stringify(collection, null, 2)}`,
-  )
 
   const {
     authorized_amount,

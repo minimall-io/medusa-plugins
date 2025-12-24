@@ -1,8 +1,4 @@
-import {
-  ContainerRegistrationKeys,
-  MedusaError,
-  Modules,
-} from '@medusajs/framework/utils'
+import { MedusaError, Modules } from '@medusajs/framework/utils'
 import {
   createStep,
   type StepExecutionContext,
@@ -15,7 +11,7 @@ export const authorisationFailedStepId = 'authorisation-failed-step'
 
 const authorisationFailedStepInvoke = async (
   input: PaymentData,
-  { container, workflowId, stepName, context }: StepExecutionContext,
+  { container, context }: StepExecutionContext,
 ): Promise<StepResponse<undefined, PaymentData>> => {
   const { notification, payment } = input
   const {
@@ -26,7 +22,6 @@ const authorisationFailedStepInvoke = async (
     reason: message,
   } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
-  const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
   if (value === undefined || currency === undefined) {
     throw new MedusaError(
@@ -34,10 +29,6 @@ const authorisationFailedStepInvoke = async (
       'Authorisation notification is missing amount information!',
     )
   }
-
-  logging.debug(
-    `${workflowId}/${stepName}/invoke/payment ${JSON.stringify(payment, null, 2)}`,
-  )
 
   const dataManager = PaymentDataManager(payment.data)
 
@@ -64,14 +55,10 @@ const authorisationFailedStepInvoke = async (
 
 const authorisationFailedStepCompensate = async (
   input: PaymentData,
-  { container, workflowId, stepName, context }: StepExecutionContext,
+  { container, context }: StepExecutionContext,
 ): Promise<StepResponse<undefined>> => {
   const { payment } = input
   const paymentService = container.resolve(Modules.PAYMENT)
-  const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
-  logging.debug(
-    `${workflowId}/${stepName}/compensate/payment ${JSON.stringify(payment, null, 2)}`,
-  )
 
   const dataManager = PaymentDataManager(payment.data)
 

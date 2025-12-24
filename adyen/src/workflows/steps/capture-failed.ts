@@ -1,8 +1,4 @@
-import {
-  ContainerRegistrationKeys,
-  MedusaError,
-  Modules,
-} from '@medusajs/framework/utils'
+import { MedusaError, Modules } from '@medusajs/framework/utils'
 import {
   createStep,
   type StepExecutionContext,
@@ -16,7 +12,7 @@ export const captureFailedStepId = 'capture-failed-step'
 
 const captureFailedStepInvoke = async (
   input: PaymentData,
-  { container, workflowId, stepName, context }: StepExecutionContext,
+  { container, context }: StepExecutionContext,
 ): Promise<StepResponse<undefined, PaymentData>> => {
   const { notification, payment } = input
   const {
@@ -27,7 +23,6 @@ const captureFailedStepInvoke = async (
     reason: message,
   } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
-  const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
   if (value === undefined || currency === undefined) {
     throw new MedusaError(
@@ -35,10 +30,6 @@ const captureFailedStepInvoke = async (
       'Capture notification is missing amount information!',
     )
   }
-
-  logging.debug(
-    `${workflowId}/${stepName}/invoke/payment ${JSON.stringify(payment, null, 2)}`,
-  )
 
   const dataManager = PaymentDataManager(payment.data)
 
@@ -79,15 +70,11 @@ const captureFailedStepInvoke = async (
 
 const captureFailedStepCompensate = async (
   input: PaymentData,
-  { container, workflowId, stepName, context }: StepExecutionContext,
+  { container, context }: StepExecutionContext,
 ): Promise<StepResponse<undefined>> => {
   const { payment, notification } = input
   const { pspReference } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
-  const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
-  logging.debug(
-    `${workflowId}/${stepName}/compensate/payment ${JSON.stringify(payment, null, 2)}`,
-  )
 
   const dataManager = PaymentDataManager(payment.data)
   const originalDataCapture = dataManager.getEvent(pspReference)

@@ -1,8 +1,4 @@
-import {
-  ContainerRegistrationKeys,
-  Modules,
-  PaymentSessionStatus,
-} from '@medusajs/framework/utils'
+import { Modules, PaymentSessionStatus } from '@medusajs/framework/utils'
 import {
   createStep,
   type StepExecutionContext,
@@ -16,15 +12,10 @@ export const synchronizePaymentSessionStepId =
 
 const synchronizePaymentSessionStepInvoke = async (
   input: PaymentData,
-  { container, workflowId, stepName, context }: StepExecutionContext,
+  { container, context }: StepExecutionContext,
 ): Promise<StepResponse<undefined, PaymentData>> => {
   const { session } = input
   const paymentService = container.resolve(Modules.PAYMENT)
-  const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
-
-  logging.debug(
-    `${workflowId}/${stepName}/invoke/session ${JSON.stringify(session, null, 2)}`,
-  )
 
   const newSession = await paymentService.retrievePaymentSession(
     session.id,
@@ -32,9 +23,6 @@ const synchronizePaymentSessionStepInvoke = async (
       relations: ['payment.*', 'payment.captures.*', 'payment.refunds.*'],
     },
     context,
-  )
-  logging.debug(
-    `${workflowId}/${stepName}/invoke/newSession ${JSON.stringify(newSession, null, 2)}`,
   )
 
   const { id, amount, currency_code, payment } = newSession
@@ -74,15 +62,10 @@ const synchronizePaymentSessionStepInvoke = async (
 
 const synchronizePaymentSessionStepCompensate = async (
   input: PaymentData,
-  { container, workflowId, stepName, context }: StepExecutionContext,
+  { container, context }: StepExecutionContext,
 ): Promise<StepResponse<undefined>> => {
   const { session } = input
   const paymentService = container.resolve(Modules.PAYMENT)
-  const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
-
-  logging.debug(
-    `${workflowId}/${stepName}/compensate/session ${JSON.stringify(session, null, 2)}`,
-  )
 
   const { id, amount, currency_code, payment, status } = session
 

@@ -1,8 +1,4 @@
-import {
-  ContainerRegistrationKeys,
-  MedusaError,
-  Modules,
-} from '@medusajs/framework/utils'
+import { MedusaError, Modules } from '@medusajs/framework/utils'
 import {
   createStep,
   type StepExecutionContext,
@@ -15,7 +11,7 @@ export const cancellationFailedStepId = 'cancellation-failed-step'
 
 const cancellationFailedStepInvoke = async (
   input: PaymentData,
-  { container, workflowId, stepName, context }: StepExecutionContext,
+  { container, context }: StepExecutionContext,
 ): Promise<StepResponse<undefined, PaymentData>> => {
   const { notification, payment } = input
   const {
@@ -25,11 +21,6 @@ const cancellationFailedStepInvoke = async (
     reason: message,
   } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
-  const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
-
-  logging.debug(
-    `${workflowId}/${stepName}/invoke/payment ${JSON.stringify(payment, null, 2)}`,
-  )
 
   const dataManager = PaymentDataManager(payment.data)
 
@@ -68,14 +59,10 @@ const cancellationFailedStepInvoke = async (
 
 const cancellationFailedStepCompensate = async (
   input: PaymentData,
-  { container, workflowId, stepName, context }: StepExecutionContext,
+  { container, context }: StepExecutionContext,
 ): Promise<StepResponse<undefined>> => {
   const { payment } = input
   const paymentService = container.resolve(Modules.PAYMENT)
-  const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
-  logging.debug(
-    `${workflowId}/${stepName}/compensate/payment ${JSON.stringify(payment, null, 2)}`,
-  )
 
   const dataManager = PaymentDataManager(payment.data)
 

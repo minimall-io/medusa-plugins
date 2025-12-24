@@ -1,8 +1,4 @@
-import {
-  ContainerRegistrationKeys,
-  MedusaError,
-  Modules,
-} from '@medusajs/framework/utils'
+import { MedusaError, Modules } from '@medusajs/framework/utils'
 import {
   createStep,
   type StepExecutionContext,
@@ -15,7 +11,7 @@ export const captureSuccessStepId = 'capture-success-step'
 
 const captureSuccessStepInvoke = async (
   input: PaymentData,
-  { container, workflowId, stepName, context }: StepExecutionContext,
+  { container, context }: StepExecutionContext,
 ): Promise<StepResponse<undefined, PaymentData>> => {
   const { notification, payment } = input
   const {
@@ -26,7 +22,6 @@ const captureSuccessStepInvoke = async (
     merchantAccountCode,
   } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
-  const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
 
   if (value === undefined || currency === undefined) {
     throw new MedusaError(
@@ -34,10 +29,6 @@ const captureSuccessStepInvoke = async (
       'Capture notification is missing amount information!',
     )
   }
-
-  logging.debug(
-    `${workflowId}/${stepName}/invoke/payment ${JSON.stringify(payment, null, 2)}`,
-  )
 
   const dataManager = PaymentDataManager(payment.data)
 
@@ -95,15 +86,11 @@ const captureSuccessStepInvoke = async (
 
 const captureSuccessStepCompensate = async (
   input: PaymentData,
-  { container, workflowId, stepName, context }: StepExecutionContext,
+  { container, context }: StepExecutionContext,
 ): Promise<StepResponse<undefined>> => {
   const { payment, notification } = input
   const { pspReference } = notification
   const paymentService = container.resolve(Modules.PAYMENT)
-  const logging = container.resolve(ContainerRegistrationKeys.LOGGER)
-  logging.debug(
-    `${workflowId}/${stepName}/compensate/payment ${JSON.stringify(payment, null, 2)}`,
-  )
 
   const newPayment = await paymentService.retrievePayment(
     payment.id,
@@ -111,9 +98,6 @@ const captureSuccessStepCompensate = async (
       relations: ['captures'],
     },
     context,
-  )
-  logging.debug(
-    `${workflowId}/${stepName}/compensate/newPayment ${JSON.stringify(newPayment, null, 2)}`,
   )
 
   const originalDataManager = PaymentDataManager(payment.data)
