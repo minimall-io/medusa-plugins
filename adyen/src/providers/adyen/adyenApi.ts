@@ -19,6 +19,7 @@ interface AdyenAPIOptions extends Options {
 
 const API_INITIAL_RETRY_DELAY = 1000
 const API_MAX_RETRIES = 3
+const MESSAGE_PREFIX = '[Adyen Payment ProviderAPI]'
 
 /**
  * Wraps Adyen CheckoutAPI with automatic retry logic and error transformation.
@@ -26,7 +27,7 @@ const API_MAX_RETRIES = 3
  *
  * All API methods automatically:
  * - Retry on transient errors (5xx) with exponential backoff
- * - Transform Adyen errors to MedusaError
+ * - Transform errors to MedusaError errors
  * - Preserve full type safety
  */
 export class AdyenAPI {
@@ -129,7 +130,7 @@ export class AdyenAPI {
 
   private transformError(error: unknown): MedusaError {
     if (error instanceof HttpClientException) {
-      const message = `Adyen payment error: ${error.message}`
+      const message = `${MESSAGE_PREFIX} payment error: ${error.message}`
       const { statusCode, errorCode } = error
       this.log.error(message)
       return new MedusaError(
@@ -141,7 +142,7 @@ export class AdyenAPI {
     }
 
     if (error instanceof Error) {
-      const message = `Adyen payment error: ${error.message}`
+      const message = `${MESSAGE_PREFIX} payment error: ${error.message}`
       this.log.error(message, error)
       return new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
@@ -156,7 +157,7 @@ export class AdyenAPI {
       return error
     }
 
-    const message = `Unknown error: ${error}`
+    const message = `${MESSAGE_PREFIX} unknown error: ${error}`
     this.log.error(message, error as Error)
     return new MedusaError(
       MedusaError.Types.UNEXPECTED_STATE,
@@ -179,7 +180,7 @@ export class AdyenAPI {
       const baseNotification = { ...notification, additionalData: null }
       const baseNotificationString = JSON.stringify(baseNotification, null, 2)
       this.log.error(
-        `Invalid Adyen Webhook Notification: ${baseNotificationString}`,
+        `${MESSAGE_PREFIX} invalid webhook notification: ${baseNotificationString}`,
       )
     }
     return isValid
