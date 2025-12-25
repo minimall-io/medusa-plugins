@@ -1,7 +1,12 @@
 import { MedusaError } from '@medusajs/framework/utils'
 import { z } from 'zod'
-import { DataSchema, EventSchema, OptionsSchema } from './schemas'
-import type { Data, Event, Options } from './types'
+import {
+  DataSchema,
+  EventSchema,
+  OptionsSchema,
+  RawDataSchema,
+} from './schemas'
+import type { Data, Event, ExtendedData, Options, RawData } from './types'
 
 export const getValidator =
   <T>(schema: z.ZodSchema) =>
@@ -28,3 +33,18 @@ export const validateOptions = getValidator<Options>(OptionsSchema)
 export const validatePartialData = getValidator<Partial<Data>>(
   DataSchema.partial(),
 )
+export const validateExtendedData = (
+  data: unknown,
+  errorMessage?: string,
+): ExtendedData => {
+  const validateRawData = getValidator<RawData>(RawDataSchema)
+  const validateData = getValidator<Data>(DataSchema)
+  const validData = validateData(data, errorMessage)
+  const valdRawData = validateRawData(data, errorMessage)
+  const rawDataKeys = Object.keys(valdRawData)
+  const emptyRawData = rawDataKeys.reduce((obj, key) => {
+    obj[key] = undefined
+    return obj
+  }, {})
+  return { ...emptyRawData, ...validData }
+}

@@ -27,7 +27,10 @@ const synchronizePaymentSessionStepInvoke = async (
 
   const { id, amount, currency_code, payment } = newSession
 
-  const dataManager = PaymentDataManager(payment?.data)
+  const dataManager = PaymentDataManager({
+    ...newSession.data,
+    ...payment?.data,
+  })
 
   let status = PaymentSessionStatus.PENDING
 

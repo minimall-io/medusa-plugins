@@ -58,3 +58,6 @@ export const DataSchema = z.object({
   reference: z.string(),
   webhook: EventSchema.optional(),
 })
+
+export const ExtendedDataSchema = DataSchema.catchall(z.unknown())
+export const RawDataSchema = z.record(z.string(), z.unknown())

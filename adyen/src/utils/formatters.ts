@@ -2,8 +2,12 @@ import type { BigNumberInput, PaymentDTO } from '@medusajs/framework/types'
 import { BigNumber, MathBN } from '@medusajs/framework/utils'
 import { cloneDeep, filter, find } from 'lodash'
 import { CURRENCY_MULTIPLIERS } from './constants'
-import type { Data, Event } from './types'
-import { validateData, validateEvent, validatePartialData } from './validators'
+import type { Data, Event, ExtendedData } from './types'
+import {
+  validateEvent,
+  validateExtendedData,
+  validatePartialData,
+} from './validators'
 
 const getCurrencyMultiplier = (currency: string): number => {
   const currencyCode = currency.toUpperCase()
@@ -64,9 +68,9 @@ export const roundToCurrencyPrecision = (
 }
 
 export const PaymentDataManager = (data: PaymentDTO['data']) => {
-  let validData = validateData(cloneDeep(data))
+  let validData = validateExtendedData(cloneDeep(data))
 
-  const getData = (): Data => validData
+  const getData = (): ExtendedData => validData
 
   const getEvents = (): Event[] => validData.events || []
 
