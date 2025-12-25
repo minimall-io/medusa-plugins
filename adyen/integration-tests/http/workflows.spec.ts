@@ -779,6 +779,26 @@ medusaIntegrationTestRunner({
               PaymentSessionStatus.AUTHORIZED,
             )
             expect(newSession.status).toEqual(PaymentSessionStatus.CAPTURED)
+            expect(authorizedSession).toHaveProperty('data.request')
+            expect(authorizedSession).toHaveProperty(
+              'data.paymentMethodsResponse',
+            )
+            expect(authorizedSession).toHaveProperty('data.session_id')
+            expect(newSession).not.toHaveProperty('data.request')
+            expect(newSession).not.toHaveProperty('data.paymentMethodsResponse')
+            expect(newSession).not.toHaveProperty('data.session_id')
+            expect(authorizedSession).not.toHaveProperty('payment.data.request')
+            expect(authorizedSession).not.toHaveProperty(
+              'payment.data.paymentMethodsResponse',
+            )
+            expect(authorizedSession).not.toHaveProperty(
+              'payment.data.session_id',
+            )
+            expect(newSession).not.toHaveProperty('payment.data.request')
+            expect(newSession).not.toHaveProperty(
+              'payment.data.paymentMethodsResponse',
+            )
+            expect(newSession).not.toHaveProperty('payment.data.session_id')
             expect(authorizedSession.payment?.captured_at).toBeNull()
             expect(newSession.payment?.captured_at).toBeDefined()
             expect(authorizedSession.payment?.captures).toHaveLength(0)
@@ -849,6 +869,38 @@ medusaIntegrationTestRunner({
               PaymentSessionStatus.AUTHORIZED,
             )
             expect(newSession.status).toEqual(PaymentSessionStatus.CAPTURED)
+            expect(authorizedSession).toHaveProperty('data.request')
+            expect(authorizedSession).toHaveProperty(
+              'data.paymentMethodsResponse',
+            )
+            expect(authorizedSession).toHaveProperty('data.session_id')
+            expect(capturedSession).toHaveProperty('data.request')
+            expect(capturedSession).toHaveProperty(
+              'data.paymentMethodsResponse',
+            )
+            expect(capturedSession).toHaveProperty('data.session_id')
+            expect(newSession).not.toHaveProperty('data.request')
+            expect(newSession).not.toHaveProperty('data.paymentMethodsResponse')
+            expect(newSession).not.toHaveProperty('data.session_id')
+            expect(authorizedSession).not.toHaveProperty('payment.data.request')
+            expect(authorizedSession).not.toHaveProperty(
+              'payment.data.paymentMethodsResponse',
+            )
+            expect(authorizedSession).not.toHaveProperty(
+              'payment.data.session_id',
+            )
+            expect(capturedSession).not.toHaveProperty('payment.data.request')
+            expect(capturedSession).not.toHaveProperty(
+              'payment.data.paymentMethodsResponse',
+            )
+            expect(capturedSession).not.toHaveProperty(
+              'payment.data.session_id',
+            )
+            expect(newSession).not.toHaveProperty('payment.data.request')
+            expect(newSession).not.toHaveProperty(
+              'payment.data.paymentMethodsResponse',
+            )
+            expect(newSession).not.toHaveProperty('payment.data.session_id')
             expect(authorizedSession.payment?.captured_at).toBeNull()
             expect(capturedSession.payment?.captured_at).toBeDefined()
             expect(newSession.payment?.captured_at).toBeDefined()
@@ -917,6 +969,26 @@ medusaIntegrationTestRunner({
               PaymentSessionStatus.AUTHORIZED,
             )
             expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
+            expect(authorizedSession).toHaveProperty('data.request')
+            expect(authorizedSession).toHaveProperty(
+              'data.paymentMethodsResponse',
+            )
+            expect(authorizedSession).toHaveProperty('data.session_id')
+            expect(newSession).not.toHaveProperty('data.request')
+            expect(newSession).not.toHaveProperty('data.paymentMethodsResponse')
+            expect(newSession).not.toHaveProperty('data.session_id')
+            expect(authorizedSession).not.toHaveProperty('payment.data.request')
+            expect(authorizedSession).not.toHaveProperty(
+              'payment.data.paymentMethodsResponse',
+            )
+            expect(authorizedSession).not.toHaveProperty(
+              'payment.data.session_id',
+            )
+            expect(newSession).not.toHaveProperty('payment.data.request')
+            expect(newSession).not.toHaveProperty(
+              'payment.data.paymentMethodsResponse',
+            )
+            expect(newSession).not.toHaveProperty('payment.data.session_id')
             expect(authorizedSession.payment?.captured_at).toBeNull()
             expect(newSession.payment?.captured_at).toBeNull()
             expect(authorizedSession.payment?.captures).toHaveLength(0)
@@ -985,6 +1057,38 @@ medusaIntegrationTestRunner({
               PaymentSessionStatus.AUTHORIZED,
             )
             expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
+            expect(authorizedSession).toHaveProperty('data.request')
+            expect(authorizedSession).toHaveProperty(
+              'data.paymentMethodsResponse',
+            )
+            expect(authorizedSession).toHaveProperty('data.session_id')
+            expect(capturedSession).toHaveProperty('data.request')
+            expect(capturedSession).toHaveProperty(
+              'data.paymentMethodsResponse',
+            )
+            expect(capturedSession).toHaveProperty('data.session_id')
+            expect(newSession).not.toHaveProperty('data.request')
+            expect(newSession).not.toHaveProperty('data.paymentMethodsResponse')
+            expect(newSession).not.toHaveProperty('data.session_id')
+            expect(authorizedSession).not.toHaveProperty('payment.data.request')
+            expect(authorizedSession).not.toHaveProperty(
+              'payment.data.paymentMethodsResponse',
+            )
+            expect(authorizedSession).not.toHaveProperty(
+              'payment.data.session_id',
+            )
+            expect(capturedSession).not.toHaveProperty('payment.data.request')
+            expect(capturedSession).not.toHaveProperty(
+              'payment.data.paymentMethodsResponse',
+            )
+            expect(capturedSession).not.toHaveProperty(
+              'payment.data.session_id',
+            )
+            expect(newSession).not.toHaveProperty('payment.data.request')
+            expect(newSession).not.toHaveProperty(
+              'payment.data.paymentMethodsResponse',
+            )
+            expect(newSession).not.toHaveProperty('payment.data.session_id')
             expect(authorizedSession.payment?.captured_at).toBeNull()
             expect(capturedSession.payment?.captured_at).toBeDefined()
             expect(newSession.payment?.captured_at).toBeNull()
@@ -1051,6 +1155,26 @@ medusaIntegrationTestRunner({
               PaymentSessionStatus.AUTHORIZED,
             )
             expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
+            expect(authorizedSession).toHaveProperty('data.request')
+            expect(authorizedSession).toHaveProperty(
+              'data.paymentMethodsResponse',
+            )
+            expect(authorizedSession).toHaveProperty('data.session_id')
+            expect(newSession).not.toHaveProperty('data.request')
+            expect(newSession).not.toHaveProperty('data.paymentMethodsResponse')
+            expect(newSession).not.toHaveProperty('data.session_id')
+            expect(authorizedSession).not.toHaveProperty('payment.data.request')
+            expect(authorizedSession).not.toHaveProperty(
+              'payment.data.paymentMethodsResponse',
+            )
+            expect(authorizedSession).not.toHaveProperty(
+              'payment.data.session_id',
+            )
+            expect(newSession).not.toHaveProperty('payment.data.request')
+            expect(newSession).not.toHaveProperty(
+              'payment.data.paymentMethodsResponse',
+            )
+            expect(newSession).not.toHaveProperty('payment.data.session_id')
             expect(authorizedSession.payment?.captured_at).toBeNull()
             expect(newSession.payment?.captured_at).toBeNull()
             expect(authorizedSession.payment?.captures).toHaveLength(0)
@@ -1119,6 +1243,38 @@ medusaIntegrationTestRunner({
               PaymentSessionStatus.AUTHORIZED,
             )
             expect(newSession.status).toEqual(PaymentSessionStatus.AUTHORIZED)
+            expect(authorizedSession).toHaveProperty('data.request')
+            expect(authorizedSession).toHaveProperty(
+              'data.paymentMethodsResponse',
+            )
+            expect(authorizedSession).toHaveProperty('data.session_id')
+            expect(capturedSession).toHaveProperty('data.request')
+            expect(capturedSession).toHaveProperty(
+              'data.paymentMethodsResponse',
+            )
+            expect(capturedSession).toHaveProperty('data.session_id')
+            expect(newSession).not.toHaveProperty('data.request')
+            expect(newSession).not.toHaveProperty('data.paymentMethodsResponse')
+            expect(newSession).not.toHaveProperty('data.session_id')
+            expect(authorizedSession).not.toHaveProperty('payment.data.request')
+            expect(authorizedSession).not.toHaveProperty(
+              'payment.data.paymentMethodsResponse',
+            )
+            expect(authorizedSession).not.toHaveProperty(
+              'payment.data.session_id',
+            )
+            expect(capturedSession).not.toHaveProperty('payment.data.request')
+            expect(capturedSession).not.toHaveProperty(
+              'payment.data.paymentMethodsResponse',
+            )
+            expect(capturedSession).not.toHaveProperty(
+              'payment.data.session_id',
+            )
+            expect(newSession).not.toHaveProperty('payment.data.request')
+            expect(newSession).not.toHaveProperty(
+              'payment.data.paymentMethodsResponse',
+            )
+            expect(newSession).not.toHaveProperty('payment.data.session_id')
             expect(authorizedSession.payment?.captured_at).toBeNull()
             expect(capturedSession.payment?.captured_at).toBeDefined()
             expect(newSession.payment?.captured_at).toBeNull()
