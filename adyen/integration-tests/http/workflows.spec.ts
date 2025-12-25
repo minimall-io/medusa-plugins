@@ -1189,6 +1189,26 @@ medusaIntegrationTestRunner({
               PaymentSessionStatus.AUTHORIZED,
             )
             expect(newSession.status).toEqual(PaymentSessionStatus.CAPTURED)
+            expect(capturedSession).toHaveProperty('data.request')
+            expect(capturedSession).toHaveProperty(
+              'data.paymentMethodsResponse',
+            )
+            expect(capturedSession).toHaveProperty('data.session_id')
+            expect(newSession).not.toHaveProperty('data.request')
+            expect(newSession).not.toHaveProperty('data.paymentMethodsResponse')
+            expect(newSession).not.toHaveProperty('data.session_id')
+            expect(capturedSession).not.toHaveProperty('payment.data.request')
+            expect(capturedSession).not.toHaveProperty(
+              'payment.data.paymentMethodsResponse',
+            )
+            expect(capturedSession).not.toHaveProperty(
+              'payment.data.session_id',
+            )
+            expect(newSession).not.toHaveProperty('payment.data.request')
+            expect(newSession).not.toHaveProperty(
+              'payment.data.paymentMethodsResponse',
+            )
+            expect(newSession).not.toHaveProperty('payment.data.session_id')
             expect(capturedSession.payment?.refunds).toHaveLength(0)
             expect(newSession.payment?.refunds).toHaveLength(1)
             expect(newRefunds).toHaveLength(1)
