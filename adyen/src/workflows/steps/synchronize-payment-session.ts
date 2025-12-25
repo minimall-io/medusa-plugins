@@ -74,10 +74,12 @@ const synchronizePaymentSessionStepCompensate = async (
 
   const dataManager = PaymentDataManager(payment?.data)
 
+  const data = { ...session.data, ...dataManager.getData() }
+
   const paymentSessionToUpdate = {
     amount,
     currency_code,
-    data: dataManager.getData(),
+    data,
     id,
     status,
   }
