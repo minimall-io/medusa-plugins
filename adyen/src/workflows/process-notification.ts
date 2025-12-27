@@ -87,62 +87,59 @@ const isRefundFailed = ({
   (eventCode === EventCodeEnum.RefundFailed && success === SuccessEnum.True) ||
   (eventCode === EventCodeEnum.RefundedReversed && success === SuccessEnum.True)
 
+const processNotificationWorkflowCall = (
+  notification: WorkflowData<NotificationRequestItem>,
+) => {
+  const paymentData = getPaymentDataStep(notification)
+
+  when('authorisation-success', notification, isAuthorisationSuccess).then(
+    () => {
+      authorisationSuccessStep(paymentData)
+    },
+  )
+
+  when('authorisation-failed', notification, isAuthorisationFailed).then(() => {
+    authorisationFailedStep(paymentData)
+  })
+
+  when('cancellation-success', notification, isCancellationSuccess).then(() => {
+    cancellationSuccessStep(paymentData)
+  })
+
+  when('cancellation-failed', notification, isCancellationFailed).then(() => {
+    cancellationFailedStep(paymentData)
+  })
+
+  when('capture-success', notification, isCaptureSuccess).then(() => {
+    captureSuccessStep(paymentData)
+  })
+
+  when('capture-failed', notification, isCatureFailed).then(() => {
+    captureFailedStep(paymentData)
+  })
+
+  when('refund-success', notification, isRefundSuccess).then(() => {
+    refundSuccessStep(paymentData)
+  })
+
+  when('refund-failed', notification, isRefundFailed).then(() => {
+    refundFailedStep(paymentData)
+  })
+
+  synchronizePaymentSessionStep(paymentData)
+  synchronizePaymentCollectionStep(paymentData)
+
+  const notificationProcessed = createHook('notificationProcessed', paymentData)
+
+  return new WorkflowResponse<
+    NotificationRequestItem,
+    ProcessNotificationWorkflowHooks
+  >(notification, {
+    hooks: [notificationProcessed],
+  })
+}
+
 export const processNotificationWorkflow = createWorkflow(
   processNotificationWorkflowId,
-  (notification: WorkflowData<NotificationRequestItem>) => {
-    const paymentData = getPaymentDataStep(notification)
-
-    when('authorisation-success', notification, isAuthorisationSuccess).then(
-      () => {
-        authorisationSuccessStep(paymentData)
-      },
-    )
-
-    when('authorisation-failed', notification, isAuthorisationFailed).then(
-      () => {
-        authorisationFailedStep(paymentData)
-      },
-    )
-
-    when('cancellation-success', notification, isCancellationSuccess).then(
-      () => {
-        cancellationSuccessStep(paymentData)
-      },
-    )
-
-    when('cancellation-failed', notification, isCancellationFailed).then(() => {
-      cancellationFailedStep(paymentData)
-    })
-
-    when('capture-success', notification, isCaptureSuccess).then(() => {
-      captureSuccessStep(paymentData)
-    })
-
-    when('capture-failed', notification, isCatureFailed).then(() => {
-      captureFailedStep(paymentData)
-    })
-
-    when('refund-success', notification, isRefundSuccess).then(() => {
-      refundSuccessStep(paymentData)
-    })
-
-    when('refund-failed', notification, isRefundFailed).then(() => {
-      refundFailedStep(paymentData)
-    })
-
-    synchronizePaymentSessionStep(paymentData)
-    synchronizePaymentCollectionStep(paymentData)
-
-    const notificationProcessed = createHook(
-      'notificationProcessed',
-      paymentData,
-    )
-
-    return new WorkflowResponse<
-      NotificationRequestItem,
-      ProcessNotificationWorkflowHooks
-    >(notification, {
-      hooks: [notificationProcessed],
-    })
-  },
+  processNotificationWorkflowCall,
 )
