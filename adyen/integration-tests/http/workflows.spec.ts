@@ -2315,7 +2315,7 @@ medusaIntegrationTestRunner({
             throw new Error('Workflow not found in WorkflowManager')
           }
 
-          const hookHandler = (input: NotificationRequestItem) => {
+          const hookHandler = () => {
             throw new MedusaError(
               MedusaError.Types.NOT_ALLOWED,
               'processNotificationWorkflow/hooks/notificationProcessed/error',
