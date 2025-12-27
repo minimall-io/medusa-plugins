@@ -23,7 +23,6 @@ import {
   getProviderId,
 } from './fixtures'
 
-type NotificationRequestItem = Types.notification.NotificationRequestItem
 const EventCodeEnum = Types.notification.NotificationRequestItem.EventCodeEnum
 const SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
 
@@ -2335,7 +2334,7 @@ medusaIntegrationTestRunner({
                 input = input.output
               }
 
-              await hookHandler(input)
+              await hookHandler()
 
               return {
                 __type: OrchestrationUtils.SymbolWorkflowWorkflowData,
