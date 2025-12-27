@@ -184,7 +184,11 @@ export class AdyenAPI {
     const { hmacKey } = this.options
     try {
       const isValid = this.hmac.validateHMAC(notification, hmacKey)
-      if (!isValid) throw new Error('Invalid Webhook Notification')
+      if (!isValid)
+        throw new MedusaError(
+          MedusaError.Types.UNEXPECTED_STATE,
+          'Invalid Webhook Notification',
+        )
       return true
     } catch (error) {
       const {
