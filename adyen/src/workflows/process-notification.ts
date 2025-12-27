@@ -15,6 +15,7 @@ import {
   captureFailedStep,
   captureSuccessStep,
   getPaymentDataStep,
+  type PaymentData,
   refundFailedStep,
   refundSuccessStep,
   synchronizePaymentCollectionStep,
@@ -25,9 +26,8 @@ type NotificationRequestItem = Types.notification.NotificationRequestItem
 const EventCodeEnum = Types.notification.NotificationRequestItem.EventCodeEnum
 const SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
 
-type Hooks = [
-  Hook<'validateNotification', WorkflowData<NotificationRequestItem>, unknown>,
-  Hook<'notificationProcessed', WorkflowData<NotificationRequestItem>, unknown>,
+type ProcessNotificationWorkflowHooks = [
+  Hook<'notificationProcessed', WorkflowData<PaymentData>, unknown>,
 ]
 
 export const processNotificationWorkflowId = 'process-notification-workflow'
@@ -90,11 +90,6 @@ const isRefundFailed = ({
 export const processNotificationWorkflow = createWorkflow(
   processNotificationWorkflowId,
   (notification: WorkflowData<NotificationRequestItem>) => {
-    const validateNotification = createHook(
-      'validateNotification',
-      notification,
-    )
-
     const paymentData = getPaymentDataStep(notification)
 
     when('authorisation-success', notification, isAuthorisationSuccess).then(
@@ -140,11 +135,14 @@ export const processNotificationWorkflow = createWorkflow(
 
     const notificationProcessed = createHook(
       'notificationProcessed',
-      notification,
+      paymentData,
     )
 
-    return new WorkflowResponse<NotificationRequestItem, Hooks>(notification, {
-      hooks: [validateNotification, notificationProcessed],
+    return new WorkflowResponse<
+      NotificationRequestItem,
+      ProcessNotificationWorkflowHooks
+    >(notification, {
+      hooks: [notificationProcessed],
     })
   },
 )
