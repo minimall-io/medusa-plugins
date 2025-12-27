@@ -182,8 +182,11 @@ export class AdyenAPI {
     notification: NotificationRequestItem,
   ): boolean {
     const { hmacKey } = this.options
-    const isValid = this.hmac.validateHMAC(notification, hmacKey)
-    if (!isValid) {
+    try {
+      const isValid = this.hmac.validateHMAC(notification, hmacKey)
+      if (!isValid) throw new Error('Invalid Webhook Notification')
+      return true
+    } catch (error) {
       const {
         eventCode,
         merchantReference,
@@ -201,11 +204,10 @@ export class AdyenAPI {
         success,
       }
       const baseNotificationString = JSON.stringify(baseNotification, null, 2)
-      this.log.error(
-        `${MESSAGE_PREFIX} Invalid Webhook Notification: ${baseNotificationString}`,
-      )
+      const message = `${MESSAGE_PREFIX} Error: ${error.message}. Notification: ${baseNotificationString}`
+      this.log.error(message, error)
     }
-    return isValid
+    return false
   }
 }
 
