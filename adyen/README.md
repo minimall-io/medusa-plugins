@@ -8,6 +8,8 @@ The plugin is frontend-agnostic and is compatible with any Advanced flow fronten
 
 **⚠️ Production Readiness:** This plugin is currently not considered safe or ready for production use due to fundamental differences between Medusa's payment module design (which assumes synchronous payment operations) and Adyen's asynchronous payment protocol. These differences create challenges in maintaining accurate payment state synchronization, as detailed in the [Webhooks](#webhooks) section.
 
+**⚠️ Version Compatibility:** Due to the webhook workflow implementation, this plugin is brittle and tied to the specified Medusa version. There is no guarantee that the plugin will work correctly with other Medusa versions because it uses the payment module's internal methods to operate on payment models. These methods and underlying payment models may change between Medusa versions, potentially breaking the plugin's functionality.
+
 ## Installation and Setup
 
 ### Install the Package
