@@ -104,3 +104,25 @@ This ensures Medusa payment records stay synchronized with Adyen's actual paymen
 **Operations may appear successful but ultimately fail.** A payment operation that initially appears successful may fail when the webhook arrives.
 
 Currently, there is no notification system in place to notify merchants about received webhooks. Merchants should rely on webhooks for processing orders and should not take irreversible actions (such as shipping goods) until webhook notifications confirm that payment operations have succeeded. The plugin's webhook workflow automatically synchronizes payment states, but merchant business logic should wait for webhook confirmation before taking irreversible actions.
+
+## Development
+
+### Integration Tests
+
+The integration tests depend on two environment variables:
+
+- **`ADYEN_PROVIDER_ID`** (required): Represents the `id` portion of the payment provider unique ID (`pp_{identifier}_{id}`). The payment module service calls, consumed by the integration tests, depend on the payment provider ID. This variable must match the value of `config.modules[i].options.providers[j].id` in the `medusa-config.ts` file of the Medusa store.
+
+- **`ADYEN_API_LIVE_TESTS`** (optional): A boolean value that determines whether integration tests use live Adyen API endpoints. Set to `'true'` to use live endpoints, or `'false'` or leave undefined to use mocks. Using mocks is recommended for consistent testing.
+
+Run integration tests using:
+
+```bash
+npm run test:integration:http
+# or
+npm run test:integration:modules
+```
+
+### Example Storefront
+
+The `examples` folder contains a Medusa storefront (frontend) with Adyen integration. The example was built using the Medusa Next.js Starter Storefront code as the base. The code is not intended for production use, but can be useful for manual end-to-end testing of the plugin and as inspiration for integrating Adyen payments with Medusa storefronts.
