@@ -84,15 +84,15 @@ export const getCardDetails = (
 export const getNotificationRequestItem = (
   pspReference: string,
   merchantReference: string,
-  value: number,
-  currency: string,
+  amountValue: number,
+  amountCurrency: string,
   eventCode: EventCodeEnum,
   success: SuccessEnum,
 ): NotificationRequestItem => {
   const eventDate = new Date().toISOString()
   const amount = {
-    currency,
-    value,
+    currency: amountCurrency,
+    value: amountValue,
   }
   return {
     amount,
