@@ -14,6 +14,7 @@ import { medusaIntegrationTestRunner } from '@medusajs/test-utils'
 import { filter, find } from 'lodash'
 import type { Event } from '../../src/utils/types'
 import { getCardDetails, getCustomer, getProviderId } from './fixtures'
+import { type IMockAdyenApi, mockAdyenApi } from './mocks'
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -30,6 +31,7 @@ medusaIntegrationTestRunner({
       let provider_id: string
       let customer: PaymentCustomerDTO
       let encryptedCardDetails: Types.checkout.CardDetails
+      let mock: IMockAdyenApi
 
       beforeAll(async () => {
         container = getContainer()
@@ -38,6 +40,11 @@ medusaIntegrationTestRunner({
         provider_id = getProviderId()
         customer = getCustomer()
         encryptedCardDetails = getCardDetails()
+        mock = mockAdyenApi()
+      })
+
+      beforeEach(() => {
+        mock.reset()
       })
 
       describe('Test storing, retrieving, and deleting payment methods', () => {
