@@ -47,8 +47,6 @@ export interface IMockAdyenApi {
 const shouldRunAdyenApiLiveTests = process.env.ADYEN_API_LIVE_TESTS === 'true'
 const HOST = 'https://checkout-test.adyen.com'
 
-// nock.recorder.rec()
-
 const getURL = (uri: string) => new URL(uri, HOST)
 
 const getSegments = (uri: string) => {
