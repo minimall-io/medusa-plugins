@@ -22,6 +22,7 @@ import {
   getNotificationRequestItem,
   getProviderId,
 } from './fixtures'
+import { type IMockAdyenApi, mockAdyenApi } from './mocks'
 
 const EventCodeEnum = Types.notification.NotificationRequestItem.EventCodeEnum
 const SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
@@ -41,6 +42,7 @@ medusaIntegrationTestRunner({
       let reference: string
       let encryptedCardDetails: Types.checkout.CardDetails
       let session: PaymentSessionDTO
+      let mock: IMockAdyenApi
 
       const authorizePaymentSession = async (sessionId: string) => {
         const payment = await paymentService.authorizePaymentSession(
@@ -96,6 +98,7 @@ medusaIntegrationTestRunner({
         currency = 'USD'
         provider_id = getProviderId()
         encryptedCardDetails = getCardDetails()
+        mock = mockAdyenApi()
       })
 
       beforeEach(async () => {
@@ -116,6 +119,7 @@ medusaIntegrationTestRunner({
         })
 
         reference = session.id
+        mock.reset()
         await delay(1000)
       })
 
