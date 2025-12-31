@@ -1,6 +1,5 @@
 import { Types } from '@adyen/api-library'
 import { filter, find, remove } from 'lodash'
-
 import nock from 'nock'
 
 type PaymentMethodsResponse = Types.checkout.PaymentMethodsResponse
