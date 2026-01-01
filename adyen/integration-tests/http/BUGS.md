@@ -1,4 +1,19 @@
+## Medusa Bugs Identified During Plugin Development
 
+- The `Payment` model unnecessarily splits data across two entities—`PaymentSession` and `Payment`—which increases complexity and makes the model harder to maintain.
+  [Reference](https://github.com/medusajs/medusa/blob/develop/packages/modules/payment/src/models/payment.ts#L7)
+
+- The `cancelPayment` method does not persist the `data` returned by the payment provider.
+  [Reference](https://github.com/medusajs/medusa/blob/develop/packages/modules/payment/src/services/payment-module.ts#L939)
+
+- The `capturePayment` method accepts a `CreateCaptureDTO` with an optional `amount`. While the `captureService_` method creates a new record using the provided `amount` (if present), the `capturePaymentFromProvider_` method never forwards this `amount` to the payment provider.
+  [Reference](https://github.com/medusajs/medusa/blob/develop/packages/modules/payment/src/services/payment-module.ts#L686)
+
+- The `refundPayment` method accepts a `CreateRefundDTO` with an optional `amount`. If no amount is provided, the `refundPayment_` method assumes a full refund. A more robust approach would be to calculate the remaining unrefunded amount, which may be less than or equal to the full payment amount.
+  [Reference](https://github.com/medusajs/medusa/blob/develop/packages/modules/payment/src/services/payment-module.ts#L868)
+
+- Running integration tests in a Dockerized development environment (with custom service names, such as a database host named `postgres`) is problematic due to hard-coded constraints that enforce SSL on database connections.
+  [Reference](https://github.com/medusajs/medusa/blob/develop/packages/medusa-test-utils/src/medusa-test-runner-utils/config.ts#L33)
 
 ### The following is the fix, recommended by a Cursor agent, for solving custom workflow hook registration inside integration tests.
 
