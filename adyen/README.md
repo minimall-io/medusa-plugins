@@ -112,7 +112,6 @@ Currently, the plugin does not provide a notification mechanism to alert merchan
 Integration tests depend on the following environment variables:
 
 - **`ADYEN_PROVIDER_ID`** (required): Represents the `id` portion of the payment provider’s unique identifier (`pp_{identifier}_{id}`). Payment module service calls used by the integration tests rely on this value. It must match the value defined in `config.modules[i].options.providers[j].id` within the `medusa-config.ts` file.
-
 - **`ADYEN_API_LIVE_TESTS`** (optional): A boolean flag that determines whether integration tests use live Adyen API endpoints. Set to `'true'` to use live endpoints, or `'false'` (or leave undefined) to use mocked responses. Using mocks is recommended for consistent and reliable testing.
 
 ### Example Storefront
