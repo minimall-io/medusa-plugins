@@ -2,13 +2,13 @@
 
 ## Introduction
 
-This plugin implements the Medusa.js payment provider for Adyen payments, providing the backend (Payment server) integration for Adyen's Advanced flow. The plugin handles server-side payment operations including payment session creation, authorization, capture, refunds, and webhook processing.
+This plugin implements a Medusa.js payment provider for Adyen, delivering backend (payment server) integration for Adyen’s Advanced flow. It handles server-side payment operations such as payment session creation, authorization, capture, refunds, and webhook processing.
 
-The plugin is frontend-agnostic and is compatible with any Advanced flow frontend implementation that Adyen supports (Web Components, Drop-in, or custom implementations). A dedicated section with frontend code examples is provided below.
+The plugin is frontend-agnostic and compatible with any Advanced flow frontend implementation supported by Adyen, including Web Components, Drop-in, and custom integrations. A dedicated section with frontend code examples is provided below.
 
-**⚠️ Production Readiness:** This plugin is currently not considered safe or ready for production use due to fundamental differences between Medusa's payment module design (which assumes synchronous payment operations) and Adyen's asynchronous payment protocol. These differences create challenges in maintaining accurate payment state synchronization, as detailed in the [Webhooks](#webhooks) section.
+**⚠️ Production Readiness:** This plugin is not currently considered safe or ready for production use. Fundamental differences between Medusa’s payment module design—which assumes synchronous payment operations—and Adyen’s asynchronous payment protocol introduce challenges in maintaining accurate payment state synchronization. These issues are explained in more detail in the [Webhooks](#webhooks) section.
 
-**⚠️ Version Compatibility:** Due to the webhook workflow implementation, this plugin is brittle and tied to the specified Medusa version. There is no guarantee that the plugin will work correctly with other Medusa versions because it uses the payment module's internal methods to operate on payment models. These methods and underlying payment models may change between Medusa versions, potentially breaking the plugin's functionality.
+**⚠️ Version Compatibility:** Due to its webhook workflow implementation, this plugin is brittle and tightly coupled to a specific Medusa version. There is no guarantee it will function correctly with other Medusa versions, as it relies on internal payment module methods to manipulate payment models. These methods and underlying models may change between Medusa releases, potentially breaking the plugin.
 
 ## Installation and Setup
 
@@ -22,7 +22,7 @@ npm install @minimall.io/medusa-plugin-adyen
 
 ### Configure the Plugin
 
-Configure the Adyen payment provider in your Medusa instance's `medusa-config.ts` file:
+Configure the Adyen payment provider in your Medusa instance by updating the `medusa-config.ts` file:
 
 ```typescript
 import { defineConfig } from '@medusajs/framework/utils'
@@ -62,59 +62,59 @@ export default defineConfig({
 
 ### Plugin Options
 
-The following options are available for the Adyen payment provider:
+The following options are available for configuring the Adyen payment provider.
 
 #### Required Options
 
-- **`apiKey`** (string): Your Adyen API key for authenticating API requests. See [Adyen documentation](https://docs.adyen.com/development-resources/api-credentials) for details.
-- **`hmacKey`** (string): HMAC key for validating webhook notifications. Required for secure webhook processing. See [Adyen documentation](https://docs.adyen.com/development-resources/webhooks/secure-webhooks) for details.
+- **`apiKey`** (string): Your Adyen API key, used to authenticate API requests. See the [Adyen documentation](https://docs.adyen.com/development-resources/api-credentials).
+- **`hmacKey`** (string): HMAC key used to validate webhook notifications. Required for secure webhook processing. See the [Adyen documentation](https://docs.adyen.com/development-resources/webhooks/secure-webhooks).
 - **`merchantAccount`** (string): Your Adyen merchant account identifier.
-- **`liveEndpointUrlPrefix`** (string): Your live endpoint URL prefix. Required when using the live environment. See [Adyen documentation](https://docs.adyen.com/development-resources/live-endpoints) for details.
+- **`liveEndpointUrlPrefix`** (string): Your live endpoint URL prefix. Required when using the live environment. See the [Adyen documentation](https://docs.adyen.com/development-resources/live-endpoints).
 
 #### Optional Options
 
-- **`environment`** (string): Adyen environment to use. Defaults to `TEST`. Set to `LIVE` for production. Must match your API credentials' environment.
-- **`shopperInteraction`** (string): Shopper interaction type for payments. Takes precedence over values specified in payment requests. See Adyen documentation for [available values](https://docs.adyen.com/api-explorer/Checkout/71/post/payments#request-shopperInteraction) and [creating a token](https://docs.adyen.com/online-payments/tokenization/create-tokens?tab=payments-create-a-token_2).
-- **`recurringProcessingModel`** (string): Recurring processing model for stored payment methods. Takes precedence over values specified in payment requests. See Adyen documentation for [available values](https://docs.adyen.com/api-explorer/Checkout/71/post/payments#request-recurringProcessingModel) and [creating a token](https://docs.adyen.com/online-payments/tokenization/create-tokens?tab=payments-create-a-token_2).
-- **`apiInitialRetryDelay`** (number): Initial delay in milliseconds before retrying failed API requests. Defaults to `1000` (1 second).
+- **`environment`** (string): The Adyen environment to use. Defaults to `TEST`. Set to `LIVE` for production. This must match the environment of your API credentials.
+- **`shopperInteraction`** (string): Shopper interaction type for payments. This value takes precedence over any value specified in individual payment requests. See the Adyen documentation for [available values](https://docs.adyen.com/api-explorer/Checkout/71/post/payments#request-shopperInteraction) and [token creation](https://docs.adyen.com/online-payments/tokenization/create-tokens?tab=payments-create-a-token_2).
+- **`recurringProcessingModel`** (string): Recurring processing model for stored payment methods. This value also takes precedence over values specified in payment requests. Refer to the Adyen documentation for [available values](https://docs.adyen.com/api-explorer/Checkout/71/post/payments#request-recurringProcessingModel) and [token creation](https://docs.adyen.com/online-payments/tokenization/create-tokens?tab=payments-create-a-token_2).
+- **`apiInitialRetryDelay`** (number): Initial delay, in milliseconds, before retrying failed API requests. Defaults to `1000` (1 second).
 - **`apiMaxRetries`** (number): Maximum number of retry attempts for failed API requests. Defaults to `3`.
 
-**Note:** The provider-level `shopperInteraction` and `recurringProcessingModel` options take precedence over values specified in individual payment requests. If not set at the provider level, the values from the payment request will be used.
+**Note:** Provider-level `shopperInteraction` and `recurringProcessingModel` options override values specified in individual payment requests. If these options are not set at the provider level, the values from the payment request will be used.
 
 ## Webhooks
 
-Webhooks are critical for the Adyen payment provider integration. The Medusa payment module assumes payment operations return definitive states synchronously, but Adyen operates asynchronously.
+Webhooks are a critical component of the Adyen payment provider integration. While the Medusa payment module assumes payment operations return definitive results synchronously, Adyen operates using an asynchronous model.
 
 ### Asynchronous Payment Operations
 
-When merchant infrastructure (Medusa server) sends a payment operation API call to Adyen (authorization, cancellation, capture, or refund), Adyen typically only acknowledges receipt of the request—it does not immediately indicate whether the operation succeeded or failed. The actual outcome is delivered later via a webhook notification from Adyen to the merchant Medusa server.
+When merchant infrastructure (the Medusa server) sends a payment operation request to Adyen—such as authorization, cancellation, capture, or refund—Adyen typically responds only with an acknowledgement of receipt. It does not immediately indicate whether the operation succeeded or failed. The final outcome is delivered later via a webhook notification from Adyen to the Medusa server.
 
 #### How the Plugin Handles This
 
-To work around Medusa's synchronous assumptions, the plugin:
+To accommodate Medusa’s synchronous assumptions, the plugin implements the following approach:
 
-1. **Initially treats request acknowledgements as successful payment operations**: When Adyen acknowledges a payment operation request, the plugin records it as a successful operation in Medusa (e.g., setting capture status to `REQUESTED`).
+1. **Treats request acknowledgements as initial success states:** When Adyen acknowledges a payment operation request, the plugin records the operation as successful in Medusa (for example, setting a capture status to `REQUESTED`).
 
-2. **Updates a payment state via webhooks**: When the corresponding webhook arrives, the plugin Adyen Webhook workflow processes the notification and updates the final state of the payment records in Medusa (payment collections, payment sessions, payments, captures, refunds, and related entities).
+2. **Finalizes payment state via webhooks:** When the corresponding webhook is received, the plugin’s Adyen webhook workflow processes the notification and updates the final state of the relevant Medusa entities, including payment collections, payment sessions, payments, captures, refunds, and related records.
 
-This ensures Medusa payment records stay synchronized with Adyen's actual payment states.
+This approach helps keep Medusa’s payment records synchronized with Adyen’s actual payment states.
 
 #### Important Considerations
 
-**Operations may appear successful but ultimately fail.** A payment operation that initially appears successful may fail when the webhook arrives.
+**Operations may initially appear successful but ultimately fail.** A payment operation that is initially recorded as successful may later fail when the webhook notification is processed.
 
-Currently, there is no notification system in place to notify merchants about received webhooks. Merchants should rely on webhooks for processing orders and should not take irreversible actions (such as shipping goods) until webhook notifications confirm that payment operations have succeeded. The plugin's webhook workflow automatically synchronizes payment states, but merchant business logic should wait for webhook confirmation before taking irreversible actions.
+Currently, the plugin does not provide a notification mechanism to alert merchants when webhooks are received. Merchants should rely on webhook-confirmed payment states when processing orders and must avoid taking irreversible actions—such as shipping goods—until webhook notifications confirm that payment operations have completed successfully. While the plugin automatically synchronizes payment states, merchant business logic should explicitly wait for webhook confirmation before proceeding.
 
 ## Development
 
 ### Integration Tests
 
-The integration tests depend on two environment variables:
+Integration tests depend on the following environment variables:
 
-- **`ADYEN_PROVIDER_ID`** (required): Represents the `id` portion of the payment provider unique ID (`pp_{identifier}_{id}`). The payment module service calls, consumed by the integration tests, depend on the payment provider ID. This variable must match the value of `config.modules[i].options.providers[j].id` in the `medusa-config.ts` file of the Medusa store.
+- **`ADYEN_PROVIDER_ID`** (required): Represents the `id` portion of the payment provider’s unique identifier (`pp_{identifier}_{id}`). Payment module service calls used by the integration tests rely on this value. It must match the value defined in `config.modules[i].options.providers[j].id` within the `medusa-config.ts` file.
 
-- **`ADYEN_API_LIVE_TESTS`** (optional): A boolean value that determines whether integration tests use live Adyen API endpoints. Set to `'true'` to use live endpoints, or `'false'` or leave undefined to use mocks. Using mocks is recommended for consistent testing.
+- **`ADYEN_API_LIVE_TESTS`** (optional): A boolean flag that determines whether integration tests use live Adyen API endpoints. Set to `'true'` to use live endpoints, or `'false'` (or leave undefined) to use mocked responses. Using mocks is recommended for consistent and reliable testing.
 
 ### Example Storefront
 
-The `examples` folder contains a Medusa storefront (frontend) with Adyen integration. The example was built using the Medusa Next.js Starter Storefront code as the base. The code is not intended for production use, but can be useful for manual end-to-end testing of the plugin and as inspiration for integrating Adyen payments with Medusa storefronts.
+The `examples` folder contains a Medusa storefront with Adyen integration. This example is based on the Medusa Next.js Starter Storefront and is not intended for production use. However, it can be useful for manual end-to-end testing of the plugin and as a reference for integrating Adyen payments into Medusa storefronts.
