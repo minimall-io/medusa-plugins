@@ -1,5 +1,5 @@
 import { Types } from '@adyen/api-library'
-import { filter, find, remove } from 'lodash'
+import { filter, remove } from 'lodash'
 import nock from 'nock'
 
 type PaymentMethodsResponse = Types.checkout.PaymentMethodsResponse
@@ -18,17 +18,6 @@ type ListStoredPaymentMethodsResponse =
 const ResultCodeEnum = Types.checkout.PaymentResponse.ResultCodeEnum
 const StatusEnum = Types.checkout.PaymentCancelResponse.StatusEnum
 
-interface IPaymentMethodsStore {
-  add: (paymentMethod: StoredPaymentMethodResource) => void
-  getByShopperReference: (
-    shopperReference?: string,
-  ) => StoredPaymentMethodResource | undefined
-  listByShopperReference: (
-    shopperReference?: string,
-  ) => StoredPaymentMethodResource[]
-  removeById: (id?: string) => void
-}
-
 enum Operation {
   PaymentMethods,
   Payments,
@@ -46,15 +35,15 @@ export interface IMockAdyenApi {
 const shouldRunAdyenApiLiveTests = process.env.ADYEN_API_LIVE_TESTS === 'true'
 const HOST = 'https://checkout-test.adyen.com'
 
-const getURL = (uri: string) => new URL(uri, HOST)
+const getURL = (uri: string): URL => new URL(uri, HOST)
 
-const getSegments = (uri: string) => {
+const getSegments = (uri: string): string[] => {
   const url = getURL(uri)
   const path = url.pathname
   return path.split('/').slice(2)
 }
 
-const getSearchParams = (uri: string) => {
+const getSearchParams = (uri: string): URLSearchParams => {
   const url = getURL(uri)
   return url.searchParams
 }
@@ -84,46 +73,60 @@ const matchOperation =
     }
   }
 
-const PaymentMethodsStore = (): IPaymentMethodsStore => {
+const StoredPaymentMethodsResponses = () => {
   const store: StoredPaymentMethodResource[] = []
 
-  const add = (
-    paymentMethod: StoredPaymentMethodResource,
-  ): StoredPaymentMethodResource => {
+  const postStoredPaymentMethods = (
+    _,
+    requestBody: StoredPaymentMethodRequest,
+  ) => {
+    const { shopperReference, paymentMethod } = requestBody
+    const expiryMonth = paymentMethod.encryptedExpiryMonth?.slice(-2)
+    const expiryYear = paymentMethod.encryptedExpiryYear?.slice(-4)
+    const lastFour = paymentMethod.encryptedCardNumber?.slice(-4)
+    const holderName = paymentMethod.holderName
+    const type = paymentMethod.type
     const id = `ID${Date.now()}`
-    const newPaymentMethod = { ...paymentMethod, id }
-    store.push(newPaymentMethod)
-    return newPaymentMethod
+    const responseBody: StoredPaymentMethodResource = {
+      expiryMonth,
+      expiryYear,
+      holderName,
+      id,
+      lastFour,
+      shopperReference,
+      type,
+    }
+    store.push(responseBody)
+    return [200, responseBody]
   }
 
-  const getByShopperReference = (
-    shopperReference?: string,
-  ): StoredPaymentMethodResource | undefined => {
-    if (!shopperReference) return undefined
-    return find(store, { shopperReference })
+  const getStoredPaymentMethods = (uri: string) => {
+    const searchParams = getSearchParams(uri)
+    const shopperReference = searchParams.get('shopperReference') || undefined
+    const merchantAccount = searchParams.get('merchantAccount') || undefined
+    const storedPaymentMethods = filter(store, { shopperReference })
+    const responseBody: ListStoredPaymentMethodsResponse = {
+      merchantAccount,
+      shopperReference,
+      storedPaymentMethods,
+    }
+    return [200, responseBody]
   }
 
-  const listByShopperReference = (
-    shopperReference?: string,
-  ): StoredPaymentMethodResource[] => {
-    if (!shopperReference) return []
-    return filter(store, { shopperReference })
-  }
-
-  const removeById = (id?: string): void => {
-    if (!id) return
+  const deleteStoredPaymentMethods = (uri: string) => {
+    const [, id] = getSegments(uri)
     remove(store, { id })
+    return [200, {}]
   }
 
   return {
-    add,
-    getByShopperReference,
-    listByShopperReference,
-    removeById,
+    deleteStoredPaymentMethods,
+    getStoredPaymentMethods,
+    postStoredPaymentMethods,
   }
 }
 
-const adyenApiResponses = (paymentMethods: IPaymentMethodsStore) => {
+const PaymentsResponses = () => {
   const getPspReference = (): string => `PSP${Date.now()}`
   const getReference = (): string => `ref_${Date.now()}`
 
@@ -213,72 +216,28 @@ const adyenApiResponses = (paymentMethods: IPaymentMethodsStore) => {
     return [200, responseBody]
   }
 
-  const postStoredPaymentMethods = (
-    _,
-    requestBody: StoredPaymentMethodRequest,
-  ) => {
-    const { shopperReference, paymentMethod } = requestBody
-    const expiryMonth = paymentMethod.encryptedExpiryMonth?.slice(-2)
-    const expiryYear = paymentMethod.encryptedExpiryYear?.slice(-4)
-    const lastFour = paymentMethod.encryptedCardNumber?.slice(-4)
-    const holderName = paymentMethod.holderName
-    const type = paymentMethod.type
-    const responseBody: StoredPaymentMethodResource = {
-      expiryMonth,
-      expiryYear,
-      holderName,
-      lastFour,
-      shopperReference,
-      type,
-    }
-    const newPaymentMethod = paymentMethods.add(responseBody)
-    return [200, newPaymentMethod]
-  }
-
-  const getStoredPaymentMethods = (uri: string) => {
-    const searchParams = getSearchParams(uri)
-    const shopperReference = searchParams.get('shopperReference') || undefined
-    const merchantAccount = searchParams.get('merchantAccount') || undefined
-    const storedPaymentMethods =
-      paymentMethods.listByShopperReference(shopperReference)
-    const responseBody: ListStoredPaymentMethodsResponse = {
-      merchantAccount,
-      shopperReference,
-      storedPaymentMethods,
-    }
-    return [200, responseBody]
-  }
-
-  const deleteStoredPaymentMethods = (uri: string) => {
-    const [, paymentMethodId] = getSegments(uri)
-    paymentMethods.removeById(paymentMethodId)
-    return [200, {}]
-  }
-
   return {
-    deleteStoredPaymentMethods,
-    getStoredPaymentMethods,
     postCancels,
     postCaptures,
     postPaymentMethods,
     postPayments,
     postRefunds,
-    postStoredPaymentMethods,
   }
 }
 
-const createAdyenApiScope = () => {
-  const paymentMethods = PaymentMethodsStore()
+const CreateAdyenApiScope = () => {
   const {
-    postPaymentMethods,
-    postPayments,
-    postCancels,
-    postCaptures,
-    postRefunds,
     postStoredPaymentMethods,
     getStoredPaymentMethods,
     deleteStoredPaymentMethods,
-  } = adyenApiResponses(paymentMethods)
+  } = StoredPaymentMethodsResponses()
+  const {
+    postCancels,
+    postCaptures,
+    postPayments,
+    postRefunds,
+    postPaymentMethods,
+  } = PaymentsResponses()
   const scope = nock(HOST)
   scope
     .persist()
@@ -323,14 +282,14 @@ const createAdyenApiScope = () => {
   return scope
 }
 
-export const mockAdyenApi = (): IMockAdyenApi => {
+export const MockAdyenApi = (): IMockAdyenApi => {
   let scope: nock.Scope | null = null
 
   const reset = () => {
     scope = null
     nock.cleanAll()
     if (shouldRunAdyenApiLiveTests) return
-    scope = createAdyenApiScope()
+    scope = CreateAdyenApiScope()
   }
 
   return { reset, scope }
