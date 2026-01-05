@@ -20,7 +20,7 @@ export const getAmount = (
   multiplier: number = 100,
   precision: number = 2,
 ): number =>
-  amount || minimum + Number((Math.random() * multiplier).toFixed(precision))
+  amount ?? minimum + Number((Math.random() * multiplier).toFixed(precision))
 
 export const getCustomer = (
   customerSuffix?: string,
