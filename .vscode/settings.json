@@ -2,7 +2,6 @@
   "[typescript]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
-  "biome.configurationPath": "/home/workspace/medusa-plugins/biome.json",
   "biome.enabled": true,
   "diffEditor.ignoreTrimWhitespace": false,
   "editor.codeActionsOnSave": {
