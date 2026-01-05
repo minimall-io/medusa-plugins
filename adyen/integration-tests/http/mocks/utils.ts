@@ -1,6 +1,7 @@
 import { HOST } from './constants'
 
 export enum Operation {
+  Any,
   PaymentMethods,
   Payments,
   Cancels,
@@ -30,6 +31,8 @@ export const matchOperation =
     const [operation, _, modification] = segments
 
     switch (filter) {
+      case Operation.Any:
+        return true
       case Operation.PaymentMethods:
         return operation === 'paymentMethods'
       case Operation.StoredPaymentMethods:
