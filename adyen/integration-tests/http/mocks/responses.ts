@@ -12,11 +12,13 @@ type PaymentCaptureResponse = Types.checkout.PaymentCaptureResponse
 type PaymentRefundRequest = Types.checkout.PaymentRefundRequest
 type PaymentRefundResponse = Types.checkout.PaymentRefundResponse
 type StoredPaymentMethodRequest = Types.checkout.StoredPaymentMethodRequest
-type StoredPaymentMethodResource = Types.checkout.StoredPaymentMethodResource
 type ListStoredPaymentMethodsResponse =
   Types.checkout.ListStoredPaymentMethodsResponse
 const ResultCodeEnum = Types.checkout.PaymentResponse.ResultCodeEnum
 const StatusEnum = Types.checkout.PaymentCancelResponse.StatusEnum
+
+export type StoredPaymentMethodResource =
+  Types.checkout.StoredPaymentMethodResource
 
 const getPspReference = (): string => `PSP${Date.now()}`
 const getReference = (): string => `ref_${Date.now()}`
