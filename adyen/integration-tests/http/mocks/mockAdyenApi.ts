@@ -15,10 +15,26 @@ import {
   postPaymentMethods,
   postPayments,
   postRefunds,
+  type StoredPaymentMethodResource,
 } from './responses'
 import { matchOperation, Operation } from './utils'
 
 export interface IMockAdyenApi {
+  deleteStoredPaymentMethods: (
+    store: StoredPaymentMethodResource[],
+    times?: number,
+    delay?: number,
+  ) => void
+  getStoredPaymentMethods: (
+    store: StoredPaymentMethodResource[],
+    times?: number,
+    delay?: number,
+  ) => void
+  postStoredPaymentMethods: (
+    store: StoredPaymentMethodResource[],
+    times?: number,
+    delay?: number,
+  ) => void
   isDone: () => boolean
   paymentAuthorisation: (times?: number, delay?: number) => void
   paymentCancel: (times?: number, delay?: number) => void
@@ -28,13 +44,6 @@ export interface IMockAdyenApi {
   postServerError: (times?: number, delay?: number, error?: string) => void
   reset: () => void
   scope: nock.Scope | null
-  storedPaymentMethods: (
-    post?: boolean,
-    get?: boolean,
-    del?: boolean,
-    times?: number,
-    delay?: number,
-  ) => void
 }
 
 export const MockAdyenApi = (): IMockAdyenApi => {
@@ -47,36 +56,43 @@ export const MockAdyenApi = (): IMockAdyenApi => {
     scope = nock(HOST)
   }
 
-  const storedPaymentMethods = (
-    post: boolean = true,
-    get: boolean = true,
-    del: boolean = true,
+  const postStoredPaymentMethods = (
+    store: StoredPaymentMethodResource[],
     times: number = DEFAULT_TIMES,
     delay: number = DEFAULT_DELAY,
   ) => {
     if (SHOULD_RUN_ADYEN_API_LIVE_TESTS || scope === null) return
-    const store = []
-    const postStoredPaymentMethods = PostStoredPaymentMethods(store)
-    const getStoredPaymentMethods = GetStoredPaymentMethods(store)
-    const deleteStoredPaymentMethods = DeleteStoredPaymentMethods(store)
-    if (post)
-      scope
-        .post(matchOperation(Operation.StoredPaymentMethods))
-        .times(times)
-        .delay(delay)
-        .reply(postStoredPaymentMethods)
-    if (get)
-      scope
-        .get(matchOperation(Operation.StoredPaymentMethods))
-        .times(times)
-        .delay(delay)
-        .reply(getStoredPaymentMethods)
-    if (del)
-      scope
-        .delete(matchOperation(Operation.StoredPaymentMethods))
-        .times(times)
-        .delay(delay)
-        .reply(deleteStoredPaymentMethods)
+    scope
+      .post(matchOperation(Operation.StoredPaymentMethods))
+      .times(times)
+      .delay(delay)
+      .reply(PostStoredPaymentMethods(store))
+  }
+
+  const getStoredPaymentMethods = (
+    store: StoredPaymentMethodResource[],
+    times: number = DEFAULT_TIMES,
+    delay: number = DEFAULT_DELAY,
+  ) => {
+    if (SHOULD_RUN_ADYEN_API_LIVE_TESTS || scope === null) return
+    scope
+      .get(matchOperation(Operation.StoredPaymentMethods))
+      .times(times)
+      .delay(delay)
+      .reply(GetStoredPaymentMethods(store))
+  }
+
+  const deleteStoredPaymentMethods = (
+    store: StoredPaymentMethodResource[],
+    times: number = DEFAULT_TIMES,
+    delay: number = DEFAULT_DELAY,
+  ) => {
+    if (SHOULD_RUN_ADYEN_API_LIVE_TESTS || scope === null) return
+    scope
+      .delete(matchOperation(Operation.StoredPaymentMethods))
+      .times(times)
+      .delay(delay)
+      .reply(DeleteStoredPaymentMethods(store))
   }
 
   const paymentMethods = (
@@ -158,6 +174,8 @@ export const MockAdyenApi = (): IMockAdyenApi => {
   }
 
   return {
+    deleteStoredPaymentMethods,
+    getStoredPaymentMethods,
     isDone,
     paymentAuthorisation,
     paymentCancel,
@@ -165,8 +183,8 @@ export const MockAdyenApi = (): IMockAdyenApi => {
     paymentMethods,
     paymentRefund,
     postServerError,
+    postStoredPaymentMethods,
     reset,
     scope,
-    storedPaymentMethods,
   }
 }

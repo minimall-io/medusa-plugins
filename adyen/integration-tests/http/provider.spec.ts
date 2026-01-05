@@ -14,7 +14,7 @@ import { medusaIntegrationTestRunner } from '@medusajs/test-utils'
 import { filter, find } from 'lodash'
 import type { Event } from '../../src/utils/types'
 import { getCardDetails, getCustomer, getProviderId } from './fixtures'
-import { type IMockAdyenApi, mockAdyenApi } from './mocks'
+import { type IMockAdyenApi, MockAdyenApi } from './mocks'
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -40,7 +40,7 @@ medusaIntegrationTestRunner({
         provider_id = getProviderId()
         customer = getCustomer()
         encryptedCardDetails = getCardDetails()
-        mock = mockAdyenApi()
+        mock = MockAdyenApi()
       })
 
       beforeEach(() => {
@@ -68,6 +68,8 @@ medusaIntegrationTestRunner({
         })
 
         it('stores payment method for the customer when storePaymentMethod is called', async () => {
+          const store = []
+          mock.postStoredPaymentMethods(store)
           const context = { account_holder: accountHolder }
           const data = { request: { paymentMethod: encryptedCardDetails } }
           const input = { context, data, provider_id }
@@ -75,9 +77,13 @@ medusaIntegrationTestRunner({
 
           expect(paymentMethod).toHaveProperty('id')
           expect(paymentMethod).toHaveProperty('data')
+          expect(mock.isDone()).toBe(true)
         })
 
         it('list stored payment methods for the customer when listPaymentMethods is called', async () => {
+          const store = []
+          mock.postStoredPaymentMethods(store)
+          mock.getStoredPaymentMethods(store)
           const context = { account_holder: accountHolder }
           const data = { request: { paymentMethod: encryptedCardDetails } }
           const input = { context, data, provider_id }
@@ -89,9 +95,14 @@ medusaIntegrationTestRunner({
           })
 
           expect(paymentMethods).toHaveLength(1)
+          expect(mock.isDone()).toBe(true)
         })
 
         it('delete stored payment methods for the customer when deleteAccountHolder is called', async () => {
+          const store = []
+          mock.postStoredPaymentMethods(store)
+          mock.getStoredPaymentMethods(store, 2)
+          mock.deleteStoredPaymentMethods(store)
           const context = { account_holder: accountHolder }
           const data = { request: { paymentMethod: encryptedCardDetails } }
           const input = { context, data, provider_id }
@@ -104,6 +115,7 @@ medusaIntegrationTestRunner({
           })
 
           expect(paymentMethods).toHaveLength(0)
+          expect(mock.isDone()).toBe(true)
         })
       })
 
@@ -119,6 +131,7 @@ medusaIntegrationTestRunner({
 
           const input = { context: { customer }, provider_id }
           accountHolder = await paymentService.createAccountHolder(input)
+          mock.paymentMethods()
           await delay(1000)
         })
 
@@ -142,6 +155,7 @@ medusaIntegrationTestRunner({
           expect(session.data).toHaveProperty('shopper')
           expect(session.data).toHaveProperty('paymentMethodsResponse')
           expect(session.data).toHaveProperty('request')
+          expect(mock.isDone()).toBe(true)
         })
 
         it('returns amount and paymentMethods data properties when initiatePayment is called without account holder context', async () => {
@@ -161,6 +175,8 @@ medusaIntegrationTestRunner({
           expect(session.data).toHaveProperty('amount')
           expect(session.data).toHaveProperty('paymentMethodsResponse')
           expect(session.data).toHaveProperty('request')
+          expect(session.data).not.toHaveProperty('shopper')
+          expect(mock.isDone()).toBe(true)
         })
       })
 
@@ -169,6 +185,7 @@ medusaIntegrationTestRunner({
         let session: PaymentSessionDTO
 
         beforeEach(async () => {
+          mock.paymentMethods()
           const collections = await paymentService.createPaymentCollections([
             collectionInput,
           ])
@@ -209,6 +226,7 @@ medusaIntegrationTestRunner({
           expect(updatedSession.data).toHaveProperty('amount')
           expect(updatedSession.data).toHaveProperty('newProperty')
           expect(updatedAmount.value).toEqual(originalAmount.value)
+          expect(mock.isDone()).toBe(true)
         })
       })
 
@@ -219,6 +237,8 @@ medusaIntegrationTestRunner({
         let sessionWithoutAccountHolder: PaymentSessionDTO
 
         beforeEach(async () => {
+          mock.paymentMethods(2)
+          mock.paymentAuthorisation()
           const collections = await paymentService.createPaymentCollections([
             collectionInput,
           ])
@@ -282,6 +302,7 @@ medusaIntegrationTestRunner({
           expect(data?.events).toHaveLength(1)
           expect(authorisations).toHaveLength(1)
           expect(data).not.toHaveProperty('request')
+          expect(mock.isDone()).toBe(true)
         })
 
         it('returns updated payment data property with saved payment method when authorizePayment is called with account holder context and storePaymentMethod is true', async () => {
@@ -319,6 +340,7 @@ medusaIntegrationTestRunner({
           expect(data?.events).toHaveLength(1)
           expect(authorisations).toHaveLength(1)
           expect(data).not.toHaveProperty('request')
+          expect(mock.isDone()).toBe(true)
         })
 
         it('returns updated payment data property with saved payment method when authorizePayment is called with shopper data in the request and storePaymentMethod is true', async () => {
@@ -357,6 +379,7 @@ medusaIntegrationTestRunner({
           expect(data?.events).toHaveLength(1)
           expect(authorisations).toHaveLength(1)
           expect(data).not.toHaveProperty('request')
+          expect(mock.isDone()).toBe(true)
         })
 
         it('returns updated payment data property with saved payment method when authorizePayment is called with account holder context preference and storePaymentMethod is true', async () => {
@@ -395,6 +418,7 @@ medusaIntegrationTestRunner({
           expect(data?.events).toHaveLength(1)
           expect(authorisations).toHaveLength(1)
           expect(data).not.toHaveProperty('request')
+          expect(mock.isDone()).toBe(true)
         })
 
         it('returns updated payment data property when authorizePayment is called', async () => {
@@ -429,6 +453,7 @@ medusaIntegrationTestRunner({
           expect(data?.events).toHaveLength(1)
           expect(authorisations).toHaveLength(1)
           expect(data).not.toHaveProperty('request')
+          expect(mock.isDone()).toBe(true)
         })
       })
 
@@ -438,6 +463,8 @@ medusaIntegrationTestRunner({
         let payment: PaymentDTO
 
         beforeEach(async () => {
+          mock.paymentMethods()
+          mock.paymentAuthorisation()
           const collections = await paymentService.createPaymentCollections([
             collectionInput,
           ])
@@ -489,6 +516,7 @@ medusaIntegrationTestRunner({
         })
 
         it('cancels the non-authorized payment when cancelPayment is called', async () => {
+          mock.paymentCancel()
           /**
            * As of this writing, the payment module's cancelPayment method,
            * doesn't preserve the provider's cancelPayment method's return value.
@@ -508,9 +536,11 @@ medusaIntegrationTestRunner({
           expect(authorisations).toHaveLength(1)
           expect(newPayment.data).toHaveProperty('reference')
           expect(newPayment.data).not.toHaveProperty('request')
+          expect(mock.isDone()).toBe(true)
         })
 
         it('returns updated payment data property when capturePayment is called', async () => {
+          mock.paymentCapture()
           /**
            * As of this writing, the payment module's capturePayment method,
            * although it accepts the amount parameter,
@@ -533,9 +563,12 @@ medusaIntegrationTestRunner({
           expect(captures).toHaveLength(1)
           expect(newPayment.data).toHaveProperty('reference')
           expect(newPayment.data).not.toHaveProperty('request')
+          expect(mock.isDone()).toBe(true)
         })
 
         it('returns updated payment data property when refundPayment is called', async () => {
+          mock.paymentCapture()
+          mock.paymentRefund(2)
           await paymentService.capturePayment({ payment_id: payment.id })
 
           const ten = 10.0
@@ -575,6 +608,61 @@ medusaIntegrationTestRunner({
           expect(refunds).toHaveLength(2)
           expect(newPayment.data).toHaveProperty('reference')
           expect(newPayment.data).not.toHaveProperty('request')
+          expect(mock.isDone()).toBe(true)
+        })
+      })
+
+      describe('Test retry logic', () => {
+        let collection: PaymentCollectionDTO
+        let session: PaymentSessionDTO
+
+        beforeEach(async () => {
+          mock.paymentMethods()
+          const collections = await paymentService.createPaymentCollections([
+            collectionInput,
+          ])
+          collection = collections[0]
+
+          session = await paymentService.createPaymentSession(collection.id, {
+            amount: collection.amount,
+            currency_code: collection.currency_code,
+            data: { request: {} },
+            provider_id,
+          })
+
+          await paymentService.updatePaymentSession({
+            amount: collection.amount,
+            currency_code: collection.currency_code,
+            data: {
+              request: {
+                paymentMethod: encryptedCardDetails,
+              },
+            },
+            id: session.id,
+          })
+
+          await delay(1000)
+        })
+
+        it('retries payment authorization on 5xx server errors and succeeds after retries', async () => {
+          mock.postServerError(2)
+          mock.paymentAuthorisation()
+          const startTime = Date.now()
+          const payment = await paymentService.authorizePaymentSession(
+            session.id,
+            {},
+          )
+          const endTime = Date.now()
+          const duration = endTime - startTime
+          expect(duration).toBeGreaterThanOrEqual(2500)
+          expect(session.status).toBe('pending')
+          expect(payment.data).toHaveProperty('events')
+          const authorisations = filter(payment.data?.events, {
+            name: 'AUTHORISATION',
+          })
+          expect(authorisations).toHaveLength(1)
+          expect(authorisations[0].status).toBe('SUCCEEDED')
+          expect(mock.isDone()).toBe(true)
         })
       })
     })
