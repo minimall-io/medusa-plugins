@@ -27,9 +27,9 @@ Fix for `createWorkflow`:
 
 ## The Fix
 
-**File:** `/home/workspace/medusa/packages/core/workflows-sdk/src/utils/composer/create-workflow.ts`
+**File:** `https://github.com/medusajs/medusa/blob/v2.12.3/packages/core/workflows-sdk/src/utils/composer/create-workflow.ts`
 
-**Lines to change:** 119-125
+**Lines to change:** 126-132
 
 ### Current Code (Buggy):
 ```typescript
@@ -60,7 +60,15 @@ Here's the fix in context:
 
 ```typescript
 export function createWorkflow<TData, TResult, THooks extends any[]>(
+  /**
+   * The name of the workflow or its configuration.
+   */
   nameOrConfig: string | ({ name: string } & TransactionModelOptions),
+  /**
+   * The constructor function that is executed when the `run` method in {@link ReturnWorkflow} is used.
+   * The function can't be an arrow function or an asynchronus function. It also can't directly manipulate data.
+   * You'll have to use the {@link transform} function if you need to directly manipulate data.
+   */
   composer: (
     input: WorkflowData<TData>
   ) => void | WorkflowResponse<TResult, THooks>
@@ -68,6 +76,12 @@ export function createWorkflow<TData, TResult, THooks extends any[]>(
   const fileSourcePath = getCallerFilePath() as string
   const name = isString(nameOrConfig) ? nameOrConfig : nameOrConfig.name
   const options = isString(nameOrConfig) ? {} : nameOrConfig
+
+  registerDevServerResource({
+    sourcePath: fileSourcePath,
+    id: name,
+    type: "workflow",
+  })
 
   // FIX: Reuse existing handlers map if workflow already exists
   let existingWorkflow = WorkflowManager.getWorkflow(name)
