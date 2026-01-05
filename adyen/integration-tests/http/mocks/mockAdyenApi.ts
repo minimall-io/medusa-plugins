@@ -48,7 +48,6 @@ export interface IMockAdyenApi {
   paymentMethods: (times?: number, delay?: number) => void
   paymentRefund: (times?: number, delay?: number) => void
   reset: () => void
-  scope: nock.Scope | null
 }
 
 export const MockAdyenApi = (): IMockAdyenApi => {
@@ -190,6 +189,5 @@ export const MockAdyenApi = (): IMockAdyenApi => {
     paymentRefund,
     postStoredPaymentMethods,
     reset,
-    scope,
   }
 }
