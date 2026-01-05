@@ -22,7 +22,7 @@ import {
   getNotificationRequestItem,
   getProviderId,
 } from './fixtures'
-import { type IMockAdyenApi, mockAdyenApi } from './mocks'
+import { type IMockAdyenApi, MockAdyenApi } from './mocks'
 
 const EventCodeEnum = Types.notification.NotificationRequestItem.EventCodeEnum
 const SuccessEnum = Types.notification.NotificationRequestItem.SuccessEnum
@@ -98,10 +98,12 @@ medusaIntegrationTestRunner({
         currency = 'USD'
         provider_id = getProviderId()
         encryptedCardDetails = getCardDetails()
-        mock = mockAdyenApi()
+        mock = MockAdyenApi()
       })
 
       beforeEach(async () => {
+        mock.reset()
+        mock.paymentMethods()
         const collections = await paymentService.createPaymentCollections([
           collectionInput,
         ])
@@ -119,13 +121,13 @@ medusaIntegrationTestRunner({
         })
 
         reference = session.id
-        mock.reset()
         await delay(1000)
       })
 
       describe('Without Errors', () => {
         describe('Test processing authorisation notification', () => {
           it('updates payment data models to reflect the change after a success authorisation notification is processed with prior direct authorisation', async () => {
+            mock.paymentAuthorisation()
             await paymentService.authorizePaymentSession(session.id, {})
 
             const [
@@ -209,9 +211,11 @@ medusaIntegrationTestRunner({
             )
             expect(originalAuthorisations[0].status).toEqual('SUCCEEDED')
             expect(newAuthorisations[0].status).toEqual('SUCCEEDED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a failed authorisation notification is processed with prior direct authorisation', async () => {
+            mock.paymentAuthorisation()
             await paymentService.authorizePaymentSession(session.id, {})
 
             const [
@@ -292,10 +296,15 @@ medusaIntegrationTestRunner({
             )
             expect(originalAuthorisations[0].status).toEqual('SUCCEEDED')
             expect(newAuthorisations[0].status).toEqual('FAILED')
+            expect(mock.isDone()).toBe(true)
           })
         })
 
         describe('Test processing cancellation notification', () => {
+          beforeEach(async () => {
+            mock.paymentAuthorisation()
+          })
+
           it('updates payment data models to reflect the change after a success cancellation notification is processed without prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
@@ -366,9 +375,11 @@ medusaIntegrationTestRunner({
             expect(newCancellations[0].amount.value).toEqual(amount)
             expect(newCancellations[0].amount.currency).toEqual(currency)
             expect(newCancellations[0].status).toEqual('SUCCEEDED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a success cancellation notification is processed with prior direct cancellation', async () => {
+            mock.paymentCancel()
             await authorizePaymentSession(session.id)
 
             const [authorizedCollection, authorizedSession] =
@@ -468,6 +479,7 @@ medusaIntegrationTestRunner({
             expect(newCancellations[0].amount.value).toEqual(amount)
             expect(newCancellations[0].amount.currency).toEqual(currency)
             expect(newCancellations[0].status).toEqual('SUCCEEDED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a failed cancellation notification is processed without prior direct cancellation', async () => {
@@ -540,9 +552,11 @@ medusaIntegrationTestRunner({
             expect(newCancellations[0].amount.value).toEqual(amount)
             expect(newCancellations[0].amount.currency).toEqual(currency)
             expect(newCancellations[0].status).toEqual('FAILED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a failed cancellation notification is processed with prior direct cancellation', async () => {
+            mock.paymentCancel()
             await authorizePaymentSession(session.id)
 
             const [authorizedCollection, authorizedSession] =
@@ -639,6 +653,7 @@ medusaIntegrationTestRunner({
             expect(newCancellations[0].amount.value).toEqual(amount)
             expect(newCancellations[0].amount.currency).toEqual(currency)
             expect(newCancellations[0].status).toEqual('FAILED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a success technical cancellation notification is processed without prior direct cancellation', async () => {
@@ -711,9 +726,11 @@ medusaIntegrationTestRunner({
             expect(newCancellations[0].amount.value).toEqual(amount)
             expect(newCancellations[0].amount.currency).toEqual(currency)
             expect(newCancellations[0].status).toEqual('SUCCEEDED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a success technical cancellation notification is processed with prior direct cancellation', async () => {
+            mock.paymentCancel()
             await authorizePaymentSession(session.id)
 
             const [authorizedCollection, authorizedSession] =
@@ -813,6 +830,7 @@ medusaIntegrationTestRunner({
             expect(newCancellations[0].amount.value).toEqual(amount)
             expect(newCancellations[0].amount.currency).toEqual(currency)
             expect(newCancellations[0].status).toEqual('SUCCEEDED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a failed technical cancellation notification is processed without prior direct cancellation', async () => {
@@ -885,9 +903,11 @@ medusaIntegrationTestRunner({
             expect(newCancellations[0].amount.value).toEqual(amount)
             expect(newCancellations[0].amount.currency).toEqual(currency)
             expect(newCancellations[0].status).toEqual('FAILED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a failed technical cancellation notification is processed with prior direct cancellation', async () => {
+            mock.paymentCancel()
             await authorizePaymentSession(session.id)
 
             const [authorizedCollection, authorizedSession] =
@@ -984,10 +1004,15 @@ medusaIntegrationTestRunner({
             expect(newCancellations[0].amount.value).toEqual(amount)
             expect(newCancellations[0].amount.currency).toEqual(currency)
             expect(newCancellations[0].status).toEqual('FAILED')
+            expect(mock.isDone()).toBe(true)
           })
         })
 
         describe('Test processing capture notification', () => {
+          beforeEach(async () => {
+            mock.paymentAuthorisation()
+          })
+
           it('updates payment data models to reflect the change after a success capture notification is processed without prior direct capture', async () => {
             await authorizePaymentSession(session.id)
 
@@ -1063,9 +1088,11 @@ medusaIntegrationTestRunner({
             expect(newCaptures[0].amount.value).toEqual(amount)
             expect(newCaptures[0].amount.currency).toEqual(currency)
             expect(newCaptures[0].status).toEqual('SUCCEEDED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a success capture notification is processed with prior direct capture', async () => {
+            mock.paymentCapture()
             const payment = await authorizePaymentSession(session.id)
 
             const [authorizedCollection, authorizedSession] =
@@ -1176,6 +1203,7 @@ medusaIntegrationTestRunner({
             )
             expect(originalCaptures[0].status).toEqual('REQUESTED')
             expect(newCaptures[0].status).toEqual('SUCCEEDED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a failed capture notification is processed without prior direct capture', async () => {
@@ -1251,9 +1279,11 @@ medusaIntegrationTestRunner({
             expect(newCaptures[0].amount.value).toEqual(amount)
             expect(newCaptures[0].amount.currency).toEqual(currency)
             expect(newCaptures[0].status).toEqual('FAILED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a failed capture notification is processed with prior direct capture', async () => {
+            mock.paymentCapture()
             const payment = await authorizePaymentSession(session.id)
 
             const [authorizedCollection, authorizedSession] =
@@ -1362,6 +1392,7 @@ medusaIntegrationTestRunner({
             )
             expect(originalCaptures[0].status).toEqual('REQUESTED')
             expect(newCaptures[0].status).toEqual('FAILED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a success capture failed notification is processed without prior direct capture', async () => {
@@ -1437,9 +1468,11 @@ medusaIntegrationTestRunner({
             expect(newCaptures[0].amount.value).toEqual(amount)
             expect(newCaptures[0].amount.currency).toEqual(currency)
             expect(newCaptures[0].status).toEqual('FAILED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a success capture failed notification is processed with prior direct capture', async () => {
+            mock.paymentCapture()
             const payment = await authorizePaymentSession(session.id)
 
             const [authorizedCollection, authorizedSession] =
@@ -1548,10 +1581,16 @@ medusaIntegrationTestRunner({
             )
             expect(originalCaptures[0].status).toEqual('REQUESTED')
             expect(newCaptures[0].status).toEqual('FAILED')
+            expect(mock.isDone()).toBe(true)
           })
         })
 
         describe('Test processing refund notification', () => {
+          beforeEach(async () => {
+            mock.paymentAuthorisation()
+            mock.paymentCapture()
+          })
+
           it('updates payment data models to reflect the change after a success refund notification is processed without prior direct refund', async () => {
             const payment = await authorizePaymentSession(session.id)
 
@@ -1627,9 +1666,11 @@ medusaIntegrationTestRunner({
             expect(newRefunds[0].amount.value).toEqual(amount)
             expect(newRefunds[0].amount.currency).toEqual(currency)
             expect(newRefunds[0].status).toEqual('SUCCEEDED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a success refund notification is processed with prior direct refund', async () => {
+            mock.paymentRefund()
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -1740,6 +1781,7 @@ medusaIntegrationTestRunner({
             )
             expect(originalRefunds[0].status).toEqual('REQUESTED')
             expect(newRefunds[0].status).toEqual('SUCCEEDED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a failed refund notification is processed without prior direct refund', async () => {
@@ -1815,9 +1857,11 @@ medusaIntegrationTestRunner({
             expect(newRefunds[0].amount.value).toEqual(amount)
             expect(newRefunds[0].amount.currency).toEqual(currency)
             expect(newRefunds[0].status).toEqual('FAILED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a failed refund notification is processed with prior direct refund', async () => {
+            mock.paymentRefund()
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -1926,6 +1970,7 @@ medusaIntegrationTestRunner({
             )
             expect(originalRefunds[0].status).toEqual('REQUESTED')
             expect(newRefunds[0].status).toEqual('FAILED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a success refund failed notification is processed without prior direct refund', async () => {
@@ -2001,9 +2046,11 @@ medusaIntegrationTestRunner({
             expect(newRefunds[0].amount.value).toEqual(amount)
             expect(newRefunds[0].amount.currency).toEqual(currency)
             expect(newRefunds[0].status).toEqual('FAILED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a success refund failed notification is processed with prior direct refund', async () => {
+            mock.paymentRefund()
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -2112,6 +2159,7 @@ medusaIntegrationTestRunner({
             )
             expect(originalRefunds[0].status).toEqual('REQUESTED')
             expect(newRefunds[0].status).toEqual('FAILED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a success refund reversed notification is processed without prior direct refund', async () => {
@@ -2187,9 +2235,11 @@ medusaIntegrationTestRunner({
             expect(newRefunds[0].amount.value).toEqual(amount)
             expect(newRefunds[0].amount.currency).toEqual(currency)
             expect(newRefunds[0].status).toEqual('FAILED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('updates payment data models to reflect the change after a success refund reversed notification is processed with prior direct refund', async () => {
+            mock.paymentRefund()
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -2298,6 +2348,7 @@ medusaIntegrationTestRunner({
             )
             expect(originalRefunds[0].status).toEqual('REQUESTED')
             expect(newRefunds[0].status).toEqual('FAILED')
+            expect(mock.isDone()).toBe(true)
           })
         })
       })
@@ -2352,6 +2403,7 @@ medusaIntegrationTestRunner({
 
         describe('Test processing authorisation notification', () => {
           it('preserves the original state of the payment data models after success authorisation notification processing fails with prior direct authorisation', async () => {
+            mock.paymentAuthorisation()
             await paymentService.authorizePaymentSession(session.id, {})
 
             const [
@@ -2446,9 +2498,11 @@ medusaIntegrationTestRunner({
             )
             expect(originalAuthorisations[0].status).toEqual('SUCCEEDED')
             expect(newAuthorisations[0].status).toEqual('SUCCEEDED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after failed authorisation notification processing fails with prior direct authorisation', async () => {
+            mock.paymentAuthorisation()
             await paymentService.authorizePaymentSession(session.id, {})
 
             const [
@@ -2540,10 +2594,15 @@ medusaIntegrationTestRunner({
             )
             expect(originalAuthorisations[0].status).toEqual('SUCCEEDED')
             expect(newAuthorisations[0].status).toEqual('SUCCEEDED')
+            expect(mock.isDone()).toBe(true)
           })
         })
 
         describe('Test processing cancellation notification', () => {
+          beforeEach(async () => {
+            mock.paymentAuthorisation()
+          })
+
           it('preserves the original state of the payment data models after success cancellation notification processing fails without prior direct cancellation', async () => {
             await authorizePaymentSession(session.id)
 
@@ -2620,9 +2679,11 @@ medusaIntegrationTestRunner({
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(newSession.payment?.canceled_at).toBeNull()
             expect(newCancellations).toHaveLength(0)
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after success cancellation notification processing fails with prior direct cancellation', async () => {
+            mock.paymentCancel()
             await authorizePaymentSession(session.id)
 
             const [authorizedCollection, authorizedSession] =
@@ -2728,6 +2789,7 @@ medusaIntegrationTestRunner({
               cancelledSession.payment?.canceled_at,
             )
             expect(newCancellations).toHaveLength(0)
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after failed cancellation notification processing fails without prior direct cancellation', async () => {
@@ -2806,9 +2868,11 @@ medusaIntegrationTestRunner({
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(newSession.payment?.canceled_at).toBeNull()
             expect(newCancellations).toHaveLength(0)
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after failed cancellation notification processing fails with prior direct cancellation', async () => {
+            mock.paymentCancel()
             await authorizePaymentSession(session.id)
 
             const [authorizedCollection, authorizedSession] =
@@ -2911,6 +2975,7 @@ medusaIntegrationTestRunner({
             expect(cancelledSession.payment?.canceled_at).toBeDefined()
             expect(newSession.payment?.canceled_at).toBeDefined()
             expect(newCancellations).toHaveLength(0)
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after success technical cancellation notification processing fails without prior direct cancellation', async () => {
@@ -2989,9 +3054,11 @@ medusaIntegrationTestRunner({
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(newSession.payment?.canceled_at).toBeNull()
             expect(newCancellations).toHaveLength(0)
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after success technical cancellation notification processing fails with prior direct cancellation', async () => {
+            mock.paymentCancel()
             await authorizePaymentSession(session.id)
 
             const [authorizedCollection, authorizedSession] =
@@ -3097,6 +3164,7 @@ medusaIntegrationTestRunner({
               cancelledSession.payment?.canceled_at,
             )
             expect(newCancellations).toHaveLength(0)
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after failed technical cancellation notification processing fails without prior direct cancellation', async () => {
@@ -3175,9 +3243,11 @@ medusaIntegrationTestRunner({
             expect(authorizedSession.payment?.canceled_at).toBeNull()
             expect(newSession.payment?.canceled_at).toBeNull()
             expect(newCancellations).toHaveLength(0)
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after failed technical cancellation notification processing fails with prior direct cancellation', async () => {
+            mock.paymentCancel()
             await authorizePaymentSession(session.id)
 
             const [authorizedCollection, authorizedSession] =
@@ -3280,10 +3350,15 @@ medusaIntegrationTestRunner({
             expect(cancelledSession.payment?.canceled_at).toBeDefined()
             expect(newSession.payment?.canceled_at).toBeDefined()
             expect(newCancellations).toHaveLength(0)
+            expect(mock.isDone()).toBe(true)
           })
         })
 
         describe('Test processing capture notification', () => {
+          beforeEach(async () => {
+            mock.paymentAuthorisation()
+          })
+
           it('preserves the original state of the payment data models after success capture notification processing fails without prior direct capture', async () => {
             await authorizePaymentSession(session.id)
 
@@ -3362,9 +3437,11 @@ medusaIntegrationTestRunner({
             expect(authorizedSession.payment?.captures).toHaveLength(0)
             expect(newSession.payment?.captures).toHaveLength(0)
             expect(newCaptures).toHaveLength(0)
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after success capture notification processing fails with prior direct capture', async () => {
+            mock.paymentCapture()
             const payment = await authorizePaymentSession(session.id)
 
             const [authorizedCollection, authorizedSession] =
@@ -3486,6 +3563,7 @@ medusaIntegrationTestRunner({
             )
             expect(originalCaptures[0].status).toEqual('REQUESTED')
             expect(newCaptures[0].status).toEqual('REQUESTED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after failed capture notification processing fails without prior direct capture', async () => {
@@ -3566,9 +3644,11 @@ medusaIntegrationTestRunner({
             expect(authorizedSession.payment?.captures).toHaveLength(0)
             expect(newSession.payment?.captures).toHaveLength(0)
             expect(newCaptures).toHaveLength(0)
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after failed capture notification processing fails with prior direct capture', async () => {
+            mock.paymentCapture()
             const payment = await authorizePaymentSession(session.id)
 
             const [authorizedCollection, authorizedSession] =
@@ -3690,6 +3770,7 @@ medusaIntegrationTestRunner({
             )
             expect(originalCaptures[0].status).toEqual('REQUESTED')
             expect(newCaptures[0].status).toEqual('REQUESTED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after success capture failed notification processing fails without prior direct capture', async () => {
@@ -3770,9 +3851,11 @@ medusaIntegrationTestRunner({
             expect(authorizedSession.payment?.captures).toHaveLength(0)
             expect(newSession.payment?.captures).toHaveLength(0)
             expect(newCaptures).toHaveLength(0)
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after success capture failed notification processing fails with prior direct capture', async () => {
+            mock.paymentCapture()
             const payment = await authorizePaymentSession(session.id)
 
             const [authorizedCollection, authorizedSession] =
@@ -3894,10 +3977,16 @@ medusaIntegrationTestRunner({
             )
             expect(originalCaptures[0].status).toEqual('REQUESTED')
             expect(newCaptures[0].status).toEqual('REQUESTED')
+            expect(mock.isDone()).toBe(true)
           })
         })
 
         describe('Test processing refund notification', () => {
+          beforeEach(async () => {
+            mock.paymentAuthorisation()
+            mock.paymentCapture()
+          })
+
           it('preserves the original state of the payment data models after success refund notification processing fails without prior direct refund', async () => {
             const payment = await authorizePaymentSession(session.id)
 
@@ -3976,9 +4065,11 @@ medusaIntegrationTestRunner({
             expect(capturedSession.payment?.refunds).toHaveLength(0)
             expect(newSession.payment?.refunds).toHaveLength(0)
             expect(newRefunds).toHaveLength(0)
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after success refund notification processing fails with prior direct refund', async () => {
+            mock.paymentRefund()
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -4100,6 +4191,7 @@ medusaIntegrationTestRunner({
             )
             expect(originalRefunds[0].status).toEqual('REQUESTED')
             expect(newRefunds[0].status).toEqual('REQUESTED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after failed refund notification processing fails without prior direct refund', async () => {
@@ -4180,9 +4272,11 @@ medusaIntegrationTestRunner({
             expect(capturedSession.payment?.refunds).toHaveLength(0)
             expect(newSession.payment?.refunds).toHaveLength(0)
             expect(newRefunds).toHaveLength(0)
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after failed refund notification processing fails with prior direct refund', async () => {
+            mock.paymentRefund()
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -4304,6 +4398,7 @@ medusaIntegrationTestRunner({
             )
             expect(originalRefunds[0].status).toEqual('REQUESTED')
             expect(newRefunds[0].status).toEqual('REQUESTED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after success refund failed notification processing fails without prior direct refund', async () => {
@@ -4384,9 +4479,11 @@ medusaIntegrationTestRunner({
             expect(capturedSession.payment?.refunds).toHaveLength(0)
             expect(newSession.payment?.refunds).toHaveLength(0)
             expect(newRefunds).toHaveLength(0)
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after success refund failed notification processing fails with prior direct refund', async () => {
+            mock.paymentRefund()
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -4508,6 +4605,7 @@ medusaIntegrationTestRunner({
             )
             expect(originalRefunds[0].status).toEqual('REQUESTED')
             expect(newRefunds[0].status).toEqual('REQUESTED')
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after success refund reversed notification processing fails without prior direct refund', async () => {
@@ -4588,9 +4686,11 @@ medusaIntegrationTestRunner({
             expect(capturedSession.payment?.refunds).toHaveLength(0)
             expect(newSession.payment?.refunds).toHaveLength(0)
             expect(newRefunds).toHaveLength(0)
+            expect(mock.isDone()).toBe(true)
           })
 
           it('preserves the original state of the payment data models after success refund reversed notification processing fails with prior direct refund', async () => {
+            mock.paymentRefund()
             const payment = await authorizePaymentSession(session.id)
 
             await paymentService.capturePayment({ payment_id: payment.id })
@@ -4712,6 +4812,7 @@ medusaIntegrationTestRunner({
             )
             expect(originalRefunds[0].status).toEqual('REQUESTED')
             expect(newRefunds[0].status).toEqual('REQUESTED')
+            expect(mock.isDone()).toBe(true)
           })
         })
       })
