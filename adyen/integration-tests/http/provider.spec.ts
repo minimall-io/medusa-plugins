@@ -45,6 +45,7 @@ medusaIntegrationTestRunner({
 
       beforeEach(async () => {
         mock.reset()
+        await delay(1000)
       })
 
       describe('Test storing, retrieving, and deleting payment methods', () => {
@@ -53,7 +54,6 @@ medusaIntegrationTestRunner({
         beforeEach(async () => {
           const input = { context: { customer }, provider_id }
           accountHolder = await paymentService.createAccountHolder(input)
-          await delay(1000)
         })
 
         it('returns formatted shopper data properties when createAccountHolder is called', async () => {
@@ -132,7 +132,6 @@ medusaIntegrationTestRunner({
           const input = { context: { customer }, provider_id }
           accountHolder = await paymentService.createAccountHolder(input)
           mock.paymentMethods()
-          await delay(1000)
         })
 
         it('returns amount, shopper, and paymentMethods data properties when initiatePayment is called', async () => {
@@ -197,7 +196,6 @@ medusaIntegrationTestRunner({
             data: { request: {} },
             provider_id,
           })
-          await delay(1000)
         })
 
         it('returns session amount data property when updatePaymentSession is called', async () => {
@@ -267,7 +265,6 @@ medusaIntegrationTestRunner({
               provider_id,
             },
           )
-          await delay(1000)
         })
 
         it('returns updated payment data property when authorizePayment is called using account holder context', async () => {
@@ -512,7 +509,6 @@ medusaIntegrationTestRunner({
             id: payment.id,
           }
           await paymentService.updatePayment(paymentToUpdate)
-          await delay(1000)
         })
 
         it('cancels the non-authorized payment when cancelPayment is called', async () => {
@@ -640,8 +636,6 @@ medusaIntegrationTestRunner({
             },
             id: session.id,
           })
-
-          await delay(1000)
         })
 
         it('retries payment authorization on 5xx server errors and succeeds after retries', async () => {
