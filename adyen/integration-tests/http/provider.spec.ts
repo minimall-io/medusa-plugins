@@ -639,7 +639,7 @@ medusaIntegrationTestRunner({
         })
 
         it('retries payment authorization on 5xx server errors and succeeds after retries', async () => {
-          mock.postServerError(2)
+          mock.paymentAuthorisationServerError(2)
           mock.paymentAuthorisation()
           const payment = await paymentService.authorizePaymentSession(
             session.id,
