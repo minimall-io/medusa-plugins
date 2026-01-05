@@ -155,3 +155,5 @@ export const postRefunds = (uri: string, requestBody: PaymentRefundRequest) => {
   }
   return [200, responseBody]
 }
+
+export const ServerError = (error: string) => () => [500, error]

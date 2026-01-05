@@ -15,6 +15,7 @@ import {
   postPaymentMethods,
   postPayments,
   postRefunds,
+  ServerError,
   type StoredPaymentMethodResource,
 } from './responses'
 import { matchOperation, Operation } from './utils'
@@ -37,11 +38,15 @@ export interface IMockAdyenApi {
   ) => void
   isDone: () => boolean
   paymentAuthorisation: (times?: number, delay?: number) => void
+  paymentAuthorisationServerError: (
+    times?: number,
+    delay?: number,
+    error?: string,
+  ) => void
   paymentCancel: (times?: number, delay?: number) => void
   paymentCapture: (times?: number, delay?: number) => void
   paymentMethods: (times?: number, delay?: number) => void
   paymentRefund: (times?: number, delay?: number) => void
-  postServerError: (times?: number, delay?: number, error?: string) => void
   reset: () => void
   scope: nock.Scope | null
 }
@@ -155,17 +160,17 @@ export const MockAdyenApi = (): IMockAdyenApi => {
       .reply(postRefunds)
   }
 
-  const postServerError = (
+  const paymentAuthorisationServerError = (
     times: number = DEFAULT_TIMES,
     delay: number = DEFAULT_DELAY,
     error: string = DEFAULT_ERROR,
   ) => {
     if (SHOULD_RUN_ADYEN_API_LIVE_TESTS || scope === null) return
     scope
-      .post(matchOperation(Operation.Any))
+      .post(matchOperation(Operation.Payments))
       .times(times)
       .delay(delay)
-      .replyWithError(error)
+      .reply(ServerError(error))
   }
 
   const isDone = (): boolean => {
@@ -178,11 +183,11 @@ export const MockAdyenApi = (): IMockAdyenApi => {
     getStoredPaymentMethods,
     isDone,
     paymentAuthorisation,
+    paymentAuthorisationServerError,
     paymentCancel,
     paymentCapture,
     paymentMethods,
     paymentRefund,
-    postServerError,
     postStoredPaymentMethods,
     reset,
     scope,
