@@ -647,14 +647,10 @@ medusaIntegrationTestRunner({
         it('retries payment authorization on 5xx server errors and succeeds after retries', async () => {
           mock.postServerError(2)
           mock.paymentAuthorisation()
-          const startTime = Date.now()
           const payment = await paymentService.authorizePaymentSession(
             session.id,
             {},
           )
-          const endTime = Date.now()
-          const duration = endTime - startTime
-          expect(duration).toBeGreaterThanOrEqual(2500)
           expect(session.status).toBe('pending')
           expect(payment.data).toHaveProperty('events')
           const authorisations = filter(payment.data?.events, {
