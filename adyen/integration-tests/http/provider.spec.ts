@@ -43,7 +43,7 @@ medusaIntegrationTestRunner({
         mock = MockAdyenApi()
       })
 
-      beforeEach(() => {
+      beforeEach(async () => {
         mock.reset()
       })
 
