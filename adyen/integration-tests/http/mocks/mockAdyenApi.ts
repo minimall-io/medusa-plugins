@@ -18,6 +18,7 @@ interface IMockAdyenApi {
   paymentCapture: (times: number, delay: number) => void
   paymentMethods: (times: number, delay: number) => void
   paymentRefund: (times: number, delay: number) => void
+  postServerError: (times: number, delay: number, error: string) => void
   reset: () => void
   scope: nock.Scope | null
   storedPaymentMethods: (times: number, delay: number) => void
@@ -101,12 +102,26 @@ export const MockAdyenApi = (): IMockAdyenApi => {
       .reply(postRefunds)
   }
 
+  const postServerError = (
+    times: number = 1,
+    delay: number = 50,
+    error: string = 'Server error',
+  ) => {
+    if (SHOULD_RUN_ADYEN_API_LIVE_TESTS || scope === null) return
+    scope
+      .post(matchOperation(Operation.Any))
+      .times(times)
+      .delay(delay)
+      .replyWithError(error)
+  }
+
   return {
     paymentAuthorisation,
     paymentCancel,
     paymentCapture,
     paymentMethods,
     paymentRefund,
+    postServerError,
     reset,
     scope,
     storedPaymentMethods,
