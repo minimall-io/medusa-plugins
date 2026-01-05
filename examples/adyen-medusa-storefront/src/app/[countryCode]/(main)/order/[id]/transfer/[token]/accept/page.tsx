@@ -18,10 +18,10 @@ export default async function TransferPage({
         {success && (
           <>
             <Heading level="h1" className="text-xl text-zinc-900">
-              Order transfered!
+              Order transferred!
             </Heading>
             <Text className="text-zinc-600">
-              Order {id} has been successfully transfered to the new owner.
+              Order {id} has been successfully transferred to the new owner.
             </Text>
           </>
         )}

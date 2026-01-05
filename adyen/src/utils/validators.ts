@@ -40,8 +40,8 @@ export const validateExtendedData = (
   const validateRawData = getValidator<RawData>(RawDataSchema)
   const validateData = getValidator<Data>(DataSchema)
   const validData = validateData(data, errorMessage)
-  const valdRawData = validateRawData(data, errorMessage)
-  const rawDataKeys = Object.keys(valdRawData)
+  const validRawData = validateRawData(data, errorMessage)
+  const rawDataKeys = Object.keys(validRawData)
   const emptyRawData = rawDataKeys.reduce((obj, key) => {
     obj[key] = undefined
     return obj

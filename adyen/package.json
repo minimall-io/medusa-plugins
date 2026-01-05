@@ -1,8 +1,17 @@
 {
   "name": "@minimall.io/medusa-plugin-adyen",
-  "version": "0.0.1",
-  "description": "Adyen payment prvider for Medusa v2",
+  "version": "0.0.1-beta.0",
+  "description": "Adyen payment provider for Medusa v2",
   "author": "minimall.io (https://minimall.io)",
+  "homepage": "https://github.com/minimall-io/medusa-plugins/tree/main/adyen",
+  "bugs": {
+    "url": "https://github.com/minimall-io/medusa-plugins/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/minimall-io/medusa-plugins.git",
+    "directory": "adyen"
+  },
   "license": "MIT",
   "files": [
     ".medusa/server"

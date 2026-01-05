@@ -1,6 +1,5 @@
 /**
- * This is the source document of the `CURRENCY_MULTIPLIERS` at the time
- * of this recording (2025-10-01)
+ * This is the source document of the `CURRENCY_MULTIPLIERS`.
  * This page lists the supported currency codes and explains what minor units are.
  * https://docs.adyen.com/development-resources/currency-codes/
  */

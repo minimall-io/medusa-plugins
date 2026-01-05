@@ -66,7 +66,7 @@ const isCaptureSuccess = ({
 }: NotificationRequestItem): boolean =>
   eventCode === EventCodeEnum.Capture && success === SuccessEnum.True
 
-const isCatureFailed = ({
+const isCaptureFailed = ({
   eventCode,
   success,
 }: NotificationRequestItem): boolean =>
@@ -114,7 +114,7 @@ const processNotificationWorkflowCall = (
     captureSuccessStep(paymentData)
   })
 
-  when('capture-failed', notification, isCatureFailed).then(() => {
+  when('capture-failed', notification, isCaptureFailed).then(() => {
     captureFailedStep(paymentData)
   })
 
