@@ -116,4 +116,4 @@ Integration tests depend on the following environment variables:
 
 ### Example Storefront
 
-The `examples` folder contains a Medusa storefront with Adyen integration. This example is based on the Medusa Next.js Starter Storefront and is not intended for production use. However, it can be useful for manual end-to-end testing of the plugin and as a reference for integrating Adyen payments into Medusa storefronts.
+The [`examples`](https://github.com/minimall-io/medusa-plugins/tree/main/examples) folder contains a Medusa storefront with Adyen integration. This example is based on the Medusa Next.js Starter Storefront and is not intended for production use. However, it can be useful for manual end-to-end testing of the plugin and as a reference for integrating Adyen payments into Medusa storefronts.
