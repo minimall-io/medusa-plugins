@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This plugin implements a Medusa.js payment provider for Adyen, delivering backend (payment server) integration for Adyen’s Advanced flow. It handles server-side payment operations such as payment session creation, authorization, capture, refunds, and webhook processing.
+This plugin implements a [Medusa.js](https://medusajs.com/) payment [provider](https://docs.medusajs.com/resources/commerce-modules/payment/payment-provider) for [Adyen](https://www.adyen.com/), delivering backend (payment server) integration for [Adyen’s Advanced flow](https://docs.adyen.com/online-payments/build-your-integration/advanced-flow). It handles server-side payment operations such as payment session creation, authorization, capture, refunds, and webhook processing.
 
 The plugin is frontend-agnostic and compatible with any Advanced flow frontend implementation supported by Adyen, including Web Components, Drop-in, and custom integrations. A dedicated section with frontend code examples is provided below.
 
@@ -22,7 +22,7 @@ npm install @minimall.io/medusa-plugin-adyen
 
 ### Configure the Plugin
 
-Configure the Adyen payment provider in your Medusa instance by updating the `medusa-config.ts` file:
+Configure the Adyen [payment provider](https://docs.medusajs.com/resources/commerce-modules/payment/module-options#providers-option) in your Medusa instance by updating the `medusa-config.ts` file:
 
 ```typescript
 import { defineConfig } from '@medusajs/framework/utils'
