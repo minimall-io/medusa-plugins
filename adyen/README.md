@@ -108,7 +108,7 @@ To accommodate Medusa’s synchronous assumptions, the plugin implements the fol
 
 This approach helps keep Medusa’s payment records synchronized with Adyen’s actual payment states.
 
-#### Important Considerations
+### Important Considerations
 
 **Operations may initially appear successful but ultimately fail.** A payment operation that is initially recorded as successful may later fail when the webhook notification is processed.
 
