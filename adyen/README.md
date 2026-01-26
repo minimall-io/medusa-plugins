@@ -96,13 +96,13 @@ Webhooks are a critical component of the Adyen payment provider integration. Whi
 
 ### Asynchronous Payment Operations
 
-When merchant infrastructure (the Medusa server) sends a payment operation API request to Adyen—such as authorization, cancellation, capture, or refund—Adyen typically responds only with an acknowledgement of receipt. It does not immediately indicate whether the operation succeeded or failed. The final outcome is delivered later via a webhook notification from Adyen to the Medusa server.
+When merchant infrastructure (a Medusa server) sends a payment operation API request to Adyen—such as authorization, cancellation, capture, or refund—Adyen typically responds only with an acknowledgement of receipt. It does not immediately indicate whether the operation succeeded or failed. The final outcome is delivered later via a webhook notification from Adyen to the Medusa server.
 
 #### How the Plugin Handles This
 
 To accommodate Medusa’s synchronous assumptions, the plugin implements the following approach:
 
-1. **Treats request acknowledgements as initial success states:** When the Adyen API acknowledges a payment operation request with the response `status` field set to `received`, the plugin updates the `data` field to reflect the current response state and returns it, along with other relevant information, to the Medusa Payment Module to indicate a successful operation.
+1. **Treats request acknowledgements as initial success states:** When the Adyen API acknowledges a payment operation request with the response `status` field set to `received`, the plugin updates the payment (`Payment`) `data` field to reflect the current response state and returns it, along with other relevant information, to the Medusa Payment Module to indicate a successful operation.
 
 2. **Finalizes payment state via webhooks:** When the corresponding webhook is received, the plugin’s Adyen webhook workflow processes the notification and updates the final state of the relevant Medusa entities, including payment collections, payment sessions, payments, captures, refunds, and related records.
 
@@ -116,13 +116,13 @@ Currently, the plugin does not provide a notification mechanism to alert merchan
 
 ## PCI Compliance Considerations
 
-Adyen's Advanced flow allows the `/payments` Checkout API request to originate from merchant infrastructure (the Medusa server). To ensure security, Adyen provides frontend-side encryption of sensitive payment data that the Medusa server uses when initiating the authorization request to the `/payments` Adyen API endpoint.
+Adyen's Advanced flow allows the `/payments` Checkout API request to originate from merchant infrastructure (a Medusa server). To ensure security, Adyen provides frontend-side encryption of sensitive payment data, which the Medusa server uses when initiating the authorization request to the `/payments` Adyen API endpoint.
 
-However, Medusa's payment module `authorizePaymentSession` method, which initiates payment authorization, does not accept `data` from the client at the time of the call. Instead, it retrieves and passes the `data` already stored in the `PaymentSession`, necessitating the presence of sensitive payment data in the stored `data` field of the corresponding session.
+However, Medusa's payment module `authorizePaymentSession` method, which initiates payment authorization, does not accept client-provided `data` value at the time of invocation. Instead, it retrieves and forwards the `data` value already stored in the associated payment session (`PaymentSession`). This requires sensitive payment data to be present in the session's `data` field prior to authorization.
 
-As a result, sensitive payment data must be sent from the frontend before authorization is initiated, via Medusa's Payment Module `updatePayment` method. This means sensitive payment data persists on the Medusa server, which may pose a PCI compliance risk.
+Consequently, sensitive payment data must be transmitted from the frontend before authorization is initiated, typically through Medusa Payment Module session APIs (for example, `updatePayment`). This results in sensitive payment data persisting on the Medusa server, which may introduce PCI compliance risks.
 
-To minimize the survival period of sensitive data, the plugin reacts upon receiving the first related webhook notification during the `synchronize-payment-session-step` of the `process-notification-workflow`. At this point, it overrides the payment session `data` field with values from the `Payment` `data` field, which do not store encrypted payment details.
+To minimize the retention period of sensitive data, the plugin reacts upon receiving the first related webhook notification by overwriting the payment session `data` field with values drawn from the corresponding payment (`Payment`) `data` field, which do not contain payment details.
 
 To improve the chances of PCI compliance clearance, it is highly advised to leverage Adyen's frontend encryption for sensitive payment data fields.
 
