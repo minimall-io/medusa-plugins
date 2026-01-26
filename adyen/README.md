@@ -124,6 +124,8 @@ As a result, sensitive payment data must be sent from the frontend before author
 
 To minimize the survival period of sensitive data, the plugin reacts upon receiving the first related webhook notification during the `synchronize-payment-session-step` of the `process-notification-workflow`. At this point, it overrides the payment session `data` field with values from the `Payment` `data` field, which do not store encrypted payment details.
 
+To improve the chances of PCI compliance clearance, it is highly advised to leverage Adyen's frontend encryption for sensitive payment data fields.
+
 ## Development
 
 ### Integration Tests
