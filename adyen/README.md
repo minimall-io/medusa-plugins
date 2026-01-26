@@ -2,7 +2,6 @@
 
 ## Table of Contents
 
-- [Quick Links](#quick-links)
 - [Introduction](#introduction)
 - [Installation and Setup](#installation-and-setup)
   - [Install the Package](#install-the-package)
@@ -20,18 +19,9 @@
   - [Example Storefront](#example-storefront)
   - [Known Issues](#known-issues)
 
-## Quick Links
-
-- [Medusa.js storefront with Adyen integration example](https://github.com/minimall-io/medusa-plugins/tree/main/examples)
-- [Medusa.js](https://medusajs.com/)
-- [Medusa.js - Payment Module Provider](https://docs.medusajs.com/resources/commerce-modules/payment/payment-provider)
-- [Medusa.js - Payment Module Options](https://docs.medusajs.com/resources/commerce-modules/payment/module-options)
-- [Adyen](https://www.adyen.com/)
-- [Adyen - Advanced flow](https://docs.adyen.com/online-payments/build-your-integration/advanced-flow)
-
 ## Introduction
 
-This plugin implements a Medusa.js payment provider for Adyen, delivering backend (payment server) integration for Adyen’s Advanced flow. It handles server-side payment operations such as payment session creation, authorization, capture, refunds, and webhook processing.
+This plugin implements a [Medusa.js](https://medusajs.com/) [payment provider](https://docs.medusajs.com/resources/commerce-modules/payment/payment-provider) for [Adyen](https://www.adyen.com/), delivering backend (payment server) integration for [Adyen’s Advanced flow](https://docs.adyen.com/online-payments/build-your-integration/advanced-flow). It handles server-side payment operations such as payment session creation, authorization, capture, refunds, and webhook processing.
 
 The plugin is frontend-agnostic and compatible with any Advanced flow frontend implementation supported by Adyen, including Web Components, Drop-in, and custom integrations. A dedicated section with frontend code examples is provided below.
 
@@ -51,7 +41,7 @@ npm install @minimall.io/medusa-plugin-adyen
 
 ### Configure the Plugin
 
-Configure the Adyen [payment provider](https://docs.medusajs.com/resources/commerce-modules/payment/module-options#providers-option) in your Medusa instance by updating the `medusa-config.ts` file:
+Configure the Medusa [Payment Module Options](https://docs.medusajs.com/resources/commerce-modules/payment/module-options) with the Adyen payment provider in your Medusa instance by updating the `medusa-config.ts` file:
 
 ```typescript
 import { defineConfig } from '@medusajs/framework/utils'
@@ -97,7 +87,7 @@ The following options are available for configuring the Adyen payment provider.
 
 - **`apiKey`** (string): Your Adyen API key, used to authenticate API requests. See the [Adyen documentation](https://docs.adyen.com/development-resources/api-credentials).
 - **`hmacKey`** (string): HMAC key used to validate webhook notifications. Required for secure webhook processing. See the [Adyen documentation](https://docs.adyen.com/development-resources/webhooks/secure-webhooks).
-- **`merchantAccount`** (string): Your Adyen merchant account identifier.
+- **`merchantAccount`** (string): Your Adyen merchant account identifier. See the [Adyen documentation](https://docs.adyen.com/account/account-structure#merchant-accounts).
 - **`liveEndpointUrlPrefix`** (string): Your live endpoint URL prefix. Required when using the live environment. See the [Adyen documentation](https://docs.adyen.com/development-resources/live-endpoints).
 
 #### Optional Options
@@ -136,7 +126,7 @@ Currently, the plugin does not provide a notification mechanism to alert merchan
 
 ## PCI Compliance Considerations
 
-Adyen's Advanced flow allows the `/payments` Checkout API request to originate from merchant infrastructure (a Medusa server). To ensure security, Adyen provides frontend-side encryption of sensitive payment data, which the Medusa server uses when initiating the authorization request to the `/payments` Adyen API endpoint.
+Adyen's Advanced flow allows the [`/payments`](https://docs.adyen.com/api-explorer/Checkout/latest/post/payments) Checkout API request to originate from merchant infrastructure (a Medusa server). To ensure security, Adyen provides frontend-side encryption of sensitive payment data, which the Medusa server uses when initiating the authorization request to the `/payments` Adyen API endpoint.
 
 However, Medusa's payment module `authorizePaymentSession` method, which initiates payment authorization, does not accept client-provided `data` value at the time of invocation. Instead, it retrieves and forwards the `data` value already stored in the associated payment session (`PaymentSession`). This requires sensitive payment data to be present in the session's `data` field prior to authorization.
 
