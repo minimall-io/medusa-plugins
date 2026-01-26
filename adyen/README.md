@@ -1,5 +1,25 @@
 # Adyen Payment Provider
 
+## Table of Contents
+
+- [Quick Links](#quick-links)
+- [Introduction](#introduction)
+- [Installation and Setup](#installation-and-setup)
+  - [Install the Package](#install-the-package)
+  - [Configure the Plugin](#configure-the-plugin)
+  - [Plugin Options](#plugin-options)
+    - [Required Options](#required-options)
+    - [Optional Options](#optional-options)
+- [Webhooks](#webhooks)
+  - [Asynchronous Payment Operations](#asynchronous-payment-operations)
+    - [How the Plugin Handles This](#how-the-plugin-handles-this)
+    - [Important Considerations](#important-considerations)
+- [PCI Compliance Considerations](#pci-compliance-considerations)
+- [Development](#development)
+  - [Integration Tests](#integration-tests)
+  - [Example Storefront](#example-storefront)
+  - [Known Issues](#known-issues)
+
 ## Quick Links
 
 - [Medusa.js storefront with Adyen integration example](https://github.com/minimall-io/medusa-plugins/tree/main/examples)
@@ -108,7 +128,7 @@ To accommodate Medusa’s synchronous assumptions, the plugin implements the fol
 
 This approach helps keep Medusa’s payment records synchronized with Adyen’s actual payment states.
 
-### Important Considerations
+#### Important Considerations
 
 **Operations may initially appear successful but ultimately fail.** A payment operation that is initially recorded as successful may later fail when the webhook notification is processed.
 
