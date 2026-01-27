@@ -21,7 +21,7 @@
 
 ## Introduction
 
-This plugin implements a [Medusa.js](https://medusajs.com/) [payment provider](https://docs.medusajs.com/resources/commerce-modules/payment/payment-provider) for [Adyen](https://www.adyen.com/), delivering backend (payment server) integration for [Adyen's Advanced flow](https://docs.adyen.com/online-payments/build-your-integration/advanced-flow). It handles server-side payment operations such as payment session creation, authorization, capture, refunds, and webhook processing.
+This plugin implements a [Medusa](https://medusajs.com/) [payment provider](https://docs.medusajs.com/resources/commerce-modules/payment/payment-provider) for [Adyen](https://www.adyen.com/), delivering backend (payment server) integration for [Adyen's Advanced flow](https://docs.adyen.com/online-payments/build-your-integration/advanced-flow). It handles server-side payment operations such as payment session creation, authorization, capture, refunds, and webhook processing.
 
 The plugin is frontend-agnostic and compatible with any Advanced flow frontend implementation supported by Adyen, including Web Components, Drop-in, and custom integrations. A dedicated section with frontend code examples is provided below.
 
