@@ -126,11 +126,11 @@ Currently, the plugin does not provide a notification mechanism to alert merchan
 
 ## PCI Compliance Considerations
 
-Adyen's Advanced flow allows the [`/payments`](https://docs.adyen.com/api-explorer/Checkout/latest/post/payments) Checkout API request, which carries sensitive payment data, to originate from merchant infrastructure (a Medusa server). To ensure security, Adyen provides frontend-side encryption of sensitive payment data, which the Medusa server uses when initiating the authorization request to the `/payments` Adyen API endpoint.
+Adyen's Advanced flow expects the [`/payments`](https://docs.adyen.com/api-explorer/Checkout/latest/post/payments) Checkout API request (the payment authorization), which carries sensitive payment data, to originate from merchant infrastructure (a Medusa server). To ensure security, Adyen provides frontend-side encryption of sensitive payment data, which can be used when making the request.
 
-However, Medusa's payment module `authorizePaymentSession` method, which initiates payment authorization, does not accept client-provided `data` value at the time of invocation. Instead, it retrieves and forwards the `data` value already stored in the associated payment session (`PaymentSession`). This requires sensitive payment data to be present in the session's `data` field prior to authorization.
+However, Medusa's payment module `authorizePaymentSession` method, which initiates payment authorization, does not accept frontend-provided `data` value at the time of invocation. Instead, it retrieves and forwards the `data` value already stored in the associated payment session (`PaymentSession`). This requires sensitive payment data to be present in the session's `data` field prior to authorization.
 
-Consequently, sensitive payment data must be transmitted from the frontend before authorization is initiated, typically through Medusa Payment Module session APIs (for example, `updatePayment`). This results in sensitive payment data persisting on the Medusa server, which may introduce PCI compliance risks.
+Consequently, sensitive payment data must be transmitted from the frontend and stored on the Medusa server before authorization is initiated, through Medusa Payment Module session APIs (for example, `updatePayment`). This results in sensitive payment data persisting on the Medusa server, which may introduce PCI compliance risks.
 
 To minimize the retention period of sensitive data, the plugin reacts upon receiving the first related webhook notification by overwriting the payment session `data` field with values drawn from the corresponding payment (`Payment`) `data` field, which do not contain payment details.
 
