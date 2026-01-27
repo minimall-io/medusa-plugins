@@ -126,7 +126,7 @@ Currently, the plugin does not provide a notification mechanism to alert merchan
 
 ## PCI Compliance Considerations
 
-Adyen's Advanced flow allows the [`/payments`](https://docs.adyen.com/api-explorer/Checkout/latest/post/payments) Checkout API request to originate from merchant infrastructure (a Medusa server). To ensure security, Adyen provides frontend-side encryption of sensitive payment data, which the Medusa server uses when initiating the authorization request to the `/payments` Adyen API endpoint.
+Adyen's Advanced flow allows the [`/payments`](https://docs.adyen.com/api-explorer/Checkout/latest/post/payments) Checkout API request, which carries sensitive payment data, to originate from merchant infrastructure (a Medusa server). To ensure security, Adyen provides frontend-side encryption of sensitive payment data, which the Medusa server uses when initiating the authorization request to the `/payments` Adyen API endpoint.
 
 However, Medusa's payment module `authorizePaymentSession` method, which initiates payment authorization, does not accept client-provided `data` value at the time of invocation. Instead, it retrieves and forwards the `data` value already stored in the associated payment session (`PaymentSession`). This requires sensitive payment data to be present in the session's `data` field prior to authorization.
 
