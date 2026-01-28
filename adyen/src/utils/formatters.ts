@@ -1,0 +1,151 @@
+import type { BigNumberInput, PaymentDTO } from '@medusajs/framework/types'
+import { BigNumber, MathBN } from '@medusajs/framework/utils'
+import { cloneDeep, filter, find } from 'lodash'
+import { CURRENCY_MULTIPLIERS } from './constants'
+import type { Data, Event, ExtendedData } from './types'
+import {
+  validateEvent,
+  validateExtendedData,
+  validatePartialData,
+} from './validators'
+
+const getCurrencyMultiplier = (currency: string): number => {
+  const currencyCode = currency.toUpperCase()
+  const multiplier = CURRENCY_MULTIPLIERS[currencyCode]
+  // Instead of using the default multiplier,
+  // we may have to throw an error for unsupported currency.
+  const defaultMultiplier = CURRENCY_MULTIPLIERS.DEFAULT
+  const power = multiplier !== undefined ? multiplier : defaultMultiplier
+  return 10 ** power
+}
+
+export const getMinorUnit = (
+  amount: BigNumberInput,
+  currency: string,
+): number => {
+  const multiplier = getCurrencyMultiplier(currency)
+
+  const formattedAmount =
+    Math.round(new BigNumber(MathBN.mult(amount, multiplier)).numeric) /
+    multiplier
+
+  const smallestAmount = new BigNumber(MathBN.mult(formattedAmount, multiplier))
+  const { numeric } = smallestAmount
+  const nearestTenNumeric = Math.ceil(numeric / 10) * 10
+
+  // Check if the currency requires rounding to the nearest ten
+  const numericAmount = multiplier === 1e3 ? nearestTenNumeric : numeric
+
+  return parseInt(numericAmount.toString().split('.').shift()!, 10)
+}
+
+export const getWholeUnit = (
+  amount: BigNumberInput,
+  currency: string,
+): number => {
+  const multiplier = getCurrencyMultiplier(currency)
+  const standardAmount = new BigNumber(MathBN.div(amount, multiplier))
+  return standardAmount.numeric
+}
+
+export const roundToCurrencyPrecision = (
+  amount: BigNumberInput,
+  currencyCode: string,
+): BigNumberInput => {
+  let precision: number | undefined
+  try {
+    const formatted = Intl.NumberFormat(undefined, {
+      currency: currencyCode,
+      style: 'currency',
+    }).format(0.1111111)
+
+    precision = formatted.split('.')[1].length
+  } catch {
+    // Unknown currency, keep the full precision
+  }
+
+  return MathBN.convert(amount, precision)
+}
+
+export const PaymentDataManager = (data: PaymentDTO['data']) => {
+  let validData = validateExtendedData(cloneDeep(data))
+
+  const getData = (): ExtendedData => validData
+
+  const getEvents = (): Event[] => validData.events || []
+
+  const getAuthorisation = (): Event | undefined =>
+    find(getEvents(), { name: 'AUTHORISATION' })
+
+  const getCancellation = (): Event | undefined =>
+    find(getEvents(), { name: 'CANCELLATION' })
+
+  const getCaptures = (): Event[] => filter(getEvents(), { name: 'CAPTURE' })
+
+  const getRefunds = (): Event[] => filter(getEvents(), { name: 'REFUND' })
+
+  const getEvent = (providerReference: string): Event | undefined =>
+    find(getEvents(), { providerReference })
+
+  const isAuthorised = (): boolean => {
+    const authorisation = getAuthorisation()
+    if (!authorisation) return false
+    return authorisation.status === 'SUCCEEDED'
+  }
+
+  const isCancelled = (): boolean => {
+    const cancellation = getCancellation()
+    if (!cancellation) return false
+    return cancellation.status === 'SUCCEEDED'
+  }
+
+  const setData = (newData: Partial<Data>): void => {
+    const newValidData = validatePartialData(newData)
+    validData = { ...validData, ...newValidData }
+  }
+
+  const setAuthorisation = (newAuthorisation: Event): void => {
+    const authorisation = validateEvent(newAuthorisation)
+    const otherEvents = filter(
+      getEvents(),
+      (event: Event) => event.name !== 'AUTHORISATION',
+    )
+    const events = [...otherEvents, authorisation]
+    setData({ events })
+  }
+
+  const setEvent = (newEvent: Event): void => {
+    const event = validateEvent(newEvent)
+    const { providerReference } = event
+    const otherEvents = filter(
+      getEvents(),
+      (event: Event) => event.providerReference !== providerReference,
+    )
+    const events = [...otherEvents, event]
+    setData({ events })
+  }
+
+  const deleteEvent = (providerReference: string): void => {
+    const events = filter(
+      getEvents(),
+      (event: Event) => event.providerReference !== providerReference,
+    )
+    setData({ events })
+  }
+
+  return {
+    deleteEvent,
+    getAuthorisation,
+    getCancellation,
+    getCaptures,
+    getData,
+    getEvent,
+    getEvents,
+    getRefunds,
+    isAuthorised,
+    isCancelled,
+    setAuthorisation,
+    setData,
+    setEvent,
+  }
+}

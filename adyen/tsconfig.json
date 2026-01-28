@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "checkJs": false,
+    "declaration": false,
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSourceMap": true,
+    "jsx": "react-jsx",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "outDir": "./.medusa/server",
+    "resolveJsonModule": true,
+    "rootDir": "./",
+    "skipDefaultLibCheck": true,
+    "skipLibCheck": true,
+    "sourceMap": false,
+    "strictNullChecks": true,
+    "target": "ES2021"
+  },
+  "exclude": [
+    "node_modules",
+    ".medusa/server",
+    ".medusa/admin",
+    "src/admin",
+    ".cache"
+  ],
+  "include": ["**/*", ".medusa/types/*"],
+  "ts-node": {
+    "swc": true
+  }
+}
