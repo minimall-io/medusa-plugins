@@ -3,6 +3,9 @@
   "version": "0.0.1-beta.0",
   "description": "Adyen payment provider for Medusa v2",
   "author": "minimall.io (https://minimall.io)",
+  "publishConfig": {
+    "access": "public"
+  },
   "homepage": "https://github.com/minimall-io/medusa-plugins/tree/main/adyen",
   "bugs": {
     "url": "https://github.com/minimall-io/medusa-plugins/issues"
