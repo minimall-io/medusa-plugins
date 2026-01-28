@@ -33,7 +33,19 @@ The plugin is frontend-agnostic and compatible with any Advanced flow frontend i
 
 ### Install the Package
 
-Install the plugin using npm:
+Install the plugin **beta** using npm (recommended for early adopters):
+
+```bash
+npm install @minimall.io/medusa-plugin-adyen@beta
+```
+
+Install a **specific beta version** (recommended for reproducible deployments):
+
+```bash
+npm install @minimall.io/medusa-plugin-adyen@0.0.1-beta.0
+```
+
+Install the **latest stable** release (will be available once a stable version is published to the `latest` tag):
 
 ```bash
 npm install @minimall.io/medusa-plugin-adyen
