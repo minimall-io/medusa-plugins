@@ -11,17 +11,6 @@ const adyenProviderId = process.env.ADYEN_PROVIDER_ID
 
 export const getProviderId = (): string => `pp_adyen_${adyenProviderId}`
 
-export const getCurrencyCode = (currency_code: string = 'usd'): string =>
-  currency_code
-
-export const getAmount = (
-  amount?: number,
-  minimum: number = 20,
-  multiplier: number = 100,
-  precision: number = 2,
-): number =>
-  amount ?? minimum + Number((Math.random() * multiplier).toFixed(precision))
-
 export const getCustomer = (
   customerSuffix?: string,
   customerId?: string,
