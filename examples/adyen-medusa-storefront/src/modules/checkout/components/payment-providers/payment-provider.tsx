@@ -1,7 +1,7 @@
 "use client"
 
 import { Radio as RadioGroupOption } from "@headlessui/react"
-import { paymentInfoMap } from "@lib/constants"
+import { getPaymentInfo } from "@lib/constants"
 import { Text, clx } from "@medusajs/ui"
 import {
   IAdyenPaymentProvider,
@@ -29,8 +29,7 @@ const PaymentProviderOption = ({
   const { id, provider, isAdyen, isStripe, isManual } = paymentProviders
   const isActive = id === providerId
   const isTesting = isManual && isDevelopment && isActive
-  const title = paymentInfoMap[providerId]?.title || providerId
-  const icon = paymentInfoMap[providerId]?.icon
+  const {title, icon} = getPaymentInfo(providerId)
 
   return (
     <RadioGroupOption
