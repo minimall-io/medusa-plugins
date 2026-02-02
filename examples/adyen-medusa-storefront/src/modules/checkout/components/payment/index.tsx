@@ -1,6 +1,6 @@
 "use client"
 
-import { paymentInfoMap } from "@lib/constants"
+import { getPaymentInfo } from "@lib/constants"
 import { CheckCircleSolid } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
 import { Button, clx, Heading, Text } from "@medusajs/ui"
@@ -118,7 +118,7 @@ const Payment = ({ cart, providers }: Props) => {
               >
                 {paidByGiftcard
                   ? "Gift card"
-                  : paymentInfoMap[providerId || ""]?.title || providerId}
+                  : getPaymentInfo(providerId).title}
               </Text>
             </div>
           ) : null}
