@@ -42,7 +42,7 @@ npm install @minimall.io/medusa-plugin-adyen@beta
 Install a **specific beta version** (recommended for reproducible deployments):
 
 ```bash
-npm install @minimall.io/medusa-plugin-adyen@0.0.1-beta.0
+npm install @minimall.io/medusa-plugin-adyen@0.0.1-beta.1
 ```
 
 Install the **latest stable** release (will be available once a stable version is published to the `latest` tag):
